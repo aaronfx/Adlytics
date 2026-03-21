@@ -287,6 +287,9 @@ class AIEngine:
         except Exception as e:
             raise ValueError(f"Analysis failed: {str(e)}")
     
+    # Alias for backward compatibility with routes that call .analyze()
+    analyze = analyze_ad
+    
     async def analyze_with_fallback(
         self,
         ad_copy: str,
