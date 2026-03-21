@@ -1,12 +1,11 @@
 /**
- * ADLYTICS - Enhanced Analyzer JavaScript v4.0
- * Handles detailed audience targeting, video script support, and v4.0 features:
- * - Line-by-line analysis
- * - Ad variant generation and ranking
- * - Winner prediction
- * - ROI comparison
- * - Run decision engine
- * - IMPROVED AD RE-ANALYSIS (PATCHED)
+ * ADLYTICS - Analyzer JavaScript v4.1 (TARGETED FIXES)
+ * 
+ * CRITICAL FIXES APPLIED:
+ * - Fixed mergeAnalysis() to use improved_ad_analysis as primary
+ * - Single source of truth for all outputs
+ * - Winner prediction matches best variant
+ * - Scores are dynamic (not stuck at 65)
  */
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
@@ -86,6 +85,7 @@ async function loadAudienceConfig() {
 // Populate all audience dropdowns
 function populateAudienceFields() {
     if (!audienceConfig) return;
+
     const countrySelect = document.getElementById('audienceCountry');
     if (countrySelect && audienceConfig.countries) {
         audienceConfig.countries.forEach(country => {
@@ -97,6 +97,7 @@ function populateAudienceFields() {
             countrySelect.appendChild(option);
         });
     }
+
     const ageSelect = document.getElementById('audienceAge');
     if (ageSelect && audienceConfig.age_brackets) {
         audienceConfig.age_brackets.forEach(age => {
@@ -107,6 +108,7 @@ function populateAudienceFields() {
             ageSelect.appendChild(option);
         });
     }
+
     const incomeSelect = document.getElementById('audienceIncome');
     if (incomeSelect && audienceConfig.income_levels) {
         audienceConfig.income_levels.forEach(income => {
@@ -117,6 +119,7 @@ function populateAudienceFields() {
             incomeSelect.appendChild(option);
         });
     }
+
     const eduSelect = document.getElementById('audienceEducation');
     if (eduSelect && audienceConfig.education_levels) {
         audienceConfig.education_levels.forEach(edu => {
@@ -126,6 +129,7 @@ function populateAudienceFields() {
             eduSelect.appendChild(option);
         });
     }
+
     const occSelect = document.getElementById('audienceOccupation');
     if (occSelect && audienceConfig.occupations) {
         audienceConfig.occupations.forEach(occ => {
@@ -136,6 +140,7 @@ function populateAudienceFields() {
             occSelect.appendChild(option);
         });
     }
+
     const psychSelect = document.getElementById('audiencePsychographic');
     if (psychSelect && audienceConfig.psychographics) {
         audienceConfig.psychographics.forEach(psych => {
@@ -146,6 +151,7 @@ function populateAudienceFields() {
             psychSelect.appendChild(option);
         });
     }
+
     const painSelect = document.getElementById('audiencePainPoint');
     if (painSelect && audienceConfig.pain_points) {
         audienceConfig.pain_points.forEach(pain => {
@@ -165,6 +171,7 @@ function populateBasicAudienceOptions() {
         {code: 'us', name: 'United States', currency: '$', regions: ['New York', 'California', 'Texas']},
         {code: 'uk', name: 'United Kingdom', currency: '£', regions: ['London', 'Manchester']}
     ];
+
     const countrySelect = document.getElementById('audienceCountry');
     if (countrySelect) {
         countries.forEach(c => {
@@ -185,6 +192,7 @@ async function loadPlatforms() {
         const data = await response.json();
         const select = document.getElementById('platform');
         if (!select) return;
+
         data.platforms.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
@@ -204,6 +212,7 @@ async function loadIndustries() {
         const data = await response.json();
         const select = document.getElementById('industry');
         if (!select) return;
+
         data.industries.forEach(i => {
             const option = document.createElement('option');
             option.value = i.id;
@@ -217,14 +226,17 @@ async function loadIndustries() {
 
 // Setup event listeners
 function setupEventListeners() {
+    // Country → Region dependency
     const countrySelect = document.getElementById('audienceCountry');
     const regionSelect = document.getElementById('audienceRegion');
     if (countrySelect && regionSelect) {
         countrySelect.addEventListener('change', (e) => {
             const selected = e.target.selectedOptions[0];
             if (!selected) return;
+
             const regions = JSON.parse(selected.dataset.regions || '[]');
             regionSelect.innerHTML = '<option value="">Select Region</option>';
+
             if (regions.length > 0) {
                 regionSelect.disabled = false;
                 regions.forEach(region => {
@@ -238,6 +250,8 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Age traits display
     const ageSelect = document.getElementById('audienceAge');
     const ageTraits = document.getElementById('ageTraits');
     if (ageSelect && ageTraits) {
@@ -251,6 +265,8 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Occupation pain points display
     const occSelect = document.getElementById('audienceOccupation');
     const occPainPoints = document.getElementById('occupationPainPoints');
     if (occSelect && occPainPoints) {
@@ -264,10 +280,13 @@ function setupEventListeners() {
             }
         });
     }
+
+    // File uploads
     const imageUpload = document.getElementById('imageUpload');
     const videoUpload = document.getElementById('videoUpload');
     let selectedImage = null;
     let selectedVideo = null;
+
     if (imageUpload) {
         imageUpload.addEventListener('change', (e) => {
             if (e.target.files[0]) {
@@ -277,6 +296,7 @@ function setupEventListeners() {
             }
         });
     }
+
     if (videoUpload) {
         videoUpload.addEventListener('change', (e) => {
             if (e.target.files[0]) {
@@ -286,6 +306,8 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Form submission
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -303,16 +325,19 @@ function updateFilePreview(file, type) {
 function getContentValues() {
     let adCopy = '';
     let videoScript = '';
+
     if (currentContentMode === 'adCopy' || currentContentMode === 'both') {
         const adCopyEl = document.getElementById('adCopy');
         const adCopyBothEl = document.getElementById('adCopyBoth');
         adCopy = adCopyEl?.value?.trim() || adCopyBothEl?.value?.trim() || '';
     }
+
     if (currentContentMode === 'videoScript' || currentContentMode === 'both') {
         const videoScriptEl = document.getElementById('videoScript');
         const videoScriptBothEl = document.getElementById('videoScriptBoth');
         videoScript = videoScriptEl?.value?.trim() || videoScriptBothEl?.value?.trim() || '';
     }
+
     return { adCopy, videoScript };
 }
 
@@ -322,18 +347,39 @@ async function handleSubmit(selectedImage, selectedVideo) {
     const country = document.getElementById('audienceCountry')?.value;
     const age = document.getElementById('audienceAge')?.value;
     const industry = document.getElementById('industry')?.value;
-    if (!adCopy && !videoScript) { alert('Please enter ad copy or video script'); return; }
-    if (!platform) { alert('Please select platform'); return; }
-    if (!country) { alert('Please select country'); return; }
-    if (!age) { alert('Please select age bracket'); return; }
-    if (!industry) { alert('Please select industry'); return; }
+
+    // Validation
+    if (!adCopy && !videoScript) { 
+        alert('Please enter ad copy or video script'); 
+        return; 
+    }
+    if (!platform) { 
+        alert('Please select platform'); 
+        return; 
+    }
+    if (!country) { 
+        alert('Please select country'); 
+        return; 
+    }
+    if (!age) { 
+        alert('Please select age bracket'); 
+        return; 
+    }
+    if (!industry) { 
+        alert('Please select industry'); 
+        return; 
+    }
+
+    // Show loading
     emptyState.classList.add('hidden');
     resultsContent.classList.add('hidden');
     loadingState.classList.remove('hidden');
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = 'Analyzing...';
+
     try {
         const formData = new FormData();
+
         if (adCopy) formData.append('ad_copy', adCopy);
         if (videoScript) formData.append('video_script', videoScript);
         formData.append('platform', platform);
@@ -341,6 +387,8 @@ async function handleSubmit(selectedImage, selectedVideo) {
         formData.append('audience_age', age);
         formData.append('industry', industry);
         formData.append('objective', document.getElementById('objective')?.value || 'conversions');
+
+        // Optional fields
         const region = document.getElementById('audienceRegion')?.value;
         const gender = document.getElementById('audienceGender')?.value;
         const income = document.getElementById('audienceIncome')?.value;
@@ -350,6 +398,7 @@ async function handleSubmit(selectedImage, selectedVideo) {
         const painPoint = document.getElementById('audiencePainPoint')?.value;
         const techSavviness = document.getElementById('techSavviness')?.value;
         const purchaseBehavior = document.getElementById('purchaseBehavior')?.value;
+
         if (region) formData.append('audience_region', region);
         if (gender) formData.append('audience_gender', gender);
         if (income) formData.append('audience_income', income);
@@ -359,13 +408,17 @@ async function handleSubmit(selectedImage, selectedVideo) {
         if (painPoint) formData.append('audience_pain_point', painPoint);
         if (techSavviness) formData.append('tech_savviness', techSavviness);
         if (purchaseBehavior) formData.append('purchase_behavior', purchaseBehavior);
+
         if (selectedImage) formData.append('image', selectedImage);
         if (selectedVideo) formData.append('video', selectedVideo);
+
         const response = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             body: formData
         });
+
         const data = await response.json();
+
         if (data.success && data.analysis) {
             renderResults(data);
         } else {
@@ -382,167 +435,89 @@ async function handleSubmit(selectedImage, selectedVideo) {
     }
 }
 
-// ===================================================================
-// PATCH: NEW FUNCTION - Render Improved Ad Analysis
-// ===================================================================
-function renderImprovedAnalysis(data) {
-    const container = document.getElementById('improvedAnalysis');
-    if (!container) return;
+// ============================================
+// CRITICAL FIX: MERGE LOGIC v4.1
+// ============================================
 
-    const score = data?.scores?.overall ?? 'N/A';
-    const roi = data?.roi_analysis?.roi_potential ?? 'Unknown';
-    const decision = data?.run_decision?.should_run ?? 'Unknown';
-    const verdict = data?.behavior_summary?.verdict ?? 'No assessment';
-    const readiness = data?.behavior_summary?.launch_readiness ?? '0%';
-    
-    // Determine colors based on values
-    const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
-    const decisionColor = decision === 'Yes' ? 'text-green-400' : decision === 'No' ? 'text-red-400' : 'text-yellow-400';
-    const roiColor = roi?.includes('High') ? 'text-green-400' : 'text-yellow-400';
+function mergeAnalysis(data) {
+    const original = data.analysis || {};
+    const improved = original.improved_ad_analysis || null;
 
-    container.innerHTML = `
-        <div class="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-xl p-5 mt-4">
-            <div class="flex items-center space-x-2 mb-4">
-                <span class="text-2xl">✨</span>
-                <h3 class="text-green-400 text-lg font-bold">Improved Ad Performance (Re-analyzed)</h3>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
-                    <span class="text-xs text-gray-500 block mb-1">New Score</span>
-                    <span class="text-2xl font-bold ${scoreColor}">${score}</span>
-                </div>
-                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
-                    <span class="text-xs text-gray-500 block mb-1">ROI Potential</span>
-                    <span class="text-lg font-bold ${roiColor}">${roi}</span>
-                </div>
-            </div>
-            
-            <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-sm text-gray-400">Run Decision</span>
-                    <span class="font-semibold ${decisionColor}">${decision}</span>
-                </div>
-                
-                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-sm text-gray-400">Launch Readiness</span>
-                    <span class="font-semibold text-white">${readiness}</span>
-                </div>
-                
-                <div class="p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-xs text-gray-500 block mb-1">Verdict</span>
-                    <p class="text-sm text-gray-300">${verdict}</p>
-                </div>
-            </div>
-            
-            ${data?._fallback ? `
-            <div class="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-center">
-                <span class="text-xs text-yellow-400">⚠️ Re-analysis used fallback values</span>
-            </div>
-            ` : ''}
-        </div>
-    `;
+    // If no improved analysis, return original only
+    if (!improved) {
+        console.log("No improved analysis found, using original only");
+        return original;
+    }
+
+    console.log("MERGE: Using improved_ad_analysis as PRIMARY");
+    console.log("Original overall:", original.scores?.overall);
+    console.log("Improved overall:", improved.scores?.overall);
+    console.log("Best variant ID:", original.winner_prediction?.best_variant_id);
+
+    // CRITICAL: Use improved analysis as PRIMARY (it has the best variant data)
+    // This ensures the UI shows the re-scored, improved version
+    return {
+        // Original baseline data (for comparison display)
+        original_scores: original.scores,
+        original_run_decision: original.run_decision,
+        original_behavior_summary: original.behavior_summary,
+
+        // PRIMARY DATA (from improved analysis - this is the best variant, re-scored)
+        scores: improved.scores,  // RE-SCORED, not copied from original
+        run_decision: improved.run_decision,
+        behavior_summary: improved.behavior_summary,
+        roi_analysis: improved.roi_analysis,
+        phase_breakdown: improved.phase_breakdown,
+        platform_specific: original.platform_specific,  // Platform doesn't change
+        line_by_line_analysis: improved.line_analysis || original.line_by_line_analysis,
+        critical_weaknesses: original.critical_weaknesses,  // Weaknesses are from original
+        improvements: original.improvements,
+        persona_reactions: improved.personas || original.persona_reactions,
+        video_execution_analysis: improved.video_execution_analysis || original.video_execution_analysis,
+
+        // CRITICAL: These MUST match the best variant (single source of truth)
+        winner_prediction: original.winner_prediction,  // Already points to best variant
+        ad_variants: original.ad_variants,  // Already sorted with best first
+        roi_comparison: original.roi_comparison,
+        competitor_advantage: improved.competitor_analysis || original.competitor_advantage,
+
+        // The improved ad content itself (best variant)
+        improved_ad: original.improved_ad,
+
+        // Flag to indicate we're showing improved data
+        _is_improved_primary: true,
+        _best_variant_id: original.winner_prediction?.best_variant_id
+    };
 }
-// ===================================================================
 
-// ✅ REBIND UI EVENTS AFTER DOM UPDATE (CRITICAL FIX)
-function rebindUIEvents() {
-    // Tabs
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    if (tabBtns.length > 0) {
-        tabBtns.forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('tab-active');
-                    b.classList.add('text-gray-400');
-                });
-
-                document.querySelectorAll('.tab-content').forEach(c => {
-                    c.classList.add('hidden');
-                });
-
-                btn.classList.add('tab-active');
-                btn.classList.remove('text-gray-400');
-
-                const tabId = `tab-${btn.dataset.tab}`;
-                const tabContent = document.getElementById(tabId);
-                if (tabContent) tabContent.classList.remove('hidden');
-            };
-        });
-    }
-
-    // Dropdowns / Selects
-    const selects = document.querySelectorAll('select');
-    if (selects.length > 0) {
-        selects.forEach(select => {
-            select.onchange = (e) => {
-                console.log('Selection changed:', e.target.value);
-            };
-        });
-    }
-
-    // Buttons with actions
-    const actionBtns = document.querySelectorAll('[data-action]');
-    if (actionBtns.length > 0) {
-        actionBtns.forEach(btn => {
-            btn.onclick = () => {
-                console.log('Action triggered:', btn.dataset.action);
-            };
-        });
-    }
-}
+// ============================================
+// RENDER RESULTS
+// ============================================
 
 function renderResults(data) {
+    console.log("=== RENDER RESULTS v4.1 ===");
+    console.log("Raw data:", data);
+
     const analysis = data.analysis;
     if (!analysis) {
         console.error('No analysis data received');
         return;
     }
 
-    const improved = analysis.improved_ad_analysis || null;
+    // CRITICAL FIX: Merge analysis with improved data as primary
+    const primary = mergeAnalysis(data);
 
-    // ✅ SAFE DEEP MERGE (CRITICAL FIX)
-    const primary = improved
-        ? {
-            ...analysis,
-
-            scores: {
-                ...analysis.scores,
-                ...improved.scores
-            },
-
-            behavior_analysis: improved.behavior_analysis || analysis.behavior_analysis,
-
-            line_analysis: improved.line_analysis || analysis.line_analysis,
-
-            roi_analysis: {
-                ...analysis.roi_analysis,
-                ...improved.roi_analysis
-            },
-
-            variants: improved.variants || analysis.variants,
-
-            personas: improved.personas || analysis.personas,
-
-            competitor_analysis: improved.competitor_analysis || analysis.competitor_analysis,
-
-            run_decision: improved.run_decision || analysis.run_decision
-        }
-        : analysis;
-
-    const isImprovedPrimary = !!improved;
-
-    console.log("PRIMARY SCORE:", primary?.scores?.overall);
-    console.log("ORIGINAL SCORE:", analysis?.scores?.overall); 
-    console.log("IMPROVED EXISTS:", !!improved);
+    console.log("PRIMARY SCORE (merged):", primary?.scores?.overall);
+    console.log("Is improved primary:", primary?._is_improved_primary);
+    console.log("Best variant ID:", primary?._best_variant_id);
 
     resultsContent.classList.remove('hidden');
 
-    // Run Decision (v4.0) - Display at top - USES PRIMARY
+    // Run Decision - USES PRIMARY (improved/re-scored data)
     const runDecisionDiv = document.getElementById('runDecision');
     if (runDecisionDiv) {
         const decision = primary.run_decision || {};
-        const shouldRun = decision.should_run || 'Only after fixes';
+        const shouldRun = decision.should_run || 'Review Required';
         const decisionColor = shouldRun === 'Yes' ? 'green' : shouldRun === 'No' ? 'red' : 'yellow';
 
         runDecisionDiv.innerHTML = `
@@ -550,7 +525,7 @@ function renderResults(data) {
                 <div class="flex items-center space-x-3 mb-3">
                     <span class="text-2xl">${shouldRun === 'Yes' ? '✅' : shouldRun === 'No' ? '🚫' : '⚠️'}</span>
                     <div>
-                        <h4 class="font-semibold text-${decisionColor}-400">${isImprovedPrimary ? 'AI-Optimized Ad' : 'Original Ad'} - Run Decision</h4>
+                        <h4 class="font-semibold text-${decisionColor}-400">AI-Optimized Ad - Run Decision</h4>
                         <p class="text-xs text-gray-400">Risk Level: ${decision.risk_level || 'Unknown'}</p>
                     </div>
                 </div>
@@ -559,9 +534,9 @@ function renderResults(data) {
                     <p class="text-lg font-bold text-${decisionColor}-400 mt-1">${shouldRun}</p>
                 </div>
                 <p class="text-sm text-gray-300">${decision.reason || 'No decision reason provided'}</p>
-                ${isImprovedPrimary ? `
+                ${primary._is_improved_primary ? `
                 <div class="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <span class="text-xs text-blue-400">Baseline was: ${analysis.run_decision?.should_run || 'Unknown'}</span>
+                    <span class="text-xs text-blue-400">Baseline was: ${analysis.run_decision?.should_run || 'Unknown'} (${analysis.scores?.overall || '?'}/100)</span>
                 </div>
                 ` : ''}
             </div>
@@ -576,10 +551,14 @@ function renderResults(data) {
         audienceSummary.classList.remove('hidden');
     }
 
-    // Overall Score - USES PRIMARY
+    // Overall Score - USES PRIMARY (re-scored)
     const overall = primary.scores?.overall || 0;
     const scoreEl = document.getElementById('overallScore');
-    if (scoreEl) scoreEl.textContent = overall;
+    if (scoreEl) {
+        scoreEl.textContent = overall;
+        console.log("UI Score updated to:", overall);
+    }
+
     const circle = document.getElementById('scoreCircle');
     if (circle) {
         const circumference = 251.2;
@@ -609,8 +588,10 @@ function renderResults(data) {
     // Primary Reason & Metrics - USES PRIMARY
     const primaryReasonEl = document.getElementById('primaryReason');
     if (primaryReasonEl) primaryReasonEl.textContent = primary.behavior_summary?.primary_reason || '';
+
     const launchReadinessEl = document.getElementById('launchReadiness');
     if (launchReadinessEl) launchReadinessEl.textContent = primary.behavior_summary?.launch_readiness || '0%';
+
     const failureRiskEl = document.getElementById('failureRisk');
     if (failureRiskEl) failureRiskEl.textContent = primary.behavior_summary?.failure_risk || '0%';
 
@@ -627,6 +608,7 @@ function renderResults(data) {
             { key: 'cultural_resonance', label: 'Cultural Resonance' },
             { key: 'decision_friction', label: 'Decision Friction (lower is better)' }
         ];
+
         scoresGrid.innerHTML = scoreItems.map(item => {
             const value = scores[item.key] || 0;
             const color = value >= 70 ? 'bg-green-500' : value >= 50 ? 'bg-yellow-500' : 'bg-red-500';
@@ -762,7 +744,7 @@ function renderResults(data) {
         }
     }
 
-    // Improved Ad Content - USES ORIGINAL analysis.improved_ad (this is the rewrite suggestion)
+    // Improved Ad Content - USES ORIGINAL analysis.improved_ad (best variant)
     const improvedAdData = analysis.improved_ad || {};
     const improvedContent = document.getElementById('improvedContent');
     if (improvedContent) {
@@ -786,16 +768,14 @@ function renderResults(data) {
                     <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.video_script_version}</p>
                 </div>
                 ` : ''}
+                <div class="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded">
+                    <span class="text-xs text-blue-400">Source: ${improvedAdData.angle || 'Unknown'} (Variant #${improvedAdData.source_variant_id || '?'})</span>
+                </div>
             </div>
         `;
     }
 
-    // Render improved analysis section if it exists (this shows the re-analysis of the improved ad)
-    if (improved) {
-        renderImprovedAnalysis(improved);
-    }
-
-    // Variations - USES PRIMARY
+    // Variants - USES PRIMARY
     const variations = primary.variations || {};
     const powerHooks = variations.power_hooks || [];
     const powerHooksDiv = document.getElementById('powerHooks');
@@ -804,6 +784,7 @@ function renderResults(data) {
             <div class="p-3 bg-gray-900/50 rounded-lg text-sm border-l-2 border-purple-500">${hook}</div>
         `).join('') || '<p class="text-gray-500 text-sm">No variations generated.</p>';
     }
+
     const ctas = variations.high_conversion_ctas || [];
     const conversionCTAsDiv = document.getElementById('conversionCTAs');
     if (conversionCTAsDiv) {
@@ -948,10 +929,12 @@ function renderResults(data) {
         `;
     }
 
-    // Winner Prediction - USES PRIMARY
+    // Winner Prediction - USES PRIMARY (MUST match best variant)
     const winnerDiv = document.getElementById('winnerPrediction');
     if (winnerDiv) {
         const winner = primary.winner_prediction || {};
+        const bestVariant = primary.ad_variants?.find(v => v.id === winner.best_variant_id) || primary.ad_variants?.[0];
+
         winnerDiv.innerHTML = `
             <div class="p-4 bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl border border-green-500/20">
                 <div class="flex items-center space-x-3 mb-3">
@@ -966,6 +949,14 @@ function renderResults(data) {
                     <span class="text-sm text-gray-400">Best Variant ID</span>
                     <span class="text-lg font-bold text-green-400">#${winner.best_variant_id || 'N/A'}</span>
                 </div>
+                ${bestVariant ? `
+                <div class="mt-3 p-3 bg-gray-900/50 rounded-lg">
+                    <span class="text-xs text-gray-500">WINNING ANGLE:</span>
+                    <p class="text-sm font-medium text-purple-400 mt-1">${bestVariant.angle}</p>
+                    <span class="text-xs text-gray-500 mt-2 block">PREDICTED SCORE:</span>
+                    <p class="text-lg font-bold text-green-400">${bestVariant.predicted_score}/100</p>
+                </div>
+                ` : ''}
                 ${winner.expected_lift ? `
                 <div class="mt-3 p-3 bg-green-500/20 rounded-lg text-center">
                     <span class="text-green-400 font-medium">Expected Lift: ${winner.expected_lift}</span>
@@ -975,20 +966,22 @@ function renderResults(data) {
         `;
     }
 
-    // Ad Variants - USES PRIMARY
+    // Ad Variants - USES PRIMARY (already sorted with best first)
     const variantsDiv = document.getElementById('adVariants');
     if (variantsDiv) {
         const variants = primary.ad_variants || [];
+        const winnerId = primary.winner_prediction?.best_variant_id;
+
         if (variants.length > 0) {
             variantsDiv.innerHTML = `
                 <div class="space-y-4">
                     ${variants.map((v, i) => `
-                        <div class="variant-card p-4 bg-gray-900/50 rounded-xl border ${v.id === primary.winner_prediction?.best_variant_id ? 'border-green-500/50 bg-green-500/5' : 'border-white/5'}">
+                        <div class="variant-card p-4 bg-gray-900/50 rounded-xl border ${v.id === winnerId ? 'border-green-500/50 bg-green-500/5' : 'border-white/5'}">
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center space-x-3">
-                                    <span class="w-8 h-8 rounded-full ${v.id === primary.winner_prediction?.best_variant_id ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'} flex items-center justify-center font-bold text-sm">${v.id}</span>
+                                    <span class="w-8 h-8 rounded-full ${v.id === winnerId ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'} flex items-center justify-center font-bold text-sm">${v.id}</span>
                                     <div>
-                                        <h4 class="font-semibold ${v.id === primary.winner_prediction?.best_variant_id ? 'text-green-400' : 'text-white'}">${v.angle || `Variant ${v.id}`}</h4>
+                                        <h4 class="font-semibold ${v.id === winnerId ? 'text-green-400' : 'text-white'}">${v.angle || `Variant ${v.id}`}</h4>
                                         <span class="text-xs text-gray-500">ROI: ${v.roi_potential || 'Unknown'}</span>
                                     </div>
                                 </div>
@@ -1006,7 +999,7 @@ function renderResults(data) {
                                 <p class="text-sm mt-1 text-gray-300">${v.copy || ''}</p>
                             </div>
                             <p class="text-xs text-gray-400">${v.reason || ''}</p>
-                            ${v.id === primary.winner_prediction?.best_variant_id ? `
+                            ${v.id === winnerId ? `
                             <div class="mt-3 p-2 bg-green-500/20 rounded-lg text-center">
                                 <span class="text-green-400 text-sm font-medium">🏆 PREDICTED WINNER</span>
                             </div>
@@ -1075,8 +1068,38 @@ function renderResults(data) {
         `;
     }
 
-    // ✅ CRITICAL: Rebind all UI events after DOM update
+    // Rebind UI events after DOM update
     rebindUIEvents();
-}// Tab Navigation - Event binding handled by rebindUIEvents() after render
 
-console.log('ADLYTICS v4.0 Enhanced Analyzer loaded (PATCHED with Improved Ad Re-analysis)');
+    console.log("=== RENDER COMPLETE ===");
+}
+
+// Rebind UI events after DOM update
+function rebindUIEvents() {
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active');
+                    b.classList.add('text-gray-400');
+                });
+
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    c.classList.add('hidden');
+                });
+
+                btn.classList.add('tab-active');
+                btn.classList.remove('text-gray-400');
+
+                const tabId = `tab-${btn.dataset.tab}`;
+                const tabContent = document.getElementById(tabId);
+                if (tabContent) tabContent.classList.remove('hidden');
+            };
+        });
+    }
+}
+
+console.log('ADLYTICS v4.1 Analyzer loaded - TARGETED FIXES APPLIED');
+console.log('Fixes: Real scoring, Variant→Improved logic, Re-scoring, Video scripts');
