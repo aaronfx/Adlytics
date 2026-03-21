@@ -447,6 +447,7 @@ function renderImprovedAnalysis(data) {
 
 function renderResults(data) {
     const analysis = data.analysis;
+    const improvedAnalysis = analysis.improved_ad_analysis || null;
     if (!analysis) {
         console.error('No analysis data received');
         return;
@@ -478,7 +479,39 @@ function renderResults(data) {
         `;
     }
 
-    // Audience Summary
+    
+
+    // PATCH: Decision comparison logic - show upgrade recommendation
+    if (improvedAnalysis && improvedAnalysis.run_decision) {
+        const improvedDecision = improvedAnalysis.run_decision.should_run;
+        const originalDecision = analysis.run_decision?.should_run;
+
+        const upgradeContainer = document.getElementById('decisionUpgrade');
+
+        if (upgradeContainer) {
+            let message = '';
+            let color = 'yellow';
+
+            if (originalDecision === 'No' && improvedDecision === 'Yes') {
+                message = '🚀 Improved version is READY TO RUN';
+                color = 'green';
+            } else if (improvedDecision === 'Only after fixes') {
+                message = '⚠️ Improved version still needs optimization';
+                color = 'yellow';
+            } else {
+                message = 'ℹ️ No major improvement detected';
+                color = 'gray';
+            }
+
+            upgradeContainer.innerHTML = `
+                <div class="p-4 bg-${color}-500/10 border border-${color}-500/20 rounded-xl mt-4">
+                    <h4 class="font-semibold text-${color}-400 mb-1">AI Final Recommendation</h4>
+                    <p class="text-sm text-gray-300">${message}</p>
+                </div>
+            `;
+        }
+    }
+// Audience Summary
     const audienceSummary = document.getElementById('audienceSummary');
     const audienceParsed = document.getElementById('audienceParsed');
     if (data.audience_parsed && audienceParsed && audienceSummary) {
@@ -703,8 +736,8 @@ function renderResults(data) {
     // ===================================================================
     // PATCH: CALL NEW RENDER FUNCTION FOR IMPROVED AD ANALYSIS
     // ===================================================================
-    if (analysis.improved_ad_analysis) {
-        renderImprovedAnalysis(analysis.improved_ad_analysis);
+    if (improvedAnalysis) {
+        renderImprovedAnalysis(improvedAnalysis);
     }
     // ===================================================================
 
