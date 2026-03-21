@@ -60,6 +60,35 @@
             z-index: 10;
             border: 1px solid #374151;
         }
+        .content-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .content-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .content-tab.active {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            border: 1px solid #a855f7;
+        }
+        .content-tab:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #9ca3af;
+        }
+        .content-tab:not(.active):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .textarea-container {
+            display: none;
+        }
+        .textarea-container.active {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
@@ -87,10 +116,40 @@
                     </h2>
 
                     <form id="analyzeForm" class="space-y-4">
+                        <!-- Content Type Tabs -->
+                        <div class="content-tabs">
+                            <div class="content-tab active" data-target="adCopyContainer">Ad Copy</div>
+                            <div class="content-tab" data-target="videoScriptContainer">Video Script</div>
+                            <div class="content-tab" data-target="bothContainer">Both</div>
+                        </div>
+
                         <!-- Ad Copy -->
-                        <div>
-                            <label class="field-label">Ad Copy <span class="text-red-400">*</span></label>
+                        <div id="adCopyContainer" class="textarea-container active">
+                            <label class="field-label">Ad Copy</label>
                             <textarea id="adCopy" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Paste your ad headline and body copy here..."></textarea>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-xs text-gray-500">Min 10 characters</span>
+                                <span id="adCopyCount" class="text-xs text-gray-500">0 chars</span>
+                            </div>
+                        </div>
+
+                        <!-- Video Script -->
+                        <div id="videoScriptContainer" class="textarea-container">
+                            <label class="field-label">Video Script</label>
+                            <textarea id="videoScript" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="[HOOK 0-3s] Your opening line that stops the scroll...&#10;&#10;[BODY 3-15s] Main message with benefits...&#10;&#10;[CTA 15-30s] Call to action..."></textarea>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-xs text-gray-500">Timecode format recommended</span>
+                                <span id="videoScriptCount" class="text-xs text-gray-500">0 words</span>
+                            </div>
+                        </div>
+
+                        <!-- Both -->
+                        <div id="bothContainer" class="textarea-container">
+                            <label class="field-label">Ad Copy + Video Script</label>
+                            <div class="space-y-3">
+                                <textarea id="adCopyBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Ad copy text..."></textarea>
+                                <textarea id="videoScriptBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Video script with timecodes..."></textarea>
+                            </div>
                         </div>
 
                         <!-- Platform & Industry -->
@@ -327,6 +386,7 @@
                             <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="rewrite">Rewrite</button>
                             <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="personas">Personas</button>
                             <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="roi">ROI</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="video">Video</button>
                         </div>
 
                         <!-- Tab Content -->
@@ -367,6 +427,11 @@
                             <!-- ROI Tab -->
                             <div id="tab-roi" class="tab-content hidden space-y-4">
                                 <div id="roiAnalysis" class="space-y-4"></div>
+                            </div>
+
+                            <!-- Video Tab -->
+                            <div id="tab-video" class="tab-content hidden space-y-4">
+                                <div id="videoAnalysis" class="space-y-4"></div>
                             </div>
                         </div>
                     </div>
