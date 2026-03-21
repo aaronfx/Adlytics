@@ -1,6 +1,11 @@
 /**
- * ADLYTICS - Enhanced Analyzer JavaScript
- * Handles detailed audience targeting with dependent dropdowns and video script support
+ * ADLYTICS - Enhanced Analyzer JavaScript v4.0
+ * Handles detailed audience targeting, video script support, and v4.0 features:
+ * - Line-by-line analysis
+ * - Ad variant generation and ranking
+ * - Winner prediction
+ * - ROI comparison
+ * - Run decision engine
  */
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
@@ -382,12 +387,41 @@ function renderResults(data) {
         return;
     }
     resultsContent.classList.remove('hidden');
+    
+    // Run Decision (v4.0) - Display at top
+    const runDecisionDiv = document.getElementById('runDecision');
+    if (runDecisionDiv) {
+        const decision = analysis.run_decision || {};
+        const shouldRun = decision.should_run || 'Only after fixes';
+        const decisionColor = shouldRun === 'Yes' ? 'green' : shouldRun === 'No' ? 'red' : 'yellow';
+        
+        runDecisionDiv.innerHTML = `
+            <div class="p-4 bg-${decisionColor}-500/10 border border-${decisionColor}-500/20 rounded-xl">
+                <div class="flex items-center space-x-3 mb-3">
+                    <span class="text-2xl">${shouldRun === 'Yes' ? '✅' : shouldRun === 'No' ? '🚫' : '⚠️'}</span>
+                    <div>
+                        <h4 class="font-semibold text-${decisionColor}-400">Run Decision</h4>
+                        <p class="text-xs text-gray-400">Risk Level: ${decision.risk_level || 'Unknown'}</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-gray-900/50 rounded-lg mb-3">
+                    <span class="text-xs text-gray-500">VERDICT:</span>
+                    <p class="text-lg font-bold text-${decisionColor}-400 mt-1">${shouldRun}</p>
+                </div>
+                <p class="text-sm text-gray-300">${decision.reason || 'No decision reason provided'}</p>
+            </div>
+        `;
+    }
+
+    // Audience Summary
     const audienceSummary = document.getElementById('audienceSummary');
     const audienceParsed = document.getElementById('audienceParsed');
     if (data.audience_parsed && audienceParsed && audienceSummary) {
         audienceParsed.textContent = data.audience_parsed;
         audienceSummary.classList.remove('hidden');
     }
+
+    // Overall Score
     const overall = analysis.scores?.overall || 0;
     const scoreEl = document.getElementById('overallScore');
     if (scoreEl) scoreEl.textContent = overall;
@@ -402,6 +436,8 @@ function renderResults(data) {
             else circle.style.stroke = '#ef4444';
         }, 100);
     }
+
+    // Verdict Badge
     const verdict = analysis.behavior_summary?.verdict || 'Unknown';
     const badge = document.getElementById('verdictBadge');
     if (badge) {
@@ -414,12 +450,16 @@ function renderResults(data) {
             badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
         }
     }
+
+    // Primary Reason & Metrics
     const primaryReasonEl = document.getElementById('primaryReason');
     if (primaryReasonEl) primaryReasonEl.textContent = analysis.behavior_summary?.primary_reason || '';
     const launchReadinessEl = document.getElementById('launchReadiness');
     if (launchReadinessEl) launchReadinessEl.textContent = analysis.behavior_summary?.launch_readiness || '0%';
     const failureRiskEl = document.getElementById('failureRisk');
     if (failureRiskEl) failureRiskEl.textContent = analysis.behavior_summary?.failure_risk || '0%';
+
+    // Detailed Scores
     const scoresGrid = document.getElementById('scoresGrid');
     if (scoresGrid) {
         const scores = analysis.scores || {};
@@ -446,6 +486,8 @@ function renderResults(data) {
             `;
         }).join('');
     }
+
+    // Phase Breakdown
     const phaseDiv = document.getElementById('phaseBreakdown');
     if (phaseDiv) {
         const phases = analysis.phase_breakdown || {};
@@ -472,6 +514,8 @@ function renderResults(data) {
             </div>
         `;
     }
+
+    // Platform Specific
     const platformDiv = document.getElementById('platformSpecific');
     if (platformDiv) {
         const platform = analysis.platform_specific || {};
@@ -488,6 +532,43 @@ function renderResults(data) {
             </div>
         `;
     }
+
+    // Line-by-Line Analysis (v4.0)
+    const lineByLineDiv = document.getElementById('lineByLineAnalysis');
+    if (lineByLineDiv) {
+        const lines = analysis.line_by_line_analysis || [];
+        if (lines.length > 0) {
+            lineByLineDiv.innerHTML = lines.map((line, i) => `
+                <div class="p-4 bg-gray-900/50 rounded-xl border-l-4 ${line.issue ? 'border-red-500' : 'border-green-500'} line-analysis-item">
+                    <div class="flex items-start justify-between mb-2">
+                        <span class="text-xs text-gray-500 font-mono">Line ${i + 1}</span>
+                        ${line.impact ? `<span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">${line.impact}</span>` : ''}
+                    </div>
+                    <p class="text-sm font-medium mb-2 text-white">"${line.line || ''}"</p>
+                    ${line.issue ? `
+                        <div class="space-y-2">
+                            <div class="p-2 bg-red-500/10 rounded-lg">
+                                <span class="text-xs text-red-400 font-medium">ISSUE:</span>
+                                <p class="text-sm text-gray-300">${line.issue}</p>
+                            </div>
+                            <div class="p-2 bg-gray-800 rounded-lg">
+                                <span class="text-xs text-gray-500">WHY IT FAILS:</span>
+                                <p class="text-sm text-gray-400">${line.why_it_fails || ''}</p>
+                            </div>
+                            <div class="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                                <span class="text-xs text-green-400 font-medium">✓ PRECISE FIX:</span>
+                                <p class="text-sm text-gray-300">${line.precise_fix || ''}</p>
+                            </div>
+                        </div>
+                    ` : '<span class="text-xs text-green-400">✓ No issues detected</span>'}
+                </div>
+            `).join('');
+        } else {
+            lineByLineDiv.innerHTML = '<p class="text-gray-500">No line-by-line analysis available.</p>';
+        }
+    }
+
+    // Critical Weaknesses
     const weaknessesDiv = document.getElementById('criticalWeaknesses');
     if (weaknessesDiv) {
         const weaknesses = analysis.critical_weaknesses || [];
@@ -509,6 +590,8 @@ function renderResults(data) {
             weaknessesDiv.innerHTML = '<p class="text-gray-500">No critical weaknesses detected.</p>';
         }
     }
+
+    // Improvements
     const improvementsDiv = document.getElementById('improvements');
     if (improvementsDiv) {
         const improvements = analysis.improvements || [];
@@ -523,6 +606,8 @@ function renderResults(data) {
             improvementsDiv.innerHTML = '';
         }
     }
+
+    // Improved Ad
     const improved = analysis.improved_ad || {};
     const improvedContent = document.getElementById('improvedContent');
     if (improvedContent) {
@@ -549,6 +634,8 @@ function renderResults(data) {
             </div>
         `;
     }
+
+    // Variations
     const variations = analysis.variations || {};
     const powerHooks = variations.power_hooks || [];
     const powerHooksDiv = document.getElementById('powerHooks');
@@ -564,6 +651,8 @@ function renderResults(data) {
             <span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">${cta}</span>
         `).join('') || '<p class="text-gray-500 text-sm">No CTAs generated.</p>';
     }
+
+    // Persona Reactions
     const personasDiv = document.getElementById('personaReactions');
     if (personasDiv) {
         const personas = analysis.persona_reactions || [];
@@ -578,6 +667,8 @@ function renderResults(data) {
             </div>
         `).join('') || '<p class="text-gray-500">No persona data available.</p>';
     }
+
+    // ROI Analysis
     const roiDiv = document.getElementById('roiAnalysis');
     if (roiDiv) {
         const roi = analysis.roi_analysis || {};
@@ -638,42 +729,187 @@ function renderResults(data) {
                 <h4 class="font-semibold text-red-400 mb-2">⚠️ Biggest Financial Risk</h4>
                 <p class="text-sm">${roi.biggest_financial_risk || 'N/A'}</p>
             </div>
+            ${roi.optimization_priority ? `
+            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                <h4 class="font-semibold text-blue-400 mb-2">Optimization Priority</h4>
+                <p class="text-sm">${roi.optimization_priority}</p>
+            </div>
+            ` : ''}
         `;
     }
+
+    // Video Analysis
     const videoDiv = document.getElementById('videoAnalysis');
     if (videoDiv) {
         const video = analysis.video_execution_analysis || {};
         videoDiv.innerHTML = `
             <div class="p-4 bg-gray-900/50 rounded-xl">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-sm text-gray-500">Video Script Detected</span>
-                    <span class="px-2 py-1 rounded text-xs font-medium ${video.is_video_script === 'Yes' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}">${video.is_video_script || 'No'}</span>
-                </div>
-                <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <span class="text-xs text-purple-400 font-medium">Hook Delivery Strength</span>
+                        <span class="text-xs text-purple-400 font-medium">Hook Delivery</span>
                         <p class="text-sm mt-1">${video.hook_delivery_strength || 'N/A'}</p>
                     </div>
                     <div>
-                        <span class="text-xs text-blue-400 font-medium">Speech Flow Quality</span>
+                        <span class="text-xs text-blue-400 font-medium">Speech Flow</span>
                         <p class="text-sm mt-1">${video.speech_flow_quality || 'N/A'}</p>
                     </div>
                     <div>
-                        <span class="text-xs text-yellow-400 font-medium">Visual Dependency</span>
-                        <p class="text-sm mt-1">${video.visual_dependency || 'N/A'}</p>
+                        <span class="text-xs text-yellow-400 font-medium">Pattern Interrupt</span>
+                        <p class="text-sm mt-1">${video.pattern_interrupt_strength || 'N/A'}</p>
                     </div>
                     <div>
-                        <span class="text-xs text-red-400 font-medium">Delivery Risk</span>
-                        <p class="text-sm mt-1">${video.delivery_risk || 'N/A'}</p>
+                        <span class="text-xs text-pink-400 font-medium">Visual Dependency</span>
+                        <p class="text-sm mt-1">${video.visual_dependency || 'N/A'}</p>
                     </div>
-                    <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <span class="text-red-400 font-medium text-xs">⚠️ Biggest Execution Gap</span>
-                        <p class="text-sm mt-1">${video.biggest_execution_gap || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-3">
+                    <span class="text-red-400 font-medium text-xs">⚠️ Delivery Risk</span>
+                    <p class="text-sm mt-1">${video.delivery_risk || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-3">
+                    <span class="text-green-400 font-medium text-xs">✓ Recommended Format</span>
+                    <p class="text-sm mt-1">${video.recommended_format || 'talking head'}</p>
+                </div>
+                ${video.execution_gaps?.length ? `
+                <div class="space-y-2">
+                    <span class="text-xs text-gray-500">Execution Gaps:</span>
+                    ${video.execution_gaps.map(gap => `
+                        <div class="p-2 bg-gray-800 rounded text-sm text-gray-400">• ${gap}</div>
+                    `).join('')}
+                </div>
+                ` : ''}
+                ${video.exact_fix_direction ? `
+                <div class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <span class="text-blue-400 font-medium text-xs">Exact Fix Direction</span>
+                    <p class="text-sm mt-1">${video.exact_fix_direction}</p>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // Winner Prediction (v4.0)
+    const winnerDiv = document.getElementById('winnerPrediction');
+    if (winnerDiv) {
+        const winner = analysis.winner_prediction || {};
+        winnerDiv.innerHTML = `
+            <div class="p-4 bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl border border-green-500/20">
+                <div class="flex items-center space-x-3 mb-3">
+                    <span class="text-2xl">🏆</span>
+                    <div>
+                        <h4 class="font-semibold text-green-400">Winner Prediction</h4>
+                        <p class="text-xs text-gray-400">Confidence: ${winner.confidence || 'Unknown'}</p>
                     </div>
-                    <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <span class="text-green-400 font-medium text-xs">✓ Recommended Format</span>
-                        <p class="text-sm mt-1">${video.recommended_format || 'talking head'}</p>
-                    </div>
+                </div>
+                <p class="text-sm text-gray-300 mb-3">${winner.reason || 'No prediction available'}</p>
+                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                    <span class="text-sm text-gray-400">Best Variant ID</span>
+                    <span class="text-lg font-bold text-green-400">#${winner.best_variant_id || 'N/A'}</span>
+                </div>
+                ${winner.expected_lift ? `
+                <div class="mt-3 p-3 bg-green-500/20 rounded-lg text-center">
+                    <span class="text-green-400 font-medium">Expected Lift: ${winner.expected_lift}</span>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // Ad Variants (v4.0)
+    const variantsDiv = document.getElementById('adVariants');
+    if (variantsDiv) {
+        const variants = analysis.ad_variants || [];
+        if (variants.length > 0) {
+            variantsDiv.innerHTML = `
+                <div class="space-y-4">
+                    ${variants.map((v, i) => `
+                        <div class="variant-card p-4 bg-gray-900/50 rounded-xl border ${v.id === analysis.winner_prediction?.best_variant_id ? 'border-green-500/50 bg-green-500/5' : 'border-white/5'}">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <span class="w-8 h-8 rounded-full ${v.id === analysis.winner_prediction?.best_variant_id ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'} flex items-center justify-center font-bold text-sm">${v.id}</span>
+                                    <div>
+                                        <h4 class="font-semibold ${v.id === analysis.winner_prediction?.best_variant_id ? 'text-green-400' : 'text-white'}">${v.angle || `Variant ${v.id}`}</h4>
+                                        <span class="text-xs text-gray-500">ROI: ${v.roi_potential || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-lg font-bold ${v.predicted_score >= 70 ? 'text-green-400' : v.predicted_score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${v.predicted_score || 0}</span>
+                                    <p class="text-xs text-gray-500">predicted score</p>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-gray-800 rounded-lg mb-3">
+                                <span class="text-xs text-purple-400 font-medium">HOOK:</span>
+                                <p class="text-sm mt-1 italic">"${v.hook || ''}"</p>
+                            </div>
+                            <div class="p-3 bg-gray-800 rounded-lg mb-3">
+                                <span class="text-xs text-gray-500">FULL COPY:</span>
+                                <p class="text-sm mt-1 text-gray-300">${v.copy || ''}</p>
+                            </div>
+                            <p class="text-xs text-gray-400">${v.reason || ''}</p>
+                            ${v.id === analysis.winner_prediction?.best_variant_id ? `
+                            <div class="mt-3 p-2 bg-green-500/20 rounded-lg text-center">
+                                <span class="text-green-400 text-sm font-medium">🏆 PREDICTED WINNER</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            variantsDiv.innerHTML = '<p class="text-gray-500">No ad variants generated.</p>';
+        }
+    }
+
+    // ROI Comparison (v4.0)
+    const roiCompareDiv = document.getElementById('roiComparison');
+    if (roiCompareDiv) {
+        const comparisons = analysis.roi_comparison || [];
+        if (comparisons.length > 0) {
+            roiCompareDiv.innerHTML = `
+                <div class="space-y-3">
+                    ${comparisons.map(c => `
+                        <div class="p-3 bg-gray-900/50 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-3">
+                                    <span class="w-6 h-6 rounded-full bg-gray-700 text-gray-400 flex items-center justify-center text-xs font-bold">${c.variant_id}</span>
+                                    <span class="text-sm font-medium">Variant ${c.variant_id}</span>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm ${c.roi_potential?.includes('High') ? 'text-green-400' : 'text-yellow-400'}">${c.roi_potential || 'Unknown'}</p>
+                                    <p class="text-xs text-gray-500">Risk: ${c.risk || 'Unknown'}</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400">${c.summary || ''}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            roiCompareDiv.innerHTML = '<p class="text-gray-500">No ROI comparison available.</p>';
+        }
+    }
+
+    // Competitor Advantage (v4.0)
+    const competitorDiv = document.getElementById('competitorAdvantage');
+    if (competitorDiv) {
+        const comp = analysis.competitor_advantage || {};
+        competitorDiv.innerHTML = `
+            <div class="space-y-4">
+                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <span class="text-xs text-red-400 font-medium">Why Users Choose Competitor:</span>
+                    <p class="text-sm mt-1 text-gray-300">${comp.why_user_might_choose_competitor || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <span class="text-xs text-yellow-400 font-medium">What They Do Better:</span>
+                    <p class="text-sm mt-1 text-gray-300">${comp.what_competitor_is_doing_better || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-gray-800 rounded-lg">
+                    <span class="text-xs text-gray-500">Execution Difference:</span>
+                    <p class="text-sm mt-1 text-gray-400">${comp.execution_difference || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <span class="text-xs text-green-400 font-medium">✓ How to Outperform:</span>
+                    <p class="text-sm mt-1 text-gray-300">${comp.how_to_outperform || 'N/A'}</p>
                 </div>
             </div>
         `;
@@ -696,4 +932,4 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-console.log('ADLYTICS Enhanced Analyzer loaded');
+console.log('ADLYTICS v4.0 Enhanced Analyzer loaded');
