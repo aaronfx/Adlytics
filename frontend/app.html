@@ -1,1204 +1,503 @@
-/**
- * ADLYTICS v4.0 - EXACT SIMULATION MATCH
- * 100% Implementation of your document specifications
- */
-
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000/api' 
-    : '/api';
-
-let audienceConfig = null;
-let currentContentMode = 'adCopy';
-
-const form = document.getElementById('analyzeForm');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const loadingState = document.getElementById('loadingState');
-const emptyState = document.getElementById('emptyState');
-const resultsContent = document.getElementById('resultsContent');
-const filePreview = document.getElementById('filePreview');
-
-// ============================================
-// EXACT SIMULATION STRUCTURE - SAFE MERGE
-// ============================================
-function mergeAnalysis(original, improved) {
-    if (!improved) return original;
-
-    return {
-        // Keep full original dataset
-        ...original,
-
-        // Override with improved where available
-        ...improved,
-
-        // DEEP MERGE for nested objects (CRITICAL)
-        scores: improved.scores ? { ...original.scores, ...improved.scores } : original.scores,
-
-        roi_analysis: improved.roi_analysis ? { 
-            ...original.roi_analysis, 
-            ...improved.roi_analysis 
-        } : original.roi_analysis,
-
-        // Use improved summary/decision if available
-        behavior_summary: improved.behavior_summary || original.behavior_summary,
-        run_decision: improved.run_decision || original.run_decision,
-
-        // FALLBACK to original for these (improved is partial)
-        phase_breakdown: improved.phase_breakdown || original.phase_breakdown,
-        platform_specific: improved.platform_specific || original.platform_specific,
-        line_by_line_analysis: improved.line_by_line_analysis || original.line_by_line_analysis,
-        critical_weaknesses: improved.critical_weaknesses || original.critical_weaknesses,
-        improvements: improved.improvements || original.improvements,
-        variations: improved.variations || original.variations,
-        persona_reactions: improved.persona_reactions || original.persona_reactions,
-        video_execution_analysis: improved.video_execution_analysis || original.video_execution_analysis,
-        winner_prediction: improved.winner_prediction || original.winner_prediction,
-        ad_variants: improved.ad_variants || original.ad_variants,
-        roi_comparison: improved.roi_comparison || original.roi_comparison,
-        competitor_advantage: improved.competitor_advantage || original.competitor_advantage,
-
-        // Preserve original content
-        improved_ad: original.improved_ad,
-        audience_parsed: original.audience_parsed
-    };
-}
-
-// ============================================
-// UI INTERACTIVITY - EVENT REBINDING
-// ============================================
-function rebindUIEvents() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    if (tabBtns.length > 0) {
-        tabBtns.forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('tab-active');
-                    b.classList.add('text-gray-400');
-                });
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                btn.classList.add('tab-active');
-                btn.classList.remove('text-gray-400');
-                const tabId = `tab-${btn.dataset.tab}`;
-                const tabContent = document.getElementById(tabId);
-                if (tabContent) tabContent.classList.remove('hidden');
-            };
-        });
-    }
-
-    const selects = document.querySelectorAll('select');
-    if (selects.length > 0) {
-        selects.forEach(select => {
-            select.onchange = (e) => console.log('Selection changed:', e.target.value);
-        });
-    }
-
-    const actionBtns = document.querySelectorAll('[data-action]');
-    if (actionBtns.length > 0) {
-        actionBtns.forEach(btn => {
-            btn.onclick = () => console.log('Action triggered:', btn.dataset.action);
-        });
-    }
-}
-
-// ============================================
-// INITIALIZATION
-// ============================================
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadAudienceConfig();
-    await loadPlatforms();
-    await loadIndustries();
-    setupEventListeners();
-    setupContentTabs();
-    setupTextareaCounters();
-});
-
-function setupContentTabs() {
-    const tabs = document.querySelectorAll('.content-tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const target = tab.dataset.target;
-            document.querySelectorAll('.textarea-container').forEach(c => c.classList.remove('active'));
-            document.getElementById(target).classList.add('active');
-            currentContentMode = target.replace('Container', '');
-        });
-    });
-}
-
-function setupTextareaCounters() {
-    const adCopy = document.getElementById('adCopy');
-    const videoScript = document.getElementById('videoScript');
-    if (adCopy) {
-        adCopy.addEventListener('input', (e) => {
-            document.getElementById('adCopyCount').textContent = `${e.target.value.length} chars`;
-        });
-    }
-    if (videoScript) {
-        videoScript.addEventListener('input', (e) => {
-            const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-            const readTime = Math.ceil(words / 3);
-            document.getElementById('videoScriptCount').textContent = `${words} words (~${readTime}s read)`;
-        });
-    }
-}
-
-async function loadAudienceConfig() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/audience-config`);
-        if (!response.ok) throw new Error('Failed to load audience config');
-        audienceConfig = await response.json();
-        populateAudienceFields();
-    } catch (error) {
-        console.error('Error loading audience config:', error);
-        populateBasicAudienceOptions();
-    }
-}
-
-function populateAudienceFields() {
-    if (!audienceConfig) return;
-
-    const countrySelect = document.getElementById('audienceCountry');
-    if (countrySelect && audienceConfig.countries) {
-        audienceConfig.countries.forEach(country => {
-            const option = document.createElement('option');
-            option.value = country.code;
-            option.textContent = `${country.name} (${country.currency})`;
-            option.dataset.regions = JSON.stringify(country.regions || []);
-            option.dataset.currency = country.currency;
-            countrySelect.appendChild(option);
-        });
-    }
-
-    const ageSelect = document.getElementById('audienceAge');
-    if (ageSelect && audienceConfig.age_brackets) {
-        audienceConfig.age_brackets.forEach(age => {
-            const option = document.createElement('option');
-            option.value = age.value;
-            option.textContent = age.label;
-            option.dataset.traits = age.traits;
-            ageSelect.appendChild(option);
-        });
-    }
-
-    const incomeSelect = document.getElementById('audienceIncome');
-    if (incomeSelect && audienceConfig.income_levels) {
-        audienceConfig.income_levels.forEach(income => {
-            const option = document.createElement('option');
-            option.value = income.value;
-            option.textContent = income.label;
-            option.dataset.description = income.description;
-            incomeSelect.appendChild(option);
-        });
-    }
-
-    const eduSelect = document.getElementById('audienceEducation');
-    if (eduSelect && audienceConfig.education_levels) {
-        audienceConfig.education_levels.forEach(edu => {
-            const option = document.createElement('option');
-            option.value = edu.value;
-            option.textContent = edu.label;
-            eduSelect.appendChild(option);
-        });
-    }
-
-    const occSelect = document.getElementById('audienceOccupation');
-    if (occSelect && audienceConfig.occupations) {
-        audienceConfig.occupations.forEach(occ => {
-            const option = document.createElement('option');
-            option.value = occ.value;
-            option.textContent = occ.label;
-            option.dataset.painPoints = occ.pain_points;
-            occSelect.appendChild(option);
-        });
-    }
-
-    const psychSelect = document.getElementById('audiencePsychographic');
-    if (psychSelect && audienceConfig.psychographics) {
-        audienceConfig.psychographics.forEach(psych => {
-            const option = document.createElement('option');
-            option.value = psych.value;
-            option.textContent = psych.label;
-            option.dataset.traits = psych.traits;
-            psychSelect.appendChild(option);
-        });
-    }
-
-    const painSelect = document.getElementById('audiencePainPoint');
-    if (painSelect && audienceConfig.pain_points) {
-        audienceConfig.pain_points.forEach(pain => {
-            const option = document.createElement('option');
-            option.value = pain.value;
-            option.textContent = pain.label;
-            option.dataset.description = pain.description;
-            painSelect.appendChild(option);
-        });
-    }
-}
-
-function populateBasicAudienceOptions() {
-    const countries = [
-        {code: 'nigeria', name: 'Nigeria', currency: '₦', regions: ['Lagos', 'Abuja', 'Port Harcourt']},
-        {code: 'us', name: 'United States', currency: '$', regions: ['New York', 'California', 'Texas']},
-        {code: 'uk', name: 'United Kingdom', currency: '£', regions: ['London', 'Manchester']}
-    ];
-    const countrySelect = document.getElementById('audienceCountry');
-    if (countrySelect) {
-        countries.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.code;
-            option.textContent = `${c.name} (${c.currency})`;
-            option.dataset.regions = JSON.stringify(c.regions);
-            countrySelect.appendChild(option);
-        });
-    }
-}
-
-async function loadPlatforms() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/platforms`);
-        if (!response.ok) return;
-        const data = await response.json();
-        const select = document.getElementById('platform');
-        if (!select) return;
-        data.platforms.forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.id;
-            option.textContent = p.name;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading platforms:', error);
-    }
-}
-
-async function loadIndustries() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/industries`);
-        if (!response.ok) return;
-        const data = await response.json();
-        const select = document.getElementById('industry');
-        if (!select) return;
-        data.industries.forEach(i => {
-            const option = document.createElement('option');
-            option.value = i.id;
-            option.textContent = i.name;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading industries:', error);
-    }
-}
-
-function setupEventListeners() {
-    const countrySelect = document.getElementById('audienceCountry');
-    const regionSelect = document.getElementById('audienceRegion');
-    if (countrySelect && regionSelect) {
-        countrySelect.addEventListener('change', (e) => {
-            const selected = e.target.selectedOptions[0];
-            if (!selected) return;
-            const regions = JSON.parse(selected.dataset.regions || '[]');
-            regionSelect.innerHTML = '<option value="">Select Region</option>';
-            if (regions.length > 0) {
-                regionSelect.disabled = false;
-                regions.forEach(region => {
-                    const option = document.createElement('option');
-                    option.value = region.toLowerCase().replace(/\s+/g, '_');
-                    option.textContent = region;
-                    regionSelect.appendChild(option);
-                });
-            } else {
-                regionSelect.disabled = true;
-            }
-        });
-    }
-
-    const ageSelect = document.getElementById('audienceAge');
-    const ageTraits = document.getElementById('ageTraits');
-    if (ageSelect && ageTraits) {
-        ageSelect.addEventListener('change', (e) => {
-            const traits = e.target.selectedOptions[0]?.dataset.traits;
-            if (traits) {
-                ageTraits.textContent = traits;
-                ageTraits.classList.remove('hidden');
-            } else {
-                ageTraits.classList.add('hidden');
-            }
-        });
-    }
-
-    const occSelect = document.getElementById('audienceOccupation');
-    const occPainPoints = document.getElementById('occupationPainPoints');
-    if (occSelect && occPainPoints) {
-        occSelect.addEventListener('change', (e) => {
-            const painPoints = e.target.selectedOptions[0]?.dataset.painPoints;
-            if (painPoints) {
-                occPainPoints.textContent = `Pain points: ${painPoints}`;
-                occPainPoints.classList.remove('hidden');
-            } else {
-                occPainPoints.classList.add('hidden');
-            }
-        });
-    }
-
-    const imageUpload = document.getElementById('imageUpload');
-    const videoUpload = document.getElementById('videoUpload');
-    let selectedImage = null;
-    let selectedVideo = null;
-
-    if (imageUpload) {
-        imageUpload.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedImage = e.target.files[0];
-                selectedVideo = null;
-                updateFilePreview(selectedImage, 'image');
-            }
-        });
-    }
-    if (videoUpload) {
-        videoUpload.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedVideo = e.target.files[0];
-                selectedImage = null;
-                updateFilePreview(selectedVideo, 'video');
-            }
-        });
-    }
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleSubmit(selectedImage, selectedVideo);
-        });
-    }
-}
-
-function updateFilePreview(file, type) {
-    const icon = type === 'image' ? '📷' : '🎥';
-    filePreview.textContent = `${icon} ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`;
-    filePreview.classList.remove('hidden');
-}
-
-function getContentValues() {
-    let adCopy = '';
-    let videoScript = '';
-    if (currentContentMode === 'adCopy' || currentContentMode === 'both') {
-        const adCopyEl = document.getElementById('adCopy');
-        const adCopyBothEl = document.getElementById('adCopyBoth');
-        adCopy = adCopyEl?.value?.trim() || adCopyBothEl?.value?.trim() || '';
-    }
-    if (currentContentMode === 'videoScript' || currentContentMode === 'both') {
-        const videoScriptEl = document.getElementById('videoScript');
-        const videoScriptBothEl = document.getElementById('videoScriptBoth');
-        videoScript = videoScriptEl?.value?.trim() || videoScriptBothEl?.value?.trim() || '';
-    }
-    return { adCopy, videoScript };
-}
-
-async function handleSubmit(selectedImage, selectedVideo) {
-    const { adCopy, videoScript } = getContentValues();
-    const platform = document.getElementById('platform')?.value;
-    const country = document.getElementById('audienceCountry')?.value;
-    const age = document.getElementById('audienceAge')?.value;
-    const industry = document.getElementById('industry')?.value;
-
-    if (!adCopy && !videoScript) { alert('Please enter ad copy or video script'); return; }
-    if (!platform) { alert('Please select platform'); return; }
-    if (!country) { alert('Please select country'); return; }
-    if (!age) { alert('Please select age bracket'); return; }
-    if (!industry) { alert('Please select industry'); return; }
-
-    emptyState.classList.add('hidden');
-    resultsContent.classList.add('hidden');
-    loadingState.classList.remove('hidden');
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = 'Analyzing...';
-
-    try {
-        const formData = new FormData();
-        if (adCopy) formData.append('ad_copy', adCopy);
-        if (videoScript) formData.append('video_script', videoScript);
-        formData.append('platform', platform);
-        formData.append('audience_country', country);
-        formData.append('audience_age', age);
-        formData.append('industry', industry);
-        formData.append('objective', document.getElementById('objective')?.value || 'conversions');
-
-        const region = document.getElementById('audienceRegion')?.value;
-        const gender = document.getElementById('audienceGender')?.value;
-        const income = document.getElementById('audienceIncome')?.value;
-        const education = document.getElementById('audienceEducation')?.value;
-        const occupation = document.getElementById('audienceOccupation')?.value;
-        const psychographic = document.getElementById('audiencePsychographic')?.value;
-        const painPoint = document.getElementById('audiencePainPoint')?.value;
-        const techSavviness = document.getElementById('techSavviness')?.value;
-        const purchaseBehavior = document.getElementById('purchaseBehavior')?.value;
-
-        if (region) formData.append('audience_region', region);
-        if (gender) formData.append('audience_gender', gender);
-        if (income) formData.append('audience_income', income);
-        if (education) formData.append('audience_education', education);
-        if (occupation) formData.append('audience_occupation', occupation);
-        if (psychographic) formData.append('audience_psychographic', psychographic);
-        if (painPoint) formData.append('audience_pain_point', painPoint);
-        if (techSavviness) formData.append('tech_savviness', techSavviness);
-        if (purchaseBehavior) formData.append('purchase_behavior', purchaseBehavior);
-        if (selectedImage) formData.append('image', selectedImage);
-        if (selectedVideo) formData.append('video', selectedVideo);
-
-        const response = await fetch(`${API_BASE_URL}/analyze`, {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        if (data.success && data.analysis) {
-            renderResults(data);
-        } else {
-            throw new Error(data.error || 'Analysis returned unsuccessful');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADLYTICS v4.0 — AI Ad Pre-Validation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+        .score-ring { 
+            background: conic-gradient(from 0deg, #10b981 var(--score), #374151 var(--score));
         }
-    } catch (error) {
-        console.error('Analysis error:', error);
-        alert(`Error: ${error.message}`);
-        emptyState.classList.remove('hidden');
-    } finally {
-        loadingState.classList.add('hidden');
-        analyzeBtn.disabled = false;
-        analyzeBtn.textContent = 'Analyze Ad →';
-    }
-}
-
-// ============================================
-// RENDER IMPROVED ANALYSIS (Re-analysis results)
-// ============================================
-function renderImprovedAnalysis(data) {
-    const container = document.getElementById('improvedAnalysis');
-    if (!container) return;
-
-    const score = data?.scores?.overall ?? 'N/A';
-    const roi = data?.roi_analysis?.roi_potential ?? 'Unknown';
-    const decision = data?.run_decision?.should_run ?? 'Unknown';
-    const verdict = data?.behavior_summary?.verdict ?? 'No assessment';
-    const readiness = data?.behavior_summary?.launch_readiness ?? '0%';
-
-    const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
-    const decisionColor = decision === 'Yes' ? 'text-green-400' : decision === 'No' ? 'text-red-400' : 'text-yellow-400';
-    const roiColor = roi?.includes('High') ? 'text-green-400' : 'text-yellow-400';
-
-    container.innerHTML = `
-        <div class="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-xl p-5 mt-4">
-            <div class="flex items-center space-x-2 mb-4">
-                <span class="text-2xl">✨</span>
-                <h3 class="text-green-400 text-lg font-bold">Improved Ad Performance (Re-analyzed)</h3>
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .tab-active {
+            border-bottom: 2px solid #a855f7;
+            color: #a855f7;
+        }
+        .form-section {
+            border-left: 3px solid #a855f7;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .dependent-field {
+            transition: all 0.3s ease;
+        }
+        .field-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            margin-bottom: 0.25rem;
+        }
+        .info-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .info-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 10;
+            border: 1px solid #374151;
+        }
+        .content-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .content-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .content-tab.active {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            border: 1px solid #a855f7;
+        }
+        .content-tab:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #9ca3af;
+        }
+        .content-tab:not(.active):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .textarea-container {
+            display: none;
+        }
+        .textarea-container.active {
+            display: block;
+        }
+        .variant-card {
+            transition: all 0.3s ease;
+        }
+        .variant-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(168, 85, 247, 0.1);
+        }
+        .line-analysis-item {
+            transition: all 0.2s ease;
+        }
+        .line-analysis-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center font-bold">A</div>
+                    <span class="text-xl font-bold tracking-tight">ADLYTICS <span class="text-purple-400 text-sm">v4.0</span></span>
+                </a>
+                <a href="index.html" class="text-gray-300 hover:text-white transition">← Back to Home</a>
             </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
-                    <span class="text-xs text-gray-500 block mb-1">New Score</span>
-                    <span class="text-2xl font-bold ${scoreColor}">${score}</span>
-                </div>
-                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
-                    <span class="text-xs text-gray-500 block mb-1">ROI Potential</span>
-                    <span class="text-lg font-bold ${roiColor}">${roi}</span>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-sm text-gray-400">Run Decision</span>
-                    <span class="font-semibold ${decisionColor}">${decision}</span>
-                </div>
-
-                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-sm text-gray-400">Launch Readiness</span>
-                    <span class="font-semibold text-white">${readiness}</span>
-                </div>
-
-                <div class="p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-xs text-gray-500 block mb-1">Verdict</span>
-                    <p class="text-sm text-gray-300">${verdict}</p>
-                </div>
-            </div>
-
-            ${data?._fallback ? `
-            <div class="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-center">
-                <span class="text-xs text-yellow-400">⚠️ Re-analysis used fallback values</span>
-            </div>
-            ` : ''}
         </div>
-    `;
-}
+    </nav>
 
-// ============================================
-// MAIN RENDER RESULTS - EXACT SIMULATION MATCH
-// ============================================
-function renderResults(data) {
-    const analysis = data.analysis;
-    if (!analysis) {
-        console.error('No analysis data received');
-        return;
-    }
+    <div class="pt-20 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Input Form -->
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3 text-purple-400">1</span>
+                        Your Ad
+                    </h2>
 
-    // EXACT SIMULATION STRUCTURE: Merge improved into primary
-    const improved = analysis.improved_ad_analysis || null;
-    const primary = mergeAnalysis(analysis, improved);
-    const isImprovedPrimary = !!improved;
+                    <form id="analyzeForm" class="space-y-4">
+                        <!-- Content Type Tabs -->
+                        <div class="content-tabs">
+                            <div class="content-tab active" data-target="adCopyContainer">Ad Copy</div>
+                            <div class="content-tab" data-target="videoScriptContainer">Video Script</div>
+                            <div class="content-tab" data-target="bothContainer">Both</div>
+                        </div>
 
-    console.log("PRIMARY SCORE:", primary?.scores?.overall);
-    console.log("ORIGINAL SCORE:", analysis?.scores?.overall);
-    console.log("IMPROVED EXISTS:", !!improved);
-
-    resultsContent.classList.remove('hidden');
-
-    // ============================================
-    // RUN DECISION BANNER (USES PRIMARY)
-    // ============================================
-    const runDecisionDiv = document.getElementById('runDecision');
-    if (runDecisionDiv) {
-        const decision = primary.run_decision || {};
-        const shouldRun = decision.should_run || 'Only after fixes';
-        const decisionColor = shouldRun === 'Yes' ? 'green' : shouldRun === 'No' ? 'red' : 'yellow';
-
-        runDecisionDiv.innerHTML = `
-            <div class="p-4 bg-${decisionColor}-500/10 border border-${decisionColor}-500/20 rounded-xl">
-                <div class="flex items-center space-x-3 mb-3">
-                    <span class="text-2xl">${shouldRun === 'Yes' ? '✅' : shouldRun === 'No' ? '🚫' : '⚠️'}</span>
-                    <div>
-                        <h4 class="font-semibold text-${decisionColor}-400">${isImprovedPrimary ? 'AI-Optimized Ad' : 'Original Ad'} - Run Decision</h4>
-                        <p class="text-xs text-gray-400">Risk Level: ${decision.risk_level || 'Unknown'}</p>
-                    </div>
-                </div>
-                <div class="p-3 bg-gray-900/50 rounded-lg mb-3">
-                    <span class="text-xs text-gray-500">VERDICT:</span>
-                    <p class="text-lg font-bold text-${decisionColor}-400 mt-1">${shouldRun}</p>
-                </div>
-                <p class="text-sm text-gray-300">${decision.reason || 'No decision reason provided'}</p>
-                ${isImprovedPrimary ? `
-                <div class="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <span class="text-xs text-blue-400">Baseline was: ${analysis.run_decision?.should_run || 'Unknown'}</span>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    // ============================================
-    // DECISION COMPARISON (UPGRADE LOGIC)
-    // ============================================
-    if (improved && improved.run_decision) {
-        const improvedDecision = improved.run_decision.should_run;
-        const originalDecision = analysis.run_decision?.should_run;
-
-        const upgradeContainer = document.getElementById('decisionUpgrade');
-
-        if (upgradeContainer) {
-            let message = '';
-            let color = 'yellow';
-
-            if (originalDecision === 'No' && improvedDecision === 'Yes') {
-                message = '🚀 Improved version is READY TO RUN';
-                color = 'green';
-            } else if (improvedDecision === 'Only after fixes') {
-                message = '⚠️ Improved version still needs optimization';
-                color = 'yellow';
-            } else {
-                message = 'ℹ️ No major improvement detected';
-                color = 'gray';
-            }
-
-            upgradeContainer.innerHTML = `
-                <div class="p-4 bg-${color}-500/10 border border-${color}-500/20 rounded-xl mt-4">
-                    <h4 class="font-semibold text-${color}-400 mb-1">AI Final Recommendation</h4>
-                    <p class="text-sm text-gray-300">${message}</p>
-                </div>
-            `;
-        }
-    }
-
-    // ============================================
-    // AUDIENCE SUMMARY
-    // ============================================
-    const audienceSummary = document.getElementById('audienceSummary');
-    const audienceParsed = document.getElementById('audienceParsed');
-    if (data.audience_parsed && audienceParsed && audienceSummary) {
-        audienceParsed.textContent = data.audience_parsed;
-        audienceSummary.classList.remove('hidden');
-    }
-
-    // ============================================
-    // OVERALL SCORE (USES PRIMARY)
-    // ============================================
-    const overall = primary.scores?.overall || 0;
-    const scoreEl = document.getElementById('overallScore');
-    if (scoreEl) scoreEl.textContent = overall;
-
-    const circle = document.getElementById('scoreCircle');
-    if (circle) {
-        const circumference = 251.2;
-        const offset = circumference - (overall / 100) * circumference;
-        setTimeout(() => {
-            circle.style.strokeDashoffset = offset;
-            if (overall >= 70) circle.style.stroke = '#10b981';
-            else if (overall >= 50) circle.style.stroke = '#f59e0b';
-            else circle.style.stroke = '#ef4444';
-        }, 100);
-    }
-
-    // ============================================
-    // VERDICT BADGE (USES PRIMARY)
-    // ============================================
-    const verdict = primary.behavior_summary?.verdict || 'Unknown';
-    const badge = document.getElementById('verdictBadge');
-    if (badge) {
-        badge.textContent = verdict;
-        if (verdict.includes('Explosive') || verdict.includes('Strong') || verdict.includes('Win')) {
-            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400';
-        } else if (verdict.includes('Moderate') || verdict.includes('Medium')) {
-            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400';
-        } else {
-            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
-        }
-    }
-
-    // ============================================
-    // PRIMARY REASON & METRICS (USES PRIMARY)
-    // ============================================
-    const primaryReasonEl = document.getElementById('primaryReason');
-    if (primaryReasonEl) primaryReasonEl.textContent = primary.behavior_summary?.primary_reason || '';
-
-    const launchReadinessEl = document.getElementById('launchReadiness');
-    if (launchReadinessEl) launchReadinessEl.textContent = primary.behavior_summary?.launch_readiness || '0%';
-
-    const failureRiskEl = document.getElementById('failureRisk');
-    if (failureRiskEl) failureRiskEl.textContent = primary.behavior_summary?.failure_risk || '0%';
-
-    // ============================================
-    // DETAILED SCORES (USES PRIMARY)
-    // ============================================
-    const scoresGrid = document.getElementById('scoresGrid');
-    if (scoresGrid) {
-        const scores = primary.scores || {};
-        const scoreItems = [
-            { key: 'hook_strength', label: 'Hook Strength' },
-            { key: 'clarity', label: 'Clarity' },
-            { key: 'trust_building', label: 'Trust Building' },
-            { key: 'cta_power', label: 'CTA Power' },
-            { key: 'audience_alignment', label: 'Audience Alignment' },
-            { key: 'cultural_resonance', label: 'Cultural Resonance' },
-            { key: 'decision_friction', label: 'Decision Friction (lower is better)' }
-        ];
-
-        scoresGrid.innerHTML = scoreItems.map(item => {
-            const value = scores[item.key] || 0;
-            const color = value >= 70 ? 'bg-green-500' : value >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-            return `
-                <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-400 w-32">${item.label}</span>
-                    <div class="flex-1 bg-gray-700 rounded-full h-2">
-                        <div class="${color} h-2 rounded-full transition-all duration-500" style="width: ${value}%"></div>
-                    </div>
-                    <span class="text-sm font-medium w-8">${value}</span>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // ============================================
-    // PHASE BREAKDOWN - BEHAVIORAL SIMULATION
-    // ============================================
-    const phaseDiv = document.getElementById('phaseBreakdown');
-    if (phaseDiv) {
-        const phases = primary.phase_breakdown || {};
-        phaseDiv.innerHTML = `
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-purple-400 font-medium">0-1s MICRO-STOP</span>
-                <p class="text-sm mt-1">${phases.micro_stop_0_1s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-pink-400 font-medium">1-3s HOOK</span>
-                <p class="text-sm mt-1">${phases.scroll_stop_1_2s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-blue-400 font-medium">3-15s BODY</span>
-                <p class="text-sm mt-1">${phases.attention_2_5s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-yellow-400 font-medium">15-30s CTA</span>
-                <p class="text-sm mt-1">${phases.trust_evaluation || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-green-400 font-medium">POST-CLICK</span>
-                <p class="text-sm mt-1">${phases.click_and_post_click || 'N/A'}</p>
-            </div>
-        `;
-    }
-
-    // ============================================
-    // PLATFORM SPECIFIC (USES PRIMARY)
-    // ============================================
-    const platformDiv = document.getElementById('platformSpecific');
-    if (platformDiv) {
-        const platform = primary.platform_specific || {};
-        platformDiv.innerHTML = `
-            <h4 class="font-semibold mb-2">Platform Analysis: ${platform.platform || 'Unknown'}</h4>
-            <p class="text-sm text-gray-400 mb-2">${platform.core_behavior || ''}</p>
-            <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mt-3">
-                <span class="text-red-400 font-medium text-sm">⚠️ Fatal Flaw:</span>
-                <p class="text-sm mt-1">${platform.fatal_flaw || 'None detected'}</p>
-            </div>
-            <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg mt-2">
-                <span class="text-green-400 font-medium text-sm">✓ Fix:</span>
-                <p class="text-sm mt-1">${platform['platform-specific_fix'] || 'No specific fix provided'}</p>
-            </div>
-        `;
-    }
-
-    // ============================================
-    // LINE-BY-LINE ANALYSIS (USES PRIMARY)
-    // ============================================
-    const lineByLineDiv = document.getElementById('lineByLineAnalysis');
-    if (lineByLineDiv) {
-        const lines = primary.line_by_line_analysis || [];
-        if (lines.length > 0) {
-            lineByLineDiv.innerHTML = lines.map((line, i) => `
-                <div class="p-4 bg-gray-900/50 rounded-xl border-l-4 ${line.issue ? 'border-red-500' : 'border-green-500'} line-analysis-item">
-                    <div class="flex items-start justify-between mb-2">
-                        <span class="text-xs text-gray-500 font-mono">Line ${i + 1}</span>
-                        ${line.impact ? `<span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">${line.impact}</span>` : ''}
-                    </div>
-                    <p class="text-sm font-medium mb-2 text-white">"${line.line || ''}"</p>
-                    ${line.issue ? `
-                        <div class="space-y-2">
-                            <div class="p-2 bg-red-500/10 rounded-lg">
-                                <span class="text-xs text-red-400 font-medium">ISSUE:</span>
-                                <p class="text-sm text-gray-300">${line.issue}</p>
-                            </div>
-                            <div class="p-2 bg-gray-800 rounded-lg">
-                                <span class="text-xs text-gray-500">WHY IT FAILS:</span>
-                                <p class="text-sm text-gray-400">${line.why_it_fails || ''}</p>
-                            </div>
-                            <div class="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
-                                <span class="text-xs text-green-400 font-medium">✓ PRECISE FIX:</span>
-                                <p class="text-sm text-gray-300">${line.precise_fix || ''}</p>
+                        <!-- Ad Copy -->
+                        <div id="adCopyContainer" class="textarea-container active">
+                            <label class="field-label">Ad Copy</label>
+                            <textarea id="adCopy" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Paste your ad headline and body copy here..."></textarea>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-xs text-gray-500">Min 10 characters</span>
+                                <span id="adCopyCount" class="text-xs text-gray-500">0 chars</span>
                             </div>
                         </div>
-                    ` : '<span class="text-xs text-green-400">✓ No issues detected</span>'}
-                </div>
-            `).join('');
-        } else {
-            lineByLineDiv.innerHTML = '<p class="text-gray-500">No line-by-line analysis available.</p>';
-        }
-    }
 
-    // ============================================
-    // CRITICAL WEAKNESSES (USES PRIMARY)
-    // ============================================
-    const weaknessesDiv = document.getElementById('criticalWeaknesses');
-    if (weaknessesDiv) {
-        const weaknesses = primary.critical_weaknesses || [];
-        if (weaknesses.length > 0) {
-            weaknessesDiv.innerHTML = weaknesses.map((w, i) => `
-                <div class="p-4 bg-red-500/5 border border-red-500/10 rounded-xl">
-                    <div class="flex items-start justify-between">
-                        <h4 class="font-semibold text-red-400">${i + 1}. ${w.issue || 'Unknown Issue'}</h4>
-                        <span class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">${w.estimated_lift || '+0%'}</span>
-                    </div>
-                    <p class="text-sm text-gray-400 mt-2">${w.behavior_impact || ''}</p>
-                    <div class="mt-3 p-3 bg-gray-900/50 rounded-lg">
-                        <span class="text-xs text-green-400 font-medium">PRECISE FIX:</span>
-                        <p class="text-sm mt-1">${w.precise_fix || 'No fix provided'}</p>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            weaknessesDiv.innerHTML = '<p class="text-gray-500">No critical weaknesses detected.</p>';
-        }
-    }
+                        <!-- Video Script -->
+                        <div id="videoScriptContainer" class="textarea-container">
+                            <label class="field-label">Video Script</label>
+                            <textarea id="videoScript" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="[HOOK 0-3s] Your opening line that stops the scroll...&#10;&#10;[BODY 3-15s] Main message with benefits...&#10;&#10;[CTA 15-30s] Call to action..."></textarea>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-xs text-gray-500">Timecode format recommended</span>
+                                <span id="videoScriptCount" class="text-xs text-gray-500">0 words</span>
+                            </div>
+                        </div>
 
-    // ============================================
-    // IMPROVEMENTS (USES PRIMARY)
-    // ============================================
-    const improvementsDiv = document.getElementById('improvements');
-    if (improvementsDiv) {
-        const improvements = primary.improvements || [];
-        if (improvements.length > 0) {
-            improvementsDiv.innerHTML = `
-                <h4 class="font-semibold mb-3">Additional Improvements</h4>
-                <ul class="space-y-2">
-                    ${improvements.map(imp => `<li class="text-sm text-gray-400 flex items-start"><span class="text-green-400 mr-2">→</span>${imp}</li>`).join('')}
-                </ul>
-            `;
-        } else {
-            improvementsDiv.innerHTML = '';
-        }
-    }
+                        <!-- Both -->
+                        <div id="bothContainer" class="textarea-container">
+                            <label class="field-label">Ad Copy + Video Script</label>
+                            <div class="space-y-3">
+                                <textarea id="adCopyBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Ad copy text..."></textarea>
+                                <textarea id="videoScriptBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Video script with timecodes..."></textarea>
+                            </div>
+                        </div>
 
-    // ============================================
-    // IMPROVED AD CONTENT (USES ORIGINAL analysis.improved_ad)
-    // ============================================
-    const improvedAdData = analysis.improved_ad || {};
-    const improvedContent = document.getElementById('improvedContent');
-    if (improvedContent) {
-        improvedContent.innerHTML = `
-            <div class="space-y-3">
-                <div>
-                    <span class="text-xs text-gray-500">HEADLINE</span>
-                    <p class="font-medium">${improvedAdData.headline || 'N/A'}</p>
-                </div>
-                <div>
-                    <span class="text-xs text-gray-500">BODY COPY</span>
-                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.body_copy || 'N/A'}</p>
-                </div>
-                <div>
-                    <span class="text-xs text-gray-500">CTA</span>
-                    <p class="font-medium text-purple-400">${improvedAdData.cta || 'N/A'}</p>
-                </div>
-                ${improvedAdData.video_script_version ? `
-                <div>
-                    <span class="text-xs text-gray-500">VIDEO SCRIPT VERSION</span>
-                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.video_script_version}</p>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
+                        <!-- Platform & Industry -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="field-label">Platform <span class="text-red-400">*</span></label>
+                                <select id="platform" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Platform</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="field-label">Industry <span class="text-red-400">*</span></label>
+                                <select id="industry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Industry</option>
+                                </select>
+                            </div>
+                        </div>
 
-    // ============================================
-    // RENDER IMPROVED ANALYSIS IF EXISTS
-    // ============================================
-    if (improved) {
-        renderImprovedAnalysis(improved);
-    }
+                        <!-- Objective -->
+                        <div>
+                            <label class="field-label">Campaign Objective <span class="text-red-400">*</span></label>
+                            <select id="objective" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <option value="conversions">Sales / Conversions</option>
+                                <option value="leads">Lead Generation</option>
+                                <option value="traffic">Website Traffic</option>
+                                <option value="awareness">Brand Awareness</option>
+                                <option value="appinstalls">App Installs</option>
+                                <option value="engagement">Engagement</option>
+                            </select>
+                        </div>
 
-    // ============================================
-    // VARIATIONS (USES PRIMARY)
-    // ============================================
-    const variations = primary.variations || {};
+                        <!-- Audience Targeting Section -->
+                        <div class="form-section">
+                            <h3 class="text-lg font-semibold mb-4 text-purple-400">🎯 Audience Targeting</h3>
 
-    // Power Hooks
-    const powerHooks = variations.power_hooks || [];
-    const powerHooksDiv = document.getElementById('powerHooks');
-    if (powerHooksDiv) {
-        powerHooksDiv.innerHTML = powerHooks.map(hook => `
-            <div class="p-3 bg-gray-900/50 rounded-lg text-sm border-l-2 border-purple-500">${hook}</div>
-        `).join('') || '<p class="text-gray-500 text-sm">No power hooks generated.</p>';
-    }
+                            <!-- Country & Region -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Country <span class="text-red-400">*</span></label>
+                                    <select id="audienceCountry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Country</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">State/Region</label>
+                                    <select id="audienceRegion" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none" disabled>
+                                        <option value="">Select Region</option>
+                                    </select>
+                                </div>
+                            </div>
 
-    // High-Converting CTAs
-    const ctas = variations.high_conversion_ctas || [];
-    const conversionCTAsDiv = document.getElementById('conversionCTAs');
-    if (conversionCTAsDiv) {
-        conversionCTAsDiv.innerHTML = ctas.map(cta => `
-            <span class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">${cta}</span>
-        `).join('') || '<p class="text-gray-500 text-sm">No CTAs generated.</p>';
-    }
+                            <!-- Age & Gender -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Age Bracket <span class="text-red-400">*</span></label>
+                                    <select id="audienceAge" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Age</option>
+                                    </select>
+                                    <p id="ageTraits" class="text-xs text-gray-500 mt-1 hidden"></p>
+                                </div>
+                                <div>
+                                    <label class="field-label">Gender</label>
+                                    <select id="audienceGender" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Any</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="all">All Genders</option>
+                                    </select>
+                                </div>
+                            </div>
 
-    // Strongest Angles (ADDED FOR 100% MATCH)
-    const angles = variations.strongest_angles || [];
-    const anglesDiv = document.getElementById('strongestAngles');
-    if (anglesDiv) {
-        anglesDiv.innerHTML = angles.map(angle => `
-            <div class="p-3 bg-gray-900/50 rounded-lg text-sm border-l-2 border-blue-500">${angle}</div>
-        `).join('') || '<p class="text-gray-500 text-sm">No angles generated.</p>';
-    }
+                            <!-- Income & Education -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Income Level <span class="info-tooltip" data-tooltip="Affects purchasing power and price sensitivity">ℹ️</span></label>
+                                    <select id="audienceIncome" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Income</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Education Level</label>
+                                    <select id="audienceEducation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Education</option>
+                                    </select>
+                                </div>
+                            </div>
 
-    // ============================================
-    // PERSONA REACTIONS - 5 PERSONAS (USES PRIMARY)
-    // ============================================
-    const personasDiv = document.getElementById('personaReactions');
-    if (personasDiv) {
-        const personas = primary.persona_reactions || [];
-        personasDiv.innerHTML = personas.map(p => `
-            <div class="p-4 bg-gray-900/50 rounded-xl border border-white/5">
-                <h4 class="font-semibold text-purple-400 mb-2">${p.persona || 'Unknown'}</h4>
-                <p class="text-sm text-gray-400 mb-2">${p.reaction || ''}</p>
-                <div class="p-3 bg-gray-800 rounded-lg">
-                    <span class="text-xs text-gray-500">EXACT QUOTE:</span>
-                    <p class="text-sm italic mt-1">"${p.exact_quote || '...'}"</p>
-                </div>
-            </div>
-        `).join('') || '<p class="text-gray-500">No persona data available.</p>';
-    }
+                            <!-- Occupation -->
+                            <div class="mb-4">
+                                <label class="field-label">Occupation <span class="info-tooltip" data-tooltip="Determines daily pain points and availability">ℹ️</span></label>
+                                <select id="audienceOccupation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Occupation</option>
+                                </select>
+                                <p id="occupationPainPoints" class="text-xs text-gray-500 mt-1 hidden"></p>
+                            </div>
 
-    // ============================================
-    // ROI ANALYSIS (USES PRIMARY)
-    // ============================================
-    const roiDiv = document.getElementById('roiAnalysis');
-    if (roiDiv) {
-        const roi = primary.roi_analysis || {};
-        roiDiv.innerHTML = `
-            <div class="grid grid-cols-3 gap-4">
-                <div class="p-4 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">ROI Potential</span>
-                    <p class="text-lg font-bold ${(roi.roi_potential || '').includes('High') ? 'text-green-400' : 'text-yellow-400'}">${roi.roi_potential || 'Unknown'}</p>
-                </div>
-                <div class="p-4 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">Break-Even Probability</span>
-                    <p class="text-lg font-bold text-blue-400">${roi.break_even_probability || '0%'}</p>
-                </div>
-                <div class="p-4 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">Risk Level</span>
-                    <p class="text-lg font-bold ${(roi.risk_classification || '') === 'High' ? 'text-red-400' : 'text-green-400'}">${roi.risk_classification || 'Unknown'}</p>
-                </div>
-            </div>
-            <div class="p-4 bg-gray-900/50 rounded-xl">
-                <h4 class="font-semibold mb-3">Key Metrics</h4>
-                <div class="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                        <span class="text-gray-500">Expected CTR</span>
-                        <p class="font-medium">${roi.key_metrics?.expected_ctr_range || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Realistic CPC</span>
-                        <p class="font-medium">${roi.key_metrics?.realistic_cpc_range || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Conversion Rate</span>
-                        <p class="font-medium">${roi.key_metrics?.conversion_rate_range || 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 bg-gray-900/50 rounded-xl">
-                <h4 class="font-semibold mb-3">ROI Scenarios</h4>
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-red-400">Worst Case:</span>
-                        <span class="text-gray-400">${roi.roi_scenarios?.worst_case || 'N/A'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-yellow-400">Expected:</span>
-                        <span class="text-gray-400">${roi.roi_scenarios?.expected_case || 'N/A'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-green-400">Best Case:</span>
-                        <span class="text-gray-400">${roi.roi_scenarios?.best_case || 'N/A'}</span>
-                    </div>
+                            <!-- Psychographic -->
+                            <div class="mb-4">
+                                <label class="field-label">Psychographic Profile <span class="info-tooltip" data-tooltip="How they adopt new products">ℹ️</span></label>
+                                <select id="audiencePsychographic" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Profile</option>
+                                </select>
+                            </div>
+
+                            <!-- Pain Point -->
+                            <div class="mb-4">
+                                <label class="field-label">Primary Pain Point <span class="info-tooltip" data-tooltip="Main problem your ad addresses">ℹ️</span></label>
+                                <select id="audiencePainPoint" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Pain Point</option>
+                                </select>
+                            </div>
+
+                            <!-- Tech Savviness & Purchase Behavior -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="field-label">Tech Savviness</label>
+                                    <select id="techSavviness" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="medium">Medium (Default)</option>
+                                        <option value="low">Low - Prefers simple</option>
+                                        <option value="high">High - Early adopter</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Purchase Style</label>
+                                    <select id="purchaseBehavior" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Unknown</option>
+                                        <option value="impulse">Impulse Buyer</option>
+                                        <option value="research">Researcher</option>
+                                        <option value="loyal">Brand Loyal</option>
+                                        <option value="bargain">Deal Seeker</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Media Upload -->
+                        <div class="border-t border-white/10 pt-4">
+                            <label class="field-label">Creative (Optional)</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                                    <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
+                                        <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span class="text-xs text-gray-500">Add Image</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                                    <label for="videoUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
+                                        <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        <span class="text-xs text-gray-500">Add Video</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="filePreview" class="mt-2 text-sm text-gray-400 hidden"></div>
+                        </div>
+
+                        <button type="submit" id="analyzeBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-[1.02] transition transform disabled:opacity-50 disabled:cursor-not-allowed">
+                            Analyze Ad →
+                        </button>
+                    </form>
                 </div>
             </div>
-            <div class="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                <h4 class="font-semibold text-purple-400 mb-2">Primary ROI Lever</h4>
-                <p class="text-sm">${roi.primary_roi_lever || 'N/A'}</p>
-            </div>
-            <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <h4 class="font-semibold text-red-400 mb-2">⚠️ Biggest Financial Risk</h4>
-                <p class="text-sm">${roi.biggest_financial_risk || 'N/A'}</p>
-            </div>
-            ${roi.optimization_priority ? `
-            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                <h4 class="font-semibold text-blue-400 mb-2">Optimization Priority</h4>
-                <p class="text-sm">${roi.optimization_priority}</p>
-            </div>
-            ` : ''}
-        `;
-    }
 
-    // ============================================
-    // VIDEO EXECUTION ANALYSIS (USES PRIMARY)
-    // ============================================
-    const videoDiv = document.getElementById('videoAnalysis');
-    if (videoDiv) {
-        const video = primary.video_execution_analysis || {};
-        videoDiv.innerHTML = `
-            <div class="p-4 bg-gray-900/50 rounded-xl">
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <span class="text-xs text-purple-400 font-medium">Hook Delivery</span>
-                        <p class="text-sm mt-1">${video.hook_delivery_strength || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <span class="text-xs text-blue-400 font-medium">Speech Flow</span>
-                        <p class="text-sm mt-1">${video.speech_flow_quality || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <span class="text-xs text-yellow-400 font-medium">Pattern Interrupt</span>
-                        <p class="text-sm mt-1">${video.pattern_interrupt_strength || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <span class="text-xs text-pink-400 font-medium">Visual Dependency</span>
-                        <p class="text-sm mt-1">${video.visual_dependency || 'N/A'}</p>
-                    </div>
+            <!-- Results Panel -->
+            <div class="space-y-6">
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden bg-gray-800 rounded-2xl p-12 border border-white/5 text-center">
+                    <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <h3 class="text-xl font-semibold mb-2">Simulating Real User Behavior...</h3>
+                    <p class="text-gray-400">Analyzing across 5 personas • Generating variants • Predicting winner • v4.0 AI Engine</p>
                 </div>
-                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-3">
-                    <span class="text-red-400 font-medium text-xs">⚠️ Delivery Risk</span>
-                    <p class="text-sm mt-1">${video.delivery_risk || 'N/A'}</p>
-                </div>
-                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-3">
-                    <span class="text-green-400 font-medium text-xs">✓ Recommended Format</span>
-                    <p class="text-sm mt-1">${video.recommended_format || 'talking head'}</p>
-                </div>
-                ${video.execution_gaps?.length ? `
-                <div class="space-y-2">
-                    <span class="text-xs text-gray-500">Execution Gaps:</span>
-                    ${video.execution_gaps.map(gap => `
-                        <div class="p-2 bg-gray-800 rounded text-sm text-gray-400">• ${gap}</div>
-                    `).join('')}
-                </div>
-                ` : ''}
-                ${video.exact_fix_direction ? `
-                <div class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <span class="text-blue-400 font-medium text-xs">Exact Fix Direction</span>
-                    <p class="text-sm mt-1">${video.exact_fix_direction}</p>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
 
-    // ============================================
-    // WINNER PREDICTION (USES PRIMARY)
-    // ============================================
-    const winnerDiv = document.getElementById('winnerPrediction');
-    if (winnerDiv) {
-        const winner = primary.winner_prediction || {};
-        winnerDiv.innerHTML = `
-            <div class="p-4 bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl border border-green-500/20">
-                <div class="flex items-center space-x-3 mb-3">
-                    <span class="text-2xl">🏆</span>
-                    <div>
-                        <h4 class="font-semibold text-green-400">Winner Prediction</h4>
-                        <p class="text-xs text-gray-400">Confidence: ${winner.confidence || 'Unknown'}</p>
+                <!-- Empty State -->
+                <div id="emptyState" class="bg-gray-800 rounded-2xl p-12 border border-white/5 text-center">
+                    <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
+                    <h3 class="text-xl font-semibold mb-2">Ready to Analyze</h3>
+                    <p class="text-gray-400">Fill in your ad details and detailed audience targeting to see the v4.0 simulation results.</p>
                 </div>
-                <p class="text-sm text-gray-300 mb-3">${winner.reason || 'No prediction available'}</p>
-                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                    <span class="text-sm text-gray-400">Best Variant ID</span>
-                    <span class="text-lg font-bold text-green-400">#${winner.best_variant_id || 'N/A'}</span>
-                </div>
-                ${winner.expected_lift ? `
-                <div class="mt-3 p-3 bg-green-500/20 rounded-lg text-center">
-                    <span class="text-green-400 font-medium">Expected Lift: ${winner.expected_lift}</span>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
 
-    // ============================================
-    // AD VARIANTS - 5-10 VARIANTS (USES PRIMARY)
-    // ============================================
-    const variantsDiv = document.getElementById('adVariants');
-    if (variantsDiv) {
-        const variants = primary.ad_variants || [];
-        if (variants.length > 0) {
-            variantsDiv.innerHTML = `
-                <div class="space-y-4">
-                    ${variants.map((v, i) => `
-                        <div class="variant-card p-4 bg-gray-900/50 rounded-xl border ${v.id === primary.winner_prediction?.best_variant_id ? 'border-green-500/50 bg-green-500/5' : 'border-white/5'}">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex items-center space-x-3">
-                                    <span class="w-8 h-8 rounded-full ${v.id === primary.winner_prediction?.best_variant_id ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'} flex items-center justify-center font-bold text-sm">${v.id}</span>
+                <!-- Results Content -->
+                <div id="resultsContent" class="hidden space-y-6">
+                    <!-- Run Decision Banner (v4.0) -->
+                    <div id="runDecision" class="bg-gray-800 rounded-2xl p-6 border border-white/5"></div>
+
+                    <!-- PATCH: Decision Upgrade Comparison -->
+                    <div id="decisionUpgrade"></div>
+
+                    <!-- Overall Score -->
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Overall Score</h3>
+                            <span id="verdictBadge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700"></span>
+                        </div>
+                        <div class="flex items-center space-x-6">
+                            <div class="relative w-24 h-24">
+                                <svg class="w-24 h-24 transform -rotate-90">
+                                    <circle cx="48" cy="48" r="40" stroke="#374151" stroke-width="8" fill="none"></circle>
+                                    <circle id="scoreCircle" cx="48" cy="48" r="40" stroke="#a855f7" stroke-width="8" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="overallScore" class="text-2xl font-bold">0</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p id="primaryReason" class="text-gray-300 text-sm"></p>
+                                <div class="mt-3 flex items-center space-x-4 text-sm">
                                     <div>
-                                        <h4 class="font-semibold ${v.id === primary.winner_prediction?.best_variant_id ? 'text-green-400' : 'text-white'}">${v.angle || `Variant ${v.id}`}</h4>
-                                        <span class="text-xs text-gray-500">ROI: ${v.roi_potential || 'Unknown'}</span>
+                                        <span class="text-gray-500">Launch Readiness</span>
+                                        <p id="launchReadiness" class="font-semibold text-white"></p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Failure Risk</span>
+                                        <p id="failureRisk" class="font-semibold text-red-400"></p>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-lg font-bold ${v.predicted_score >= 70 ? 'text-green-400' : v.predicted_score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${v.predicted_score || 0}</span>
-                                    <p class="text-xs text-gray-500">predicted score</p>
-                                </div>
                             </div>
-                            <div class="p-3 bg-gray-800 rounded-lg mb-3">
-                                <span class="text-xs text-purple-400 font-medium">HOOK:</span>
-                                <p class="text-sm mt-1 italic">"${v.hook || ''}"</p>
-                            </div>
-                            <div class="p-3 bg-gray-800 rounded-lg mb-3">
-                                <span class="text-xs text-gray-500">FULL COPY:</span>
-                                <p class="text-sm mt-1 text-gray-300">${v.copy || ''}</p>
-                            </div>
-                            <p class="text-xs text-gray-400">${v.reason || ''}</p>
-                            ${v.id === primary.winner_prediction?.best_variant_id ? `
-                            <div class="mt-3 p-2 bg-green-500/20 rounded-lg text-center">
-                                <span class="text-green-400 text-sm font-medium">🏆 PREDICTED WINNER</span>
-                            </div>
-                            ` : ''}
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        } else {
-            variantsDiv.innerHTML = '<p class="text-gray-500">No ad variants generated.</p>';
-        }
-    }
+                    </div>
 
-    // ============================================
-    // ROI COMPARISON (USES PRIMARY)
-    // ============================================
-    const roiCompareDiv = document.getElementById('roiComparison');
-    if (roiCompareDiv) {
-        const comparisons = primary.roi_comparison || [];
-        if (comparisons.length > 0) {
-            roiCompareDiv.innerHTML = `
-                <div class="space-y-3">
-                    ${comparisons.map(c => `
-                        <div class="p-3 bg-gray-900/50 rounded-lg">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center space-x-3">
-                                    <span class="w-6 h-6 rounded-full bg-gray-700 text-gray-400 flex items-center justify-center text-xs font-bold">${c.variant_id}</span>
-                                    <span class="text-sm font-medium">Variant ${c.variant_id}</span>
+                    <!-- Audience Summary -->
+                    <div id="audienceSummary" class="bg-gray-800 rounded-2xl p-4 border border-white/5 hidden">
+                        <h4 class="text-sm font-semibold text-purple-400 mb-2">Target Audience Profile</h4>
+                        <p id="audienceParsed" class="text-sm text-gray-300"></p>
+                    </div>
+
+                    <!-- Detailed Scores -->
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                        <h3 class="text-lg font-semibold mb-4">Performance Breakdown</h3>
+                        <div class="space-y-3" id="scoresGrid"></div>
+                    </div>
+
+                    <!-- Winner Prediction (v4.0) -->
+                    <div id="winnerPrediction" class="bg-gray-800 rounded-2xl p-6 border border-white/5"></div>
+
+                    <!-- Tabs Navigation -->
+                    <div class="bg-gray-800 rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="flex border-b border-white/5 overflow-x-auto">
+                            <button class="tab-btn tab-active px-6 py-3 text-sm font-medium whitespace-nowrap" data-tab="behavior">Behavior</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="lines">Lines</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="weaknesses">Weaknesses</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="rewrite">Rewrite</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="variants">Variants</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="personas">Personas</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="roi">ROI</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="video">Video</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="competitor">Competitor</button>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="p-6">
+                            <!-- Behavior Tab -->
+                            <div id="tab-behavior" class="tab-content space-y-4">
+                                <div id="phaseBreakdown" class="space-y-3"></div>
+                                <div id="platformSpecific" class="mt-6 p-4 bg-gray-900/50 rounded-xl"></div>
+                            </div>
+
+                            <!-- Line-by-Line Tab (v4.0) -->
+                            <div id="tab-lines" class="tab-content hidden space-y-4">
+                                <h4 class="font-semibold mb-4 text-purple-400">🔍 Line-by-Line Analysis</h4>
+                                <div id="lineByLineAnalysis" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                            </div>
+
+                            <!-- Weaknesses Tab -->
+                            <div id="tab-weaknesses" class="tab-content hidden space-y-4">
+                                <div id="criticalWeaknesses" class="space-y-4"></div>
+                                <div id="improvements" class="mt-4"></div>
+                            </div>
+
+                            <!-- Rewrite Tab -->
+                            <div id="tab-rewrite" class="tab-content hidden space-y-6">
+                                <div id="improvedAd" class="bg-gray-900/50 p-4 rounded-xl border border-green-500/20">
+                                    <h4 class="text-green-400 font-semibold mb-3">AI-Optimized Version (Re-tested)</h4>
+                                    <div id="improvedContent" class="space-y-2"></div>
+                                    <!-- PATCH: Improved ad analysis moved here for visibility -->
+                                    <div id="improvedAnalysis"></div>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm ${c.roi_potential?.includes('High') ? 'text-green-400' : 'text-yellow-400'}">${c.roi_potential || 'Unknown'}</p>
-                                    <p class="text-xs text-gray-500">Risk: ${c.risk || 'Unknown'}</p>
+                                <div>
+                                    <h4 class="font-semibold mb-3">Power Hooks</h4>
+                                    <div id="powerHooks" class="space-y-2"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-3">High-Converting CTAs</h4>
+                                    <div id="conversionCTAs" class="flex flex-wrap gap-2"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-3">Strongest Angles</h4>
+                                    <div id="strongestAngles" class="space-y-2"></div>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-400">${c.summary || ''}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } else {
-            roiCompareDiv.innerHTML = '<p class="text-gray-500">No ROI comparison available.</p>';
-        }
-    }
 
-    // ============================================
-    // COMPETITOR ADVANTAGE (USES PRIMARY)
-    // ============================================
-    const competitorDiv = document.getElementById('competitorAdvantage');
-    if (competitorDiv) {
-        const comp = primary.competitor_advantage || {};
-        competitorDiv.innerHTML = `
-            <div class="space-y-4">
-                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <span class="text-xs text-red-400 font-medium">Why Users Choose Competitor:</span>
-                    <p class="text-sm mt-1 text-gray-300">${comp.why_user_might_choose_competitor || 'N/A'}</p>
-                </div>
-                <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <span class="text-xs text-yellow-400 font-medium">What They Do Better:</span>
-                    <p class="text-sm mt-1 text-gray-300">${comp.what_competitor_is_doing_better || 'N/A'}</p>
-                </div>
-                <div class="p-3 bg-gray-800 rounded-lg">
-                    <span class="text-xs text-gray-500">Execution Difference:</span>
-                    <p class="text-sm mt-1 text-gray-400">${comp.execution_difference || 'N/A'}</p>
-                </div>
-                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <span class="text-xs text-green-400 font-medium">✓ How to Outperform:</span>
-                    <p class="text-sm mt-1 text-gray-300">${comp.how_to_outperform || 'N/A'}</p>
+                            <!-- Variants Tab (v4.0) -->
+                            <div id="tab-variants" class="tab-content hidden space-y-4">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-semibold text-purple-400">🚀 Generated Ad Variants</h4>
+                                    <span class="text-xs text-gray-500">AI-generated alternatives</span>
+                                </div>
+                                <div id="adVariants" class="space-y-4 max-h-[600px] overflow-y-auto"></div>
+                                <div class="mt-6 pt-6 border-t border-white/10">
+                                    <h4 class="font-semibold mb-3 text-blue-400">📊 ROI Comparison</h4>
+                                    <div id="roiComparison"></div>
+                                </div>
+                            </div>
+
+                            <!-- Personas Tab -->
+                            <div id="tab-personas" class="tab-content hidden space-y-4">
+                                <div id="personaReactions" class="space-y-4"></div>
+                            </div>
+
+                            <!-- ROI Tab -->
+                            <div id="tab-roi" class="tab-content hidden space-y-4">
+                                <div id="roiAnalysis" class="space-y-4"></div>
+                            </div>
+
+                            <!-- Video Tab -->
+                            <div id="tab-video" class="tab-content hidden space-y-4">
+                                <div id="videoAnalysis" class="space-y-4"></div>
+                            </div>
+
+                            <!-- Competitor Tab (v4.0) -->
+                            <div id="tab-competitor" class="tab-content hidden space-y-4">
+                                <h4 class="font-semibold mb-4 text-red-400">⚔️ Competitor Analysis</h4>
+                                <div id="competitorAdvantage" class="space-y-4"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    </div>
 
-    // ============================================
-    // ✅ CRITICAL: Rebind all UI events after DOM update
-    // ============================================
-    rebindUIEvents();
-}
-
-console.log('ADLYTICS v4.0 - 100% Simulation Match Implementation Loaded');
-bg-gray-800 rounded-lg">
-                    <span class="text-xs text-gray-500">Execution Difference:</span>
-                    <p class="text-sm mt-1 text-gray-400">${comp.execution_difference || 'N/A'}</p>
-                </div>
-                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <span class="text-xs text-green-400 font-medium">✓ How to Outperform:</span>
-                    <p class="text-sm mt-1 text-gray-300">${comp.how_to_outperform || 'N/A'}</p>
-                </div>
-            </div>
-        `;
-    }
-
-    // ============================================
-    // ✅ CRITICAL: Rebind all UI events after DOM update
-    // ============================================
-    rebindUIEvents();
-}
-
-console.log('ADLYTICS v4.0 Complete Analyzer loaded (ALL FIXES APPLIED)');
+    <script src="js/analyzer.js"></script>
+</body>
+</html>
