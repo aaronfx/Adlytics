@@ -1,20 +1,19 @@
 # ADLYTICS - AI Ad Pre-Validation SaaS
-# Compatible with Python 3.14 (Render default as of Feb 2025)
+# Python 3.14 Compatible - All packages have pre-built wheels
 
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.17
 
-# Python 3.14 compatible versions with pre-built wheels
-pydantic==2.10.4
-pydantic-settings==2.7.0
+# Pydantic - Latest with Python 3.14 wheels
+pydantic==2.11.7
+pydantic-settings==2.8.0
 
 httpx==0.28.1
 tenacity==9.0.0
 
-# Pillow 12.0.0+ has Python 3.14 wheels [^22^]
+# Pillow 12.0.0+ has Python 3.14 wheels
 Pillow==12.0.0
 
 python-dotenv==1.0.1
-starlette==0.27.0
 typing-extensions==4.12.2
