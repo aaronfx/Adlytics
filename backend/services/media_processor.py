@@ -13,12 +13,11 @@ class MediaProcessor:
 
     def __init__(self):
         self.supported_image_formats = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
-        self.supported_video_formats = {'.mp4', '.mov', '.avi', '.webm'}  # Limited video support without OpenCV
+        self.supported_video_formats = {'.mp4', '.mov', '.avi', '.webm'}
 
     def analyze_image(self, image_bytes: bytes) -> Dict[str, Any]:
         """
         Analyze image using Pillow
-
         Returns visual metrics without requiring OpenCV compilation
         """
         try:
@@ -29,30 +28,28 @@ class MediaProcessor:
 
             # Calculate brightness (simple average)
             if mode in ('RGB', 'RGBA', 'L'):
-                # Convert to grayscale for analysis
                 gray_img = img.convert('L')
                 pixels = list(gray_img.getdata())
                 avg_brightness = sum(pixels) / len(pixels) if pixels else 128
-                brightness_score = avg_brightness / 255.0  # Normalize to 0-1
+                brightness_score = avg_brightness / 255.0
             else:
-                brightness_score = 0.5  # Default for unsupported modes
+                brightness_score = 0.5
 
             # Detect if image has transparency
             has_transparency = mode in ('RGBA', 'P') or 'transparency' in img.info
 
-            # Estimate visual complexity (color count as proxy)
+            # Estimate visual complexity
             if mode in ('RGB', 'RGBA'):
-                # Sample pixels for color analysis (performance optimization)
                 small_img = img.resize((100, 100))
                 colors = small_img.getcolors(maxcolors=10000)
                 color_count = len(colors) if colors else 10000
-                complexity_score = min(color_count / 1000, 1.0)  # Normalize
+                complexity_score = min(color_count / 1000, 1.0)
             else:
                 complexity_score = 0.5
 
             # Aspect ratio analysis
             aspect_ratio = width / height if height > 0 else 1.0
-            is_mobile_friendly = 0.8 <= aspect_ratio <= 1.2  # Square-ish
+            is_mobile_friendly = 0.8 <= aspect_ratio <= 1.2
 
             # Platform-specific recommendations
             platform_recommendations = []
@@ -95,17 +92,14 @@ class MediaProcessor:
         """Estimate visual hook strength based on image metrics"""
         score = 0.5
 
-        # Brightness factor (optimal is mid-range with contrast)
         if 0.3 <= brightness <= 0.7:
             score += 0.2
         elif brightness < 0.1 or brightness > 0.9:
             score -= 0.2
 
-        # Complexity factor (some visual interest helps)
         if complexity > 0.3:
             score += 0.15
 
-        # Aspect ratio factor (mobile-optimized performs better)
         if 0.8 <= aspect_ratio <= 1.2:
             score += 0.15
         elif aspect_ratio > 2.0 or aspect_ratio < 0.5:
@@ -121,28 +115,18 @@ class MediaProcessor:
     def analyze_video(self, video_bytes: bytes) -> Dict[str, Any]:
         """
         Limited video analysis without OpenCV
-
-        Note: Without OpenCV, we can only do basic file analysis
-        For full video analysis, consider:
-        1. Using a video processing API (Cloudinary, AWS MediaConvert)
-        2. Installing opencv-python-headless in a Docker deployment
         """
         file_size_mb = len(video_bytes) / (1024 * 1024)
 
-        # Basic file header analysis for format detection
         header = video_bytes[:20]
         format_guess = "unknown"
 
-        # MP4 signature: ftyp at offset 4
         if b'ftyp' in header:
             format_guess = "MP4"
-        # MOV signature
         elif b'moov' in header or b'mdat' in header:
             format_guess = "QuickTime/MOV"
-        # AVI signature: RIFF....AVI
         elif header[:4] == b'RIFF' and b'AVI' in header[:12]:
             format_guess = "AVI"
-        # WebM signature: 1A 45 DF A3 (Matroska)
         elif header[:4] == b'\x1a\x45\xdf\xa3':
             format_guess = "WebM/Matroska"
 
@@ -150,14 +134,14 @@ class MediaProcessor:
             "format_detected": format_guess,
             "file_size_mb": round(file_size_mb, 2),
             "analysis_type": "Limited (Pillow only - no video frames)",
-            "note": "For full video analysis (hook frames, pacing, faces), install opencv-python-headless or use video processing API",
+            "note": "For full video analysis, install opencv-python-headless or use video processing API",
             "recommendations": [
                 "Ensure first 3 seconds have strong visual hook",
                 "Keep under 30 seconds for TikTok/Reels",
                 "Add captions - 85% watch without sound",
                 "Front-load key message in first 5 seconds"
             ],
-            "hook_strength_estimate": "Manual review required (no frame analysis available)",
+            "hook_strength_estimate": "Manual review required",
             "platform_optimization": {
                 "tiktok": "9:16 aspect ratio, fast cuts, trending audio",
                 "instagram_reels": "9:16 or 4:5, text overlays, loop-friendly",
