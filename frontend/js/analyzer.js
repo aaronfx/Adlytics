@@ -6,6 +6,7 @@
  * - Winner prediction
  * - ROI comparison
  * - Run decision engine
+ * - IMPROVED AD RE-ANALYSIS (PATCHED)
  */
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
@@ -380,6 +381,70 @@ async function handleSubmit(selectedImage, selectedVideo) {
         analyzeBtn.textContent = 'Analyze Ad →';
     }
 }
+
+// ===================================================================
+// PATCH: NEW FUNCTION - Render Improved Ad Analysis
+// ===================================================================
+function renderImprovedAnalysis(data) {
+    const container = document.getElementById('improvedAnalysis');
+    if (!container) return;
+
+    const score = data?.scores?.overall ?? 'N/A';
+    const roi = data?.roi_analysis?.roi_potential ?? 'Unknown';
+    const decision = data?.run_decision?.should_run ?? 'Unknown';
+    const verdict = data?.behavior_summary?.verdict ?? 'No assessment';
+    const readiness = data?.behavior_summary?.launch_readiness ?? '0%';
+    
+    // Determine colors based on values
+    const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
+    const decisionColor = decision === 'Yes' ? 'text-green-400' : decision === 'No' ? 'text-red-400' : 'text-yellow-400';
+    const roiColor = roi?.includes('High') ? 'text-green-400' : 'text-yellow-400';
+
+    container.innerHTML = `
+        <div class="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-xl p-5 mt-4">
+            <div class="flex items-center space-x-2 mb-4">
+                <span class="text-2xl">✨</span>
+                <h3 class="text-green-400 text-lg font-bold">Improved Ad Performance (Re-analyzed)</h3>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
+                    <span class="text-xs text-gray-500 block mb-1">New Score</span>
+                    <span class="text-2xl font-bold ${scoreColor}">${score}</span>
+                </div>
+                <div class="bg-gray-900/50 rounded-lg p-3 text-center">
+                    <span class="text-xs text-gray-500 block mb-1">ROI Potential</span>
+                    <span class="text-lg font-bold ${roiColor}">${roi}</span>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                    <span class="text-sm text-gray-400">Run Decision</span>
+                    <span class="font-semibold ${decisionColor}">${decision}</span>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                    <span class="text-sm text-gray-400">Launch Readiness</span>
+                    <span class="font-semibold text-white">${readiness}</span>
+                </div>
+                
+                <div class="p-3 bg-gray-900/50 rounded-lg">
+                    <span class="text-xs text-gray-500 block mb-1">Verdict</span>
+                    <p class="text-sm text-gray-300">${verdict}</p>
+                </div>
+            </div>
+            
+            ${data?._fallback ? `
+            <div class="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-center">
+                <span class="text-xs text-yellow-400">⚠️ Re-analysis used fallback values</span>
+            </div>
+            ` : ''}
+        </div>
+    `;
+}
+// ===================================================================
+
 function renderResults(data) {
     const analysis = data.analysis;
     if (!analysis) {
@@ -400,7 +465,7 @@ function renderResults(data) {
                 <div class="flex items-center space-x-3 mb-3">
                     <span class="text-2xl">${shouldRun === 'Yes' ? '✅' : shouldRun === 'No' ? '🚫' : '⚠️'}</span>
                     <div>
-                        <h4 class="font-semibold text-${decisionColor}-400">Run Decision</h4>
+                        <h4 class="font-semibold text-${decisionColor}-400">Original Ad - Run Decision</h4>
                         <p class="text-xs text-gray-400">Risk Level: ${decision.risk_level || 'Unknown'}</p>
                     </div>
                 </div>
@@ -634,6 +699,14 @@ function renderResults(data) {
             </div>
         `;
     }
+
+    // ===================================================================
+    // PATCH: CALL NEW RENDER FUNCTION FOR IMPROVED AD ANALYSIS
+    // ===================================================================
+    if (analysis.improved_ad_analysis) {
+        renderImprovedAnalysis(analysis.improved_ad_analysis);
+    }
+    // ===================================================================
 
     // Variations
     const variations = analysis.variations || {};
@@ -932,4 +1005,4 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-console.log('ADLYTICS v4.0 Enhanced Analyzer loaded');
+console.log('ADLYTICS v4.0 Enhanced Analyzer loaded (PATCHED with Improved Ad Re-analysis)');
