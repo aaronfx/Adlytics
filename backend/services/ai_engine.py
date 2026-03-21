@@ -6,7 +6,7 @@ Uses OpenRouter API with GPT-4o Mini for cost-efficient, high-quality analysis
 
 import os
 import json
-import asyncio
+import re
 from typing import Dict, Any, Optional
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -47,7 +47,105 @@ VIDEO SCRIPT ANALYSIS (if applicable):
 - Recommended Format: talking head | UGC | screen recording | mixed
 
 OUTPUT FORMAT (STRICT JSON):
-{...}  # Full JSON structure as before
+{{
+  "behavior_summary": {{
+    "micro_stop_rate": "High|Medium|Low",
+    "scroll_stop_rate": "High|Medium|Low", 
+    "attention_retention": "High|Medium|Low",
+    "trust_level": "High|Medium|Low|UltraLow",
+    "click_probability": "High|Medium|Low",
+    "post_click_bounce_risk": "High|Medium|Low|VeryHigh",
+    "failure_risk": "XX%",
+    "verdict": "One sentence brutal truth",
+    "primary_reason": "Why it succeeds or fails",
+    "launch_readiness": "XX%"
+  }},
+  "platform_specific": {{
+    "platform": "...",
+    "core_behavior": "...",
+    "fatal_flaw": "...",
+    "platform-specific_fix": "..."
+  }},
+  "scores": {{
+    "overall": XX,
+    "hook_strength": XX,
+    "clarity": XX,
+    "trust_building": XX,
+    "cta_power": XX,
+    "audience_alignment": XX,
+    "cultural_resonance": XX,
+    "decision_friction": XX,
+    "predicted_lift_if_fixed": "+XX%"
+  }},
+  "phase_breakdown": {{
+    "micro_stop_0_1s": "...",
+    "scroll_stop_1_2s": "...",
+    "attention_2_5s": "...",
+    "trust_evaluation": "...",
+    "click_and_post_click": "..."
+  }},
+  "critical_weaknesses": [
+    {{
+      "issue": "...",
+      "behavior_impact": "...",
+      "precise_fix": "...",
+      "estimated_lift": "+XX%"
+    }}
+  ],
+  "improvements": ["..."],
+  "improved_ad": {{
+    "headline": "...",
+    "body_copy": "...",
+    "cta": "...",
+    "video_script_version": "..."
+  }},
+  "variations": {{
+    "power_hooks": ["..."],
+    "high_conversion_ctas": ["..."],
+    "strongest_angles": ["..."]
+  }},
+  "video_execution_analysis": {{
+    "is_video_script": "Yes|No",
+    "hook_delivery_strength": "...",
+    "speech_flow_quality": "...",
+    "visual_dependency": "...",
+    "delivery_risk": "...",
+    "biggest_execution_gap": "...",
+    "recommended_format": "talking head|UGC|screen recording|mixed"
+  }},
+  "persona_reactions": [
+    {{
+      "persona": "...",
+      "reaction": "...",
+      "exact_quote": "..."
+    }}
+  ],
+  "competitor_advantage": {{
+    "why_user_might_choose_competitor": "...",
+    "what_competitor_is_doing_better": "...",
+    "how_to_outperform": "..."
+  }},
+  "post_click_prediction": "...",
+  "roi_analysis": {{
+    "roi_potential": "UltraHigh|High|Medium|Low|UltraLow",
+    "break_even_probability": "XX%",
+    "risk_classification": "High|Medium|Low",
+    "confidence_level": "High|Medium|Low",
+    "confidence_reason": "...",
+    "key_metrics": {{
+      "expected_ctr_range": "X.X% - X.X%",
+      "realistic_cpc_range": "$X.XX - $X.XX",
+      "conversion_rate_range": "X% - X%"
+    }},
+    "roi_scenarios": {{
+      "worst_case": "...",
+      "expected_case": "...",
+      "best_case": "..."
+    }},
+    "primary_roi_lever": "...",
+    "biggest_financial_risk": "..."
+  }}
+}}
 
 RULES:
 1. Be brutally honest — sugarcoating kills campaigns
@@ -59,75 +157,155 @@ RULES:
 
 Respond with ONLY the JSON object. No markdown, no explanations."""
 
+
 class AIEngine:
     """OpenRouter-powered AI analysis engine for ad validation"""
-    
+
     def __init__(self):
         self.api_key = OPENROUTER_API_KEY
         self.base_url = OPENROUTER_BASE_URL
         self.model = DEFAULT_MODEL
-        self.timeout = 60.0
-        
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def analyze_ad(self, ad_copy: str, platform: str, audience_description: str,
-                         industry: str, objective: str, media_context: Optional[Dict] = None) -> Dict[str, Any]:
-        """Analyze ad using OpenRouter API with retry logic"""
-        
+        self.timeout = 60.0  # seconds
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True
+    )
+    async def analyze_ad(
+        self,
+        ad_copy: str,
+        platform: str,
+        audience_description: str,
+        industry: str,
+        objective: str,
+        media_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Analyze ad using OpenRouter API with retry logic
+
+        Args:
+            ad_copy: The ad content to analyze
+            platform: Target platform (TikTok, Facebook, etc.)
+            audience_description: Rich audience targeting description
+            industry: Industry vertical
+            objective: Campaign objective
+            media_context: Optional media analysis results
+
+        Returns:
+            Dict containing full analysis results
+        """
+
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY not configured")
-        
+
+        # Format media context
         media_str = json.dumps(media_context) if media_context else "No media uploaded"
-        
+
+        # Build the prompt
         prompt = AD_VALIDATION_PROMPT.format(
-            ad_copy=ad_copy[:4000],
+            ad_copy=ad_copy[:4000],  # Truncate if too long
             platform=platform,
             audience_description=audience_description,
             industry=industry,
             objective=objective,
             media_context=media_str
         )
-        
+
+        # OpenRouter API request
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://adlytics.app",
-            "X-Title": "ADLYTICS"
+            "HTTP-Referer": "https://adlytics.app",  # Optional: your site URL
+            "X-Title": "ADLYTICS"  # Optional: your app name
         }
-        
+
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": "You are an expert ad validation system. Always respond with valid JSON only."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are an expert ad validation system. Always respond with valid JSON only."
+                },
+                {
+                    "role": "user", 
+                    "content": prompt
+                }
             ],
-            "temperature": 0.3,
-            "max_tokens": 4000,
-            "response_format": {"type": "json_object"}
+            "temperature": 0.3,  # Lower for consistent, analytical output
+            "max_tokens": 4000
         }
-        
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            if "choices" in data and len(data["choices"]) > 0:
-                content = data["choices"][0]["message"]["content"]
-                return json.loads(content)
-            else:
-                raise ValueError("No choices in OpenRouter response")
-    
-    async def analyze_with_fallback(self, ad_copy: str, platform: str, 
-                                    audience_description: str, industry: str,
-                                    objective: str, media_context: Optional[Dict] = None) -> Dict[str, Any]:
-        """Analyze with fallback to default values if AI fails"""
+
         try:
-            return await self.analyze_ad(ad_copy, platform, audience_description, 
-                                         industry, objective, media_context)
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Extract content from OpenRouter response
+                if "choices" in data and len(data["choices"]) > 0:
+                    content = data["choices"][0]["message"]["content"]
+
+                    # Parse JSON response
+                    try:
+                        result = json.loads(content)
+                        return result
+                    except json.JSONDecodeError:
+                        # Fallback: try to extract JSON from markdown
+                        json_match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
+                        if json_match:
+                            result = json.loads(json_match.group(1))
+                            return result
+                        else:
+                            # Try to find JSON object directly
+                            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+                            if json_match:
+                                result = json.loads(json_match.group())
+                                return result
+                            raise ValueError("Could not parse JSON from response")
+                else:
+                    raise ValueError("No choices in OpenRouter response")
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise ValueError("Invalid OpenRouter API key")
+            elif e.response.status_code == 429:
+                raise ValueError("Rate limit exceeded. Please try again.")
+            elif e.response.status_code >= 500:
+                raise ValueError("OpenRouter service error. Please retry.")
+            else:
+                raise ValueError(f"OpenRouter API error: {e.response.status_code}")
+
+        except httpx.TimeoutException:
+            raise ValueError("Analysis timed out. Please retry or simplify request.")
+
         except Exception as e:
+            raise ValueError(f"Analysis failed: {str(e)}")
+
+    async def analyze_with_fallback(
+        self,
+        ad_copy: str,
+        platform: str,
+        audience_description: str,
+        industry: str,
+        objective: str,
+        media_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Analyze with fallback to default values if AI fails
+        """
+        try:
+            return await self.analyze_ad(
+                ad_copy, platform, audience_description, 
+                industry, objective, media_context
+            )
+        except Exception as e:
+            # Return structured fallback with error info
             return {
                 "behavior_summary": {
                     "micro_stop_rate": "Medium",
@@ -197,10 +375,18 @@ class AIEngine:
                 "_fallback": True
             }
 
+
+# Singleton instance
 _ai_engine: Optional[AIEngine] = None
+
 
 def get_ai_engine() -> AIEngine:
     """Get or create AI engine singleton"""
+    global _ai_engine
+    if _ai_engine is None:
+        _ai_engine = AIEngine()
+    return _ai_engine
+ AI engine singleton"""
     global _ai_engine
     if _ai_engine is None:
         _ai_engine = AIEngine()
