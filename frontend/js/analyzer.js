@@ -445,6 +445,53 @@ function renderImprovedAnalysis(data) {
 }
 // ===================================================================
 
+// ✅ REBIND UI EVENTS AFTER DOM UPDATE (CRITICAL FIX)
+function rebindUIEvents() {
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active');
+                    b.classList.add('text-gray-400');
+                });
+
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    c.classList.add('hidden');
+                });
+
+                btn.classList.add('tab-active');
+                btn.classList.remove('text-gray-400');
+
+                const tabId = `tab-${btn.dataset.tab}`;
+                const tabContent = document.getElementById(tabId);
+                if (tabContent) tabContent.classList.remove('hidden');
+            };
+        });
+    }
+
+    // Dropdowns / Selects
+    const selects = document.querySelectorAll('select');
+    if (selects.length > 0) {
+        selects.forEach(select => {
+            select.onchange = (e) => {
+                console.log('Selection changed:', e.target.value);
+            };
+        });
+    }
+
+    // Buttons with actions
+    const actionBtns = document.querySelectorAll('[data-action]');
+    if (actionBtns.length > 0) {
+        actionBtns.forEach(btn => {
+            btn.onclick = () => {
+                console.log('Action triggered:', btn.dataset.action);
+            };
+        });
+    }
+}
+
 function renderResults(data) {
     const analysis = data.analysis;
     if (!analysis) {
@@ -454,31 +501,32 @@ function renderResults(data) {
 
     const improved = analysis.improved_ad_analysis || null;
 
-    // ✅ COMPLETE MERGE (CRITICAL FIX)
+    // ✅ SAFE DEEP MERGE (CRITICAL FIX)
     const primary = improved
         ? {
             ...analysis,
-            ...improved,
 
-            // 🔥 ONLY THESE SHOULD COME FROM IMPROVED
-            scores: improved.scores || analysis.scores,
-            run_decision: improved.run_decision || analysis.run_decision,
-            behavior_summary: improved.behavior_summary || analysis.behavior_summary,
-            roi_analysis: improved.roi_analysis || analysis.roi_analysis,
+            scores: {
+                ...analysis.scores,
+                ...improved.scores
+            },
 
-            // 🔥 EVERYTHING ELSE MUST FALL BACK TO ORIGINAL
-            phase_breakdown: improved.phase_breakdown || analysis.phase_breakdown,
-            platform_specific: improved.platform_specific || analysis.platform_specific,
-            line_by_line_analysis: improved.line_by_line_analysis || analysis.line_by_line_analysis,
-            critical_weaknesses: improved.critical_weaknesses || analysis.critical_weaknesses,
-            improvements: improved.improvements || analysis.improvements,
-            variations: improved.variations || analysis.variations,
-            persona_reactions: improved.persona_reactions || analysis.persona_reactions,
-            video_execution_analysis: improved.video_execution_analysis || analysis.video_execution_analysis,
-            winner_prediction: improved.winner_prediction || analysis.winner_prediction,
-            ad_variants: improved.ad_variants || analysis.ad_variants,
-            roi_comparison: improved.roi_comparison || analysis.roi_comparison,
-            competitor_advantage: improved.competitor_advantage || analysis.competitor_advantage
+            behavior_analysis: improved.behavior_analysis || analysis.behavior_analysis,
+
+            line_analysis: improved.line_analysis || analysis.line_analysis,
+
+            roi_analysis: {
+                ...analysis.roi_analysis,
+                ...improved.roi_analysis
+            },
+
+            variants: improved.variants || analysis.variants,
+
+            personas: improved.personas || analysis.personas,
+
+            competitor_analysis: improved.competitor_analysis || analysis.competitor_analysis,
+
+            run_decision: improved.run_decision || analysis.run_decision
         }
         : analysis;
 
@@ -1026,20 +1074,9 @@ function renderResults(data) {
             </div>
         `;
     }
-}// Tab Navigation
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => {
-            b.classList.remove('tab-active');
-            b.classList.add('text-gray-400');
-        });
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        btn.classList.add('tab-active');
-        btn.classList.remove('text-gray-400');
-        const tabId = `tab-${btn.dataset.tab}`;
-        const tabContent = document.getElementById(tabId);
-        if (tabContent) tabContent.classList.remove('hidden');
-    });
-});
+
+    // ✅ CRITICAL: Rebind all UI events after DOM update
+    rebindUIEvents();
+}// Tab Navigation - Event binding handled by rebindUIEvents() after render
 
 console.log('ADLYTICS v4.0 Enhanced Analyzer loaded (PATCHED with Improved Ad Re-analysis)');
