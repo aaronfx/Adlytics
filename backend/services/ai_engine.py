@@ -369,6 +369,41 @@ RULES:
 Respond with ONLY the JSON object."""
 
 
+# PATCH: Lightweight prompt for re-analyzing improved ad (faster, focused on key metrics)
+IMPROVED_AD_REANALYSIS_PROMPT = """You are AD PRE-VALIDATOR v4.0 - Quick Re-analysis Mode.
+Analyze this IMPROVED ad version and return ONLY the essential metrics.
+
+INPUT:
+- Ad Content: {ad_copy}
+- Platform: {platform}
+- Target Audience: {audience_description}
+- Industry: {industry}
+- Objective: {objective}
+
+OUTPUT FORMAT (STRICT JSON):
+{{
+  "scores": {{
+    "overall": 0-100
+  }},
+  "roi_analysis": {{
+    "roi_potential": "Low|Medium|High|Very High",
+    "break_even_probability": "XX%",
+    "risk_classification": "High|Medium|Low"
+  }},
+  "run_decision": {{
+    "should_run": "Yes|No|Only after fixes",
+    "reason": "One sentence explanation",
+    "risk_level": "High|Medium|Low"
+  }},
+  "behavior_summary": {{
+    "verdict": "One sentence assessment",
+    "launch_readiness": "XX%"
+  }}
+}}
+
+Return ONLY valid JSON. Be brutally honest."""
+
+
 def safe_json_parse(content: str) -> Dict[str, Any]:
     """
     Safely parse JSON from AI response with multiple fallback strategies
@@ -460,6 +495,7 @@ class AIEngine:
             - winner_prediction
             - roi_comparison
             - run_decision
+            - improved_ad_analysis (NEW - re-analysis of improved version)
         """
 
         if not self.api_key:
@@ -536,6 +572,116 @@ class AIEngine:
                         for field in required_v4_fields:
                             if field not in result:
                                 result[field] = self._get_default_v4_field(field)
+                        
+                        # ===================================================================
+                        # PATCH: Re-analyze the improved ad version
+                        # ===================================================================
+                        improved_ad = result.get("improved_ad", {})
+                        if improved_ad and (improved_ad.get("headline") or improved_ad.get("body_copy")):
+                            try:
+                                # Build improved ad content
+                                improved_content = f"{improved_ad.get('headline', '')}\n\n{improved_ad.get('body_copy', '')}\n\nCTA: {improved_ad.get('cta', '')}"
+                                
+                                # Build lightweight re-analysis prompt
+                                improved_prompt = IMPROVED_AD_REANALYSIS_PROMPT.format(
+                                    ad_copy=improved_content[:2000],  # Shorter for speed
+                                    platform=platform,
+                                    audience_description=audience_description,
+                                    industry=industry,
+                                    objective=objective
+                                )
+                                
+                                # Call AI for improved ad analysis (lighter weight)
+                                improved_payload = {
+                                    "model": self.model,
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": "You are a fast ad evaluator. Return only JSON."
+                                        },
+                                        {
+                                            "role": "user",
+                                            "content": improved_prompt
+                                        }
+                                    ],
+                                    "temperature": 0.3,
+                                    "max_tokens": 800  # Much smaller for speed
+                                }
+                                
+                                improved_response = await client.post(
+                                    f"{self.base_url}/chat/completions",
+                                    headers=headers,
+                                    json=improved_payload
+                                )
+                                improved_response.raise_for_status()
+                                improved_data = improved_response.json()
+                                
+                                if "choices" in improved_data and len(improved_data["choices"]) > 0:
+                                    improved_content_raw = improved_data["choices"][0]["message"]["content"]
+                                    improved_analysis = safe_json_parse(improved_content_raw)
+                                    
+                                    # Ensure structure is valid
+                                    result["improved_ad_analysis"] = {
+                                        "scores": improved_analysis.get("scores", {"overall": 0}),
+                                        "roi_analysis": improved_analysis.get("roi_analysis", {
+                                            "roi_potential": "Unknown",
+                                            "break_even_probability": "0%",
+                                            "risk_classification": "High"
+                                        }),
+                                        "run_decision": improved_analysis.get("run_decision", {
+                                            "should_run": "Unknown",
+                                            "reason": "Analysis incomplete",
+                                            "risk_level": "High"
+                                        }),
+                                        "behavior_summary": improved_analysis.get("behavior_summary", {
+                                            "verdict": "Unknown",
+                                            "launch_readiness": "0%"
+                                        })
+                                    }
+                                else:
+                                    raise ValueError("No choices in improved ad response")
+                                    
+                            except Exception as improved_err:
+                                # Fallback: use original analysis with note
+                                print(f"Improved ad re-analysis failed: {improved_err}")
+                                result["improved_ad_analysis"] = {
+                                    "scores": result.get("scores", {"overall": 0}),
+                                    "roi_analysis": result.get("roi_analysis", {
+                                        "roi_potential": "Unknown",
+                                        "break_even_probability": "0%",
+                                        "risk_classification": "High"
+                                    }),
+                                    "run_decision": {
+                                        "should_run": "Unknown",
+                                        "reason": f"Re-analysis failed: {str(improved_err)[:50]}",
+                                        "risk_level": "High"
+                                    },
+                                    "behavior_summary": {
+                                        "verdict": "Re-analysis unavailable",
+                                        "launch_readiness": "0%"
+                                    },
+                                    "_fallback": True
+                                }
+                        else:
+                            # No improved_ad generated, set empty analysis
+                            result["improved_ad_analysis"] = {
+                                "scores": {"overall": 0},
+                                "roi_analysis": {
+                                    "roi_potential": "N/A",
+                                    "break_even_probability": "0%",
+                                    "risk_classification": "High"
+                                },
+                                "run_decision": {
+                                    "should_run": "N/A",
+                                    "reason": "No improved version generated",
+                                    "risk_level": "High"
+                                },
+                                "behavior_summary": {
+                                    "verdict": "No improved version",
+                                    "launch_readiness": "0%"
+                                }
+                            }
+                        # ===================================================================
                         
                         return result
                     except ValueError as parse_err:
@@ -714,6 +860,24 @@ class AIEngine:
                     "what_competitor_is_doing_better": "Unable to analyze",
                     "execution_difference": "Unable to analyze",
                     "how_to_outperform": "Retry analysis"
+                },
+                # PATCH: Add improved_ad_analysis to fallback
+                "improved_ad_analysis": {
+                    "scores": {"overall": 0},
+                    "roi_analysis": {
+                        "roi_potential": "Unknown",
+                        "break_even_probability": "0%",
+                        "risk_classification": "High"
+                    },
+                    "run_decision": {
+                        "should_run": "Unknown",
+                        "reason": "Analysis failed",
+                        "risk_level": "High"
+                    },
+                    "behavior_summary": {
+                        "verdict": "Analysis failed",
+                        "launch_readiness": "0%"
+                    }
                 },
                 "_error": str(e),
                 "_fallback": True
