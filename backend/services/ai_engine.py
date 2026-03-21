@@ -154,21 +154,74 @@ RULES:
 4. Cultural context matters — Nigerian market sophistication is HIGH
 5. Video scripts: Evaluate spoken delivery, not just text quality
 6. If video script detected, analyze execution feasibility rigorously
+7. Return ONLY valid JSON - no markdown, no explanations, no code blocks
+8. Ensure all JSON keys and values are properly quoted
+9. Numbers must be integers without quotes, strings must be in quotes
 
-Respond with ONLY the JSON object. No markdown, no explanations."""
+Respond with ONLY the JSON object."""
+
+
+def safe_json_parse(content: str) -> Dict[str, Any]:
+    """
+    Safely parse JSON from AI response with multiple fallback strategies
+    """
+    content = content.strip()
+    
+    # Strategy 1: Direct JSON parse
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+    
+    # Strategy 2: Extract JSON from markdown code blocks
+    patterns = [
+        r"```json\s*\n(.*?)\n```",
+        r"```\s*\n(.*?)\n```",
+        r"```json(.*?)```",
+        r"```(.*?)```"
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1).strip())
+            except json.JSONDecodeError:
+                continue
+    
+    # Strategy 3: Find JSON object boundaries
+    try:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return json.loads(content[start:end+1])
+    except json.JSONDecodeError:
+        pass
+    
+    # Strategy 4: Fix common JSON issues and retry
+    try:
+        # Remove trailing commas before closing brackets
+        fixed = re.sub(r",(\s*[}\]])", r"\1", content)
+        # Fix single quotes to double quotes
+        fixed = fixed.replace("'", '"')
+        return json.loads(fixed)
+    except json.JSONDecodeError:
+        pass
+    
+    raise ValueError(f"Could not parse JSON from response: {content[:500]}")
 
 
 class AIEngine:
     """OpenRouter-powered AI analysis engine for ad validation"""
-    
+
     def __init__(self):
         self.api_key = OPENROUTER_API_KEY
         self.base_url = OPENROUTER_BASE_URL
         self.model = DEFAULT_MODEL
         self.timeout = 60.0  # seconds
-        
+
     @retry(
-        stop=stop_after_attempt(3),
+        stop=stop_after_attempt(2),  # 1 retry max as requested
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True
     )
@@ -183,35 +236,38 @@ class AIEngine:
     ) -> Dict[str, Any]:
         """
         Analyze ad using OpenRouter API with retry logic
-        
+
         Args:
-            ad_copy: The ad content to analyze
+            ad_copy: The ad content to analyze (truncated to 4000 chars)
             platform: Target platform (TikTok, Facebook, etc.)
             audience_description: Rich audience targeting description
             industry: Industry vertical
             objective: Campaign objective
             media_context: Optional media analysis results
-            
+
         Returns:
             Dict containing full analysis results
         """
-        
+
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY not configured")
+
+        # Truncate ad copy to prevent token overflow
+        ad_copy_truncated = ad_copy[:4000] if len(ad_copy) > 4000 else ad_copy
         
         # Format media context
         media_str = json.dumps(media_context) if media_context else "No media uploaded"
-        
+
         # Build the prompt
         prompt = AD_VALIDATION_PROMPT.format(
-            ad_copy=ad_copy[:4000],  # Truncate if too long
+            ad_copy=ad_copy_truncated,
             platform=platform,
             audience_description=audience_description,
             industry=industry,
             objective=objective,
             media_context=media_str
         )
-        
+
         # OpenRouter API request
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -219,7 +275,7 @@ class AIEngine:
             "HTTP-Referer": "https://adlytics.app",
             "X-Title": "ADLYTICS"
         }
-        
+
         payload = {
             "model": self.model,
             "messages": [
@@ -235,7 +291,7 @@ class AIEngine:
             "temperature": 0.3,
             "max_tokens": 4000
         }
-        
+
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -243,34 +299,23 @@ class AIEngine:
                     headers=headers,
                     json=payload
                 )
-                
+
                 response.raise_for_status()
                 data = response.json()
-                
+
                 # Extract content from OpenRouter response
                 if "choices" in data and len(data["choices"]) > 0:
                     content = data["choices"][0]["message"]["content"]
-                    
-                    # Parse JSON response
+
+                    # Parse JSON response using safe parser
                     try:
-                        result = json.loads(content)
+                        result = safe_json_parse(content)
                         return result
-                    except json.JSONDecodeError:
-                        # Fallback: try to extract JSON from markdown
-                        json_match = re.search(r"```json\\n(.*?)\\n```", content, re.DOTALL)
-                        if json_match:
-                            result = json.loads(json_match.group(1))
-                            return result
-                        else:
-                            # Try to find JSON object directly
-                            json_match = re.search(r"\\{.*\\}", content, re.DOTALL)
-                            if json_match:
-                                result = json.loads(json_match.group())
-                                return result
-                            raise ValueError("Could not parse JSON from response")
+                    except ValueError as parse_err:
+                        raise ValueError(f"JSON parsing failed: {parse_err}")
                 else:
                     raise ValueError("No choices in OpenRouter response")
-                    
+
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise ValueError("Invalid OpenRouter API key")
@@ -280,16 +325,13 @@ class AIEngine:
                 raise ValueError("OpenRouter service error. Please retry.")
             else:
                 raise ValueError(f"OpenRouter API error: {e.response.status_code}")
-                
+
         except httpx.TimeoutException:
             raise ValueError("Analysis timed out. Please retry or simplify request.")
-            
+
         except Exception as e:
             raise ValueError(f"Analysis failed: {str(e)}")
-    
-    # Alias for backward compatibility with routes that call .analyze()
-    analyze = analyze_ad
-    
+
     async def analyze_with_fallback(
         self,
         ad_copy: str,
@@ -319,7 +361,7 @@ class AIEngine:
                     "post_click_bounce_risk": "Medium",
                     "failure_risk": "50%",
                     "verdict": "Analysis temporarily unavailable - manual review recommended",
-                    "primary_reason": str(e),
+                    "primary_reason": str(e)[:200],
                     "launch_readiness": "50%"
                 },
                 "scores": {
@@ -342,7 +384,7 @@ class AIEngine:
                 "improvements": ["Retry analysis for full evaluation"],
                 "improved_ad": {
                     "headline": "[Analysis unavailable]",
-                    "body_copy": ad_copy[:200],
+                    "body_copy": ad_copy[:200] if ad_copy else "",
                     "cta": "[Please retry]",
                     "video_script_version": "[Please retry]"
                 },
