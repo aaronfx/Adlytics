@@ -27,7 +27,8 @@ class SPAStaticFiles(StaticFiles):
             raise ex
 
 # Import and register API routes FIRST (before static files)
-from backend.routes.analyze_v41 import router as analyze_router
+# Use the correct import path - analyze.py (not analyze_v41)
+from backend.routes.analyze import router as analyze_router
 app.include_router(analyze_router, prefix="/api", tags=["analysis"])
 
 # Health check endpoint (before static files)
