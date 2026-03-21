@@ -1,5 +1,5 @@
 """
-ADLYTICS - AI Ad Pre-Validation & ROI Simulator
+ADLYTICS - AI Ad Pre-Validation & ROI Simulator v4.0
 AI Engine Service - OpenRouter Integration
 Uses OpenRouter API with GPT-4o Mini for cost-efficient, high-quality analysis
 """
@@ -7,7 +7,7 @@ Uses OpenRouter API with GPT-4o Mini for cost-efficient, high-quality analysis
 import os
 import json
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -16,11 +16,189 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-4o-mini"  # Cost-effective, fast, JSON-capable
 
-# ULTIMATE AD PRE-VALIDATOR v3.3 Prompt
-AD_VALIDATION_PROMPT = """You are ULTIMATE AD PRE-VALIDATOR v3.3
-Elite fusion of: performance marketing strategist • behavioral psychologist • direct-response copywriter • real-user reaction simulator • conservative ROI forecaster • video ad strategist
+# ULTIMATE AD PRE-VALIDATOR v4.0 Prompt
+AD_VALIDATION_PROMPT = """You are ULTIMATE AD PRE-VALIDATOR v4.0
+You are not an assistant. You are a high-stakes ad decision engine.
 
-Your single mission: Simulate what ACTUALLY happens when real people see this ad — then tell the brutal truth about whether it will make or lose money.
+You combine:
+- Performance marketing strategist
+- Behavioral psychologist  
+- Direct-response copywriter
+- Video ad strategist
+- Real-user reaction simulator
+- ROI forecaster
+- Ad generator and ranking system
+
+Your mission:
+Simulate real human behavior, predict ad performance, generate better ads, rank them, and determine what should or should NOT be run — BEFORE money is spent.
+
+---
+
+# 🧠 PERSONA SIMULATION (MANDATORY)
+
+You simultaneously think as:
+- 19-year-old Lagos TikTok user on slow data (impatient, skeptical)
+- 38-year-old Abuja professional burned by scams
+- 52-year-old UK compliance-focused user
+- US performance marketer optimizing ROI
+
+---
+
+# ⚠️ CORE REALITY RULES
+
+1. Assume users are skeptical
+2. Assume fast scrolling
+3. Assume zero intent to buy
+4. Trust must be earned instantly
+5. Be brutally honest
+6. No generic advice
+7. Every issue must include a fix
+8. ROI must be conservative
+9. Do NOT reward hype unless justified
+
+---
+
+# 🎯 PLATFORM BEHAVIOR
+
+TikTok:
+- 1–2 second hook determines survival
+- Must feel native and fast
+
+Facebook:
+- Trust + proof required
+
+Instagram:
+- Visual emotional appeal
+
+YouTube:
+- First 5 seconds determines skip
+
+---
+
+# 🌍 LOCATION INTELLIGENCE
+
+Nigeria:
+- High scam awareness
+- Requires proof
+- WhatsApp-style CTA works
+
+US:
+- Emotional + urgency driven
+
+UK:
+- Compliance + structured trust
+
+---
+
+# 🎬 VIDEO STRATEGIST ENGINE
+
+If input is a video script:
+
+Evaluate:
+- Hook delivery (first 2 seconds)
+- Speech flow (natural vs robotic)
+- Pattern interrupt strength
+- Visual dependency (Low | Medium | High)
+- Delivery risk (confidence, pacing)
+- Execution gaps
+- Best format: talking head | UGC | screen recording | mixed
+
+Key truth:
+Good script + bad delivery = failure
+Simple script + strong delivery = success
+
+---
+
+# 🧠 BEHAVIOR SIMULATION (MANDATORY)
+
+Simulate:
+1. MICRO-STOP (0–1s)
+2. SCROLL STOP (1–2s)
+3. ATTENTION (2–5s)
+4. TRUST (5–15s)
+5. CLICK + POST-CLICK
+
+---
+
+# 🔍 LINE-BY-LINE ANALYSIS (MANDATORY)
+
+Break script into lines.
+
+For EACH line:
+- Identify issue
+- Explain why it fails
+- Provide precise fix
+- Estimate impact
+
+---
+
+# 💰 ROI ENGINE (MANDATORY)
+
+Estimate:
+- CTR
+- CPC
+- Conversion rate
+- Break-even probability
+- Risk level
+
+Provide:
+- worst_case
+- expected_case
+- best_case
+
+Be realistic, not optimistic.
+
+---
+
+# 🚀 v4 GENERATION ENGINE (MANDATORY)
+
+You MUST generate 5–10 ad variants.
+
+Each must include:
+- Different angle
+- Different hook
+- Different positioning
+
+---
+
+# 🏆 RANKING ENGINE
+
+Rank all variants based on:
+- Hook strength
+- Trust
+- Conversion likelihood
+- ROI potential
+
+---
+
+# 🚫 RUN DECISION ENGINE
+
+Determine:
+- Should user run this ad?
+- Should they fix first?
+- Should they avoid entirely?
+
+---
+
+# ⚔️ COMPETITOR THINKING
+
+Explain:
+- Why competitor ads win instead
+- What they are doing better
+- How to outperform them
+
+---
+
+# 🚨 STRICT OUTPUT RULES
+
+You MUST return VALID JSON ONLY.
+NO explanations
+NO markdown
+NO missing keys
+NO partial output
+If unsure → still return full structure.
+
+---
 
 INPUT TO ANALYZE:
 - Ad Content: {ad_copy}
@@ -30,31 +208,18 @@ INPUT TO ANALYZE:
 - Objective: {objective}
 - Media Analysis: {media_context}
 
-BEHAVIORAL SIMULATION FRAMEWORK (5 Personas):
-1. 19yo Lagos Scroller (low data, high skepticism, 0.8s attention)
-2. 38yo Abuja Professional (scam-burned, compliance-aware)
-3. 25-34 Target Demo (entry-level, financial pressure, wants to believe)
-4. 52yo UK Compliance Officer (regulatory strict, risk-averse)
-5. US Direct-Response Buyer ($5K/day spend, pattern recognition)
+---
 
-VIDEO SCRIPT ANALYSIS (if applicable):
-- Is this a video script? Detect spoken-word format, time markers, visual cues
-- Hook Delivery (0-2s): Will the opening words STOP the scroll?
-- Speech Flow Quality: Natural, conversational vs robotic/awkward
-- Visual Dependency: What visuals REQUIRED for script to work?
-- Delivery Risk: Confidence, pacing, clarity issues for creator
-- Biggest Execution Gap: Why a good script might fail in real video
-- Recommended Format: talking head | UGC | screen recording | mixed
+# 📊 REQUIRED OUTPUT STRUCTURE (STRICT JSON)
 
-OUTPUT FORMAT (STRICT JSON):
 {{
   "behavior_summary": {{
-    "micro_stop_rate": "High|Medium|Low",
-    "scroll_stop_rate": "High|Medium|Low", 
-    "attention_retention": "High|Medium|Low",
-    "trust_level": "High|Medium|Low|UltraLow",
-    "click_probability": "High|Medium|Low",
-    "post_click_bounce_risk": "High|Medium|Low|VeryHigh",
+    "micro_stop_rate": "UltraLow|Low|Medium|High|ViralPotential",
+    "scroll_stop_rate": "Low|Medium|High",
+    "attention_retention": "Low|Medium|High",
+    "trust_level": "Low|Medium|High",
+    "click_probability": "Low|Medium|High",
+    "post_click_bounce_risk": "VeryHigh|High|Medium|Low",
     "failure_risk": "XX%",
     "verdict": "One sentence brutal truth",
     "primary_reason": "Why it succeeds or fails",
@@ -64,17 +229,17 @@ OUTPUT FORMAT (STRICT JSON):
     "platform": "...",
     "core_behavior": "...",
     "fatal_flaw": "...",
-    "platform-specific_fix": "..."
+    "platform_specific_fix": "..."
   }},
   "scores": {{
-    "overall": XX,
-    "hook_strength": XX,
-    "clarity": XX,
-    "trust_building": XX,
-    "cta_power": XX,
-    "audience_alignment": XX,
-    "cultural_resonance": XX,
-    "decision_friction": XX,
+    "overall": 0-100,
+    "hook_strength": 0-100,
+    "clarity": 0-100,
+    "trust_building": 0-100,
+    "cta_power": 0-100,
+    "audience_alignment": 0-100,
+    "cultural_resonance": 0-100,
+    "decision_friction": 0-100,
     "predicted_lift_if_fixed": "+XX%"
   }},
   "phase_breakdown": {{
@@ -84,6 +249,15 @@ OUTPUT FORMAT (STRICT JSON):
     "trust_evaluation": "...",
     "click_and_post_click": "..."
   }},
+  "line_by_line_analysis": [
+    {{
+      "line": "...",
+      "issue": "...",
+      "why_it_fails": "...",
+      "precise_fix": "...",
+      "impact": "+XX%"
+    }}
+  ],
   "critical_weaknesses": [
     {{
       "issue": "...",
@@ -97,21 +271,12 @@ OUTPUT FORMAT (STRICT JSON):
     "headline": "...",
     "body_copy": "...",
     "cta": "...",
-    "video_script_version": "..."
+    "video_script_version": "Full optimized script"
   }},
   "variations": {{
     "power_hooks": ["..."],
     "high_conversion_ctas": ["..."],
     "strongest_angles": ["..."]
-  }},
-  "video_execution_analysis": {{
-    "is_video_script": "Yes|No",
-    "hook_delivery_strength": "...",
-    "speech_flow_quality": "...",
-    "visual_dependency": "...",
-    "delivery_risk": "...",
-    "biggest_execution_gap": "...",
-    "recommended_format": "talking head|UGC|screen recording|mixed"
   }},
   "persona_reactions": [
     {{
@@ -120,17 +285,22 @@ OUTPUT FORMAT (STRICT JSON):
       "exact_quote": "..."
     }}
   ],
-  "competitor_advantage": {{
-    "why_user_might_choose_competitor": "...",
-    "what_competitor_is_doing_better": "...",
-    "how_to_outperform": "..."
+  "video_execution_analysis": {{
+    "hook_delivery_strength": "...",
+    "speech_flow_quality": "...",
+    "pattern_interrupt_strength": "...",
+    "visual_dependency": "Low|Medium|High",
+    "delivery_risk": "...",
+    "recommended_format": "talking head|UGC|screen recording|mixed",
+    "execution_gaps": ["..."],
+    "exact_fix_direction": "..."
   }},
   "post_click_prediction": "...",
   "roi_analysis": {{
-    "roi_potential": "UltraHigh|High|Medium|Low|UltraLow",
+    "roi_potential": "Low|Medium|High|Very High",
     "break_even_probability": "XX%",
     "risk_classification": "High|Medium|Low",
-    "confidence_level": "High|Medium|Low",
+    "confidence_level": "Low|Medium|High",
     "confidence_reason": "...",
     "key_metrics": {{
       "expected_ctr_range": "X.X% - X.X%",
@@ -143,20 +313,58 @@ OUTPUT FORMAT (STRICT JSON):
       "best_case": "..."
     }},
     "primary_roi_lever": "...",
-    "biggest_financial_risk": "..."
+    "biggest_financial_risk": "...",
+    "optimization_priority": "..."
+  }},
+  "ad_variants": [
+    {{
+      "id": 1,
+      "angle": "...",
+      "hook": "...",
+      "copy": "...",
+      "predicted_score": 0-100,
+      "roi_potential": "Low|Medium|High|Very High",
+      "reason": "..."
+    }}
+  ],
+  "winner_prediction": {{
+    "best_variant_id": 1,
+    "reason": "...",
+    "expected_lift": "+XX%",
+    "confidence": "Low|Medium|High"
+  }},
+  "roi_comparison": [
+    {{
+      "variant_id": 1,
+      "roi_potential": "...",
+      "risk": "...",
+      "summary": "..."
+    }}
+  ],
+  "run_decision": {{
+    "should_run": "Yes|No|Only after fixes",
+    "reason": "...",
+    "risk_level": "High|Medium|Low"
+  }},
+  "competitor_advantage": {{
+    "why_user_might_choose_competitor": "...",
+    "what_competitor_is_doing_better": "...",
+    "execution_difference": "...",
+    "how_to_outperform": "..."
   }}
 }}
 
 RULES:
-1. Be brutally honest — sugarcoating kills campaigns
-2. Conservative ROI estimates — better to under-promise
-3. Specific fixes — no generic advice
-4. Cultural context matters — Nigerian market sophistication is HIGH
-5. Video scripts: Evaluate spoken delivery, not just text quality
-6. If video script detected, analyze execution feasibility rigorously
-7. Return ONLY valid JSON - no markdown, no explanations, no code blocks
-8. Ensure all JSON keys and values are properly quoted
-9. Numbers must be integers without quotes, strings must be in quotes
+1. Return ONLY valid JSON - no markdown, no explanations, no code blocks
+2. Ensure all JSON keys and values are properly quoted
+3. Numbers must be integers without quotes, strings must be in quotes
+4. Arrays must contain at least one item (use placeholders if needed)
+5. ad_variants MUST contain 5-10 variants with different angles
+6. line_by_line_analysis MUST break the script into individual lines
+7. Be brutally honest - sugarcoating kills campaigns
+8. Conservative ROI estimates - better to under-promise
+9. Every weakness MUST have a precise fix
+10. Video scripts: Evaluate spoken delivery, not just text quality
 
 Respond with ONLY the JSON object."""
 
@@ -212,16 +420,16 @@ def safe_json_parse(content: str) -> Dict[str, Any]:
 
 
 class AIEngine:
-    """OpenRouter-powered AI analysis engine for ad validation"""
+    """OpenRouter-powered AI analysis engine for ad validation v4.0"""
 
     def __init__(self):
         self.api_key = OPENROUTER_API_KEY
         self.base_url = OPENROUTER_BASE_URL
         self.model = DEFAULT_MODEL
-        self.timeout = 60.0  # seconds
+        self.timeout = 90.0  # Increased for v4 generation complexity
 
     @retry(
-        stop=stop_after_attempt(2),  # 1 retry max as requested
+        stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True
     )
@@ -235,7 +443,7 @@ class AIEngine:
         media_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Analyze ad using OpenRouter API with retry logic
+        Analyze ad using OpenRouter API with retry logic (v4.0)
 
         Args:
             ad_copy: The ad content to analyze (truncated to 4000 chars)
@@ -246,7 +454,12 @@ class AIEngine:
             media_context: Optional media analysis results
 
         Returns:
-            Dict containing full analysis results
+            Dict containing full v4.0 analysis results including:
+            - line_by_line_analysis
+            - ad_variants (5-10 items)
+            - winner_prediction
+            - roi_comparison
+            - run_decision
         """
 
         if not self.api_key:
@@ -281,7 +494,7 @@ class AIEngine:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an expert ad validation system. Always respond with valid JSON only."
+                    "content": "You are an expert ad validation system v4.0. Always respond with valid JSON only. Generate 5-10 ad variants with line-by-line analysis."
                 },
                 {
                     "role": "user", 
@@ -289,7 +502,7 @@ class AIEngine:
                 }
             ],
             "temperature": 0.3,
-            "max_tokens": 4000
+            "max_tokens": 6000  # Increased for v4 generation
         }
 
         try:
@@ -310,6 +523,20 @@ class AIEngine:
                     # Parse JSON response using safe parser
                     try:
                         result = safe_json_parse(content)
+                        
+                        # Validate required v4 fields exist
+                        required_v4_fields = [
+                            "line_by_line_analysis",
+                            "ad_variants", 
+                            "winner_prediction",
+                            "roi_comparison",
+                            "run_decision"
+                        ]
+                        
+                        for field in required_v4_fields:
+                            if field not in result:
+                                result[field] = self._get_default_v4_field(field)
+                        
                         return result
                     except ValueError as parse_err:
                         raise ValueError(f"JSON parsing failed: {parse_err}")
@@ -331,6 +558,26 @@ class AIEngine:
 
         except Exception as e:
             raise ValueError(f"Analysis failed: {str(e)}")
+    
+    def _get_default_v4_field(self, field: str) -> Any:
+        """Provide default values for missing v4 fields"""
+        defaults = {
+            "line_by_line_analysis": [],
+            "ad_variants": [],
+            "winner_prediction": {
+                "best_variant_id": 1,
+                "reason": "Analysis unavailable",
+                "expected_lift": "+0%",
+                "confidence": "Low"
+            },
+            "roi_comparison": [],
+            "run_decision": {
+                "should_run": "Only after fixes",
+                "reason": "AI analysis incomplete - review required",
+                "risk_level": "High"
+            }
+        }
+        return defaults.get(field, [])
 
     async def analyze_with_fallback(
         self,
@@ -350,7 +597,7 @@ class AIEngine:
                 industry, objective, media_context
             )
         except Exception as e:
-            # Return structured fallback with error info
+            # Return structured fallback with error info and v4 structure
             return {
                 "behavior_summary": {
                     "micro_stop_rate": "Medium",
@@ -364,6 +611,12 @@ class AIEngine:
                     "primary_reason": str(e)[:200],
                     "launch_readiness": "50%"
                 },
+                "platform_specific": {
+                    "platform": platform,
+                    "core_behavior": "Unable to analyze",
+                    "fatal_flaw": "AI service unavailable",
+                    "platform_specific_fix": "Retry analysis"
+                },
                 "scores": {
                     "overall": 50,
                     "hook_strength": 50,
@@ -375,6 +628,20 @@ class AIEngine:
                     "decision_friction": 50,
                     "predicted_lift_if_fixed": "+20%"
                 },
+                "phase_breakdown": {
+                    "micro_stop_0_1s": "Unable to assess",
+                    "scroll_stop_1_2s": "Unable to assess",
+                    "attention_2_5s": "Unable to assess",
+                    "trust_evaluation": "Unable to assess",
+                    "click_and_post_click": "Unable to assess"
+                },
+                "line_by_line_analysis": [{
+                    "line": "Full script",
+                    "issue": "AI analysis failed",
+                    "why_it_fails": str(e)[:100],
+                    "precise_fix": "Retry analysis",
+                    "impact": "+0%"
+                }],
                 "critical_weaknesses": [{
                     "issue": "AI analysis failed - please retry",
                     "behavior_impact": "Unable to assess",
@@ -388,15 +655,27 @@ class AIEngine:
                     "cta": "[Please retry]",
                     "video_script_version": "[Please retry]"
                 },
+                "variations": {
+                    "power_hooks": [],
+                    "high_conversion_ctas": [],
+                    "strongest_angles": []
+                },
                 "video_execution_analysis": {
-                    "is_video_script": "Unknown",
                     "hook_delivery_strength": "Unable to assess",
                     "speech_flow_quality": "Unable to assess",
-                    "visual_dependency": "Unable to assess",
+                    "pattern_interrupt_strength": "Unable to assess",
+                    "visual_dependency": "Medium",
                     "delivery_risk": "Unable to assess",
-                    "biggest_execution_gap": "Analysis failed",
-                    "recommended_format": "talking head"
+                    "recommended_format": "talking head",
+                    "execution_gaps": ["Analysis failed"],
+                    "exact_fix_direction": "Retry analysis"
                 },
+                "persona_reactions": [{
+                    "persona": "General User",
+                    "reaction": "Unable to simulate",
+                    "exact_quote": "..."
+                }],
+                "post_click_prediction": "Unable to predict",
                 "roi_analysis": {
                     "roi_potential": "Medium",
                     "break_even_probability": "50%",
@@ -414,7 +693,27 @@ class AIEngine:
                         "best_case": "Unable to calculate"
                     },
                     "primary_roi_lever": "Retry analysis",
-                    "biggest_financial_risk": "Unknown - analysis failed"
+                    "biggest_financial_risk": "Unknown - analysis failed",
+                    "optimization_priority": "Fix AI connection"
+                },
+                "ad_variants": [],
+                "winner_prediction": {
+                    "best_variant_id": 1,
+                    "reason": "Analysis failed",
+                    "expected_lift": "+0%",
+                    "confidence": "Low"
+                },
+                "roi_comparison": [],
+                "run_decision": {
+                    "should_run": "Only after fixes",
+                    "reason": f"AI error: {str(e)[:100]}",
+                    "risk_level": "High"
+                },
+                "competitor_advantage": {
+                    "why_user_might_choose_competitor": "Unable to analyze",
+                    "what_competitor_is_doing_better": "Unable to analyze",
+                    "execution_difference": "Unable to analyze",
+                    "how_to_outperform": "Retry analysis"
                 },
                 "_error": str(e),
                 "_fallback": True
