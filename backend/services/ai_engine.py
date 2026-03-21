@@ -160,13 +160,13 @@ Respond with ONLY the JSON object. No markdown, no explanations."""
 
 class AIEngine:
     """OpenRouter-powered AI analysis engine for ad validation"""
-
+    
     def __init__(self):
         self.api_key = OPENROUTER_API_KEY
         self.base_url = OPENROUTER_BASE_URL
         self.model = DEFAULT_MODEL
         self.timeout = 60.0  # seconds
-
+        
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -183,7 +183,7 @@ class AIEngine:
     ) -> Dict[str, Any]:
         """
         Analyze ad using OpenRouter API with retry logic
-
+        
         Args:
             ad_copy: The ad content to analyze
             platform: Target platform (TikTok, Facebook, etc.)
@@ -191,17 +191,17 @@ class AIEngine:
             industry: Industry vertical
             objective: Campaign objective
             media_context: Optional media analysis results
-
+            
         Returns:
             Dict containing full analysis results
         """
-
+        
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY not configured")
-
+        
         # Format media context
         media_str = json.dumps(media_context) if media_context else "No media uploaded"
-
+        
         # Build the prompt
         prompt = AD_VALIDATION_PROMPT.format(
             ad_copy=ad_copy[:4000],  # Truncate if too long
@@ -211,15 +211,15 @@ class AIEngine:
             objective=objective,
             media_context=media_str
         )
-
+        
         # OpenRouter API request
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://adlytics.app",  # Optional: your site URL
-            "X-Title": "ADLYTICS"  # Optional: your app name
+            "HTTP-Referer": "https://adlytics.app",
+            "X-Title": "ADLYTICS"
         }
-
+        
         payload = {
             "model": self.model,
             "messages": [
@@ -232,10 +232,10 @@ class AIEngine:
                     "content": prompt
                 }
             ],
-            "temperature": 0.3,  # Lower for consistent, analytical output
+            "temperature": 0.3,
             "max_tokens": 4000
         }
-
+        
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -243,34 +243,34 @@ class AIEngine:
                     headers=headers,
                     json=payload
                 )
-
+                
                 response.raise_for_status()
                 data = response.json()
-
+                
                 # Extract content from OpenRouter response
                 if "choices" in data and len(data["choices"]) > 0:
                     content = data["choices"][0]["message"]["content"]
-
+                    
                     # Parse JSON response
                     try:
                         result = json.loads(content)
                         return result
                     except json.JSONDecodeError:
                         # Fallback: try to extract JSON from markdown
-                        json_match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
+                        json_match = re.search(r"```json\\n(.*?)\\n```", content, re.DOTALL)
                         if json_match:
                             result = json.loads(json_match.group(1))
                             return result
                         else:
                             # Try to find JSON object directly
-                            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+                            json_match = re.search(r"\\{.*\\}", content, re.DOTALL)
                             if json_match:
                                 result = json.loads(json_match.group())
                                 return result
                             raise ValueError("Could not parse JSON from response")
                 else:
                     raise ValueError("No choices in OpenRouter response")
-
+                    
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise ValueError("Invalid OpenRouter API key")
@@ -280,13 +280,13 @@ class AIEngine:
                 raise ValueError("OpenRouter service error. Please retry.")
             else:
                 raise ValueError(f"OpenRouter API error: {e.response.status_code}")
-
+                
         except httpx.TimeoutException:
             raise ValueError("Analysis timed out. Please retry or simplify request.")
-
+            
         except Exception as e:
             raise ValueError(f"Analysis failed: {str(e)}")
-
+    
     async def analyze_with_fallback(
         self,
         ad_copy: str,
@@ -382,11 +382,6 @@ _ai_engine: Optional[AIEngine] = None
 
 def get_ai_engine() -> AIEngine:
     """Get or create AI engine singleton"""
-    global _ai_engine
-    if _ai_engine is None:
-        _ai_engine = AIEngine()
-    return _ai_engine
- AI engine singleton"""
     global _ai_engine
     if _ai_engine is None:
         _ai_engine = AIEngine()
