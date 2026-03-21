@@ -1,25 +1,20 @@
 """
-ADLYTICS Analysis Route v4.1 - TARGETED FIXES APPLIED
-- Proper variant handling
-- Video script support
-- Real scoring integration
+ADLYTICS Analysis Route v4.1 - COMPATIBLE VERSION
+Uses existing get_ai_engine() API structure
 """
 
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
 from typing import Optional, List
 import os
-import json
 
-# Import the fixed AI engine
-from backend.services.ai_engine_v41 import (
-    analyze_ad,
-    detect_content_mode,
-    extract_audience,
-    format_audience_summary
-)
+# Import using existing API structure
+from backend.services.ai_engine import get_ai_engine
 from backend.services.media_processor import process_media
 
 router = APIRouter()
+
+# Get AI engine instance (singleton pattern)
+ai_engine = get_ai_engine()
 
 
 @router.post("/analyze")
@@ -69,10 +64,9 @@ async def analyze_endpoint(
             "purchase_behavior": purchase_behavior
         }
 
-        # Detect content mode
-        content_mode = detect_content_mode(request_data)
-
         # Validate at least one content type is provided
+        content_mode = ai_engine.detect_content_mode(request_data)
+
         if content_mode == "adCopy" and not ad_copy:
             raise HTTPException(status_code=400, detail="Ad copy is required for ad copy mode")
         if content_mode == "videoScript" and not video_script:
@@ -87,8 +81,8 @@ async def analyze_endpoint(
             video_data = await process_media(video, "video")
             files.append(video_data)
 
-        # Run analysis with fixed engine
-        result = await analyze_ad(request_data, files)
+        # Run analysis using AI engine
+        result = await ai_engine.analyze(request_data, files)
 
         return result
 
