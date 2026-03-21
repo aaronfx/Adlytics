@@ -103,6 +103,7 @@
             background: rgba(255, 255, 255, 0.02);
         }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <!-- Navigation -->
@@ -350,6 +351,9 @@
                     <!-- Run Decision Banner (v4.0) -->
                     <div id="runDecision" class="bg-gray-800 rounded-2xl p-6 border border-white/5"></div>
 
+                    <!-- PATCH: Decision Upgrade Comparison -->
+                    <div id="decisionUpgrade"></div>
+
                     <!-- Overall Score -->
                     <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
                         <div class="flex items-center justify-between mb-4">
@@ -434,11 +438,11 @@
                             <!-- Rewrite Tab -->
                             <div id="tab-rewrite" class="tab-content hidden space-y-6">
                                 <div id="improvedAd" class="bg-gray-900/50 p-4 rounded-xl border border-green-500/20">
-                                    <h4 class="text-green-400 font-semibold mb-3">Improved Version</h4>
+                                    <h4 class="text-green-400 font-semibold mb-3">AI-Optimized Version (Re-tested)</h4>
                                     <div id="improvedContent" class="space-y-2"></div>
+                                    <!-- PATCH: Improved ad analysis moved here for visibility -->
+                                    <div id="improvedAnalysis"></div>
                                 </div>
-                                <!-- PATCH: Container for improved ad re-analysis -->
-                                <div id="improvedAnalysis"></div>
                                 <div>
                                     <h4 class="font-semibold mb-3">Power Hooks</h4>
                                     <div id="powerHooks" class="space-y-2"></div>
