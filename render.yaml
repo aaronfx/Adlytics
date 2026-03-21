@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: adlytics
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port 10000"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
+h: /health
+    autoDeploy: true
+
+  # Static Site for Frontend
+  - type: static
+    name: adlytics-frontend
+    buildCommand: ""  # No build needed for vanilla HTML/JS
+    staticPublishPath: ./frontend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://adlytics-api.onrender.com/api/*
+      - type: rewrite
+        source: /health
+        destination: https://adlytics-api.onrender.com/health
