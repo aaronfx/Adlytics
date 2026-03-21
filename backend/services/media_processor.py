@@ -1,283 +1,191 @@
 """
-ADLYTICS - Media Processor Service
-Handles image and video analysis for ad creatives
+ADLYTICS - Media Processing Service
+Uses Pillow (PIL) for image analysis - pre-built wheels, no compilation needed
 """
 
-import cv2
-import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
+from PIL import Image
 import io
+import math
 
 class MediaProcessor:
+    """Process images and videos using Pillow (no OpenCV compilation needed)"""
+
     def __init__(self):
-        self.supported_image_formats = ['.jpg', '.jpeg', '.png', '.webp', '.bmp']
-        self.supported_video_formats = ['.mp4', '.mov', '.avi', '.webm']
+        self.supported_image_formats = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+        self.supported_video_formats = {'.mp4', '.mov', '.avi', '.webm'}  # Limited video support without OpenCV
 
     def analyze_image(self, image_bytes: bytes) -> Dict[str, Any]:
         """
-        Analyze image for ad creative insights
-        Returns visual characteristics that affect ad performance
+        Analyze image using Pillow
+
+        Returns visual metrics without requiring OpenCV compilation
         """
         try:
-            # Convert bytes to numpy array
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            img = Image.open(io.BytesIO(image_bytes))
+            width, height = img.size
+            format_type = img.format
+            mode = img.mode
 
-            if img is None:
-                return {"error": "Could not decode image"}
+            # Calculate brightness (simple average)
+            if mode in ('RGB', 'RGBA', 'L'):
+                # Convert to grayscale for analysis
+                gray_img = img.convert('L')
+                pixels = list(gray_img.getdata())
+                avg_brightness = sum(pixels) / len(pixels) if pixels else 128
+                brightness_score = avg_brightness / 255.0  # Normalize to 0-1
+            else:
+                brightness_score = 0.5  # Default for unsupported modes
 
-            height, width = img.shape[:2]
+            # Detect if image has transparency
+            has_transparency = mode in ('RGBA', 'P') or 'transparency' in img.info
 
-            # Color analysis
-            color_analysis = self._analyze_colors(img)
+            # Estimate visual complexity (color count as proxy)
+            if mode in ('RGB', 'RGBA'):
+                # Sample pixels for color analysis (performance optimization)
+                small_img = img.resize((100, 100))
+                colors = small_img.getcolors(maxcolors=10000)
+                color_count = len(colors) if colors else 10000
+                complexity_score = min(color_count / 1000, 1.0)  # Normalize
+            else:
+                complexity_score = 0.5
 
-            # Brightness/contrast
-            brightness = self._analyze_brightness(img)
+            # Aspect ratio analysis
+            aspect_ratio = width / height if height > 0 else 1.0
+            is_mobile_friendly = 0.8 <= aspect_ratio <= 1.2  # Square-ish
 
-            # Text detection (rough heuristic)
-            text_score = self._detect_text_regions(img)
-
-            # Visual complexity
-            complexity = self._analyze_complexity(img)
-
-            # Face detection (for human element assessment)
-            faces = self._detect_faces(img)
+            # Platform-specific recommendations
+            platform_recommendations = []
+            if width < 600:
+                platform_recommendations.append("Image may be too small for Facebook feed ads")
+            if aspect_ratio > 2.0 or aspect_ratio < 0.5:
+                platform_recommendations.append("Extreme aspect ratio may be cropped on Instagram")
+            if brightness_score < 0.2:
+                platform_recommendations.append("Very dark image - may lose detail on mobile")
+            if brightness_score > 0.9:
+                platform_recommendations.append("Very bright image - risk of overexposure")
 
             return {
-                "dimensions": f"{width}x{height}",
-                "aspect_ratio": round(width / height, 2),
-                "dominant_colors": color_analysis["dominant"],
-                "brightness": brightness,
-                "contrast": color_analysis["contrast"],
-                "visual_complexity": complexity,
-                "text_detected": text_score > 0.3,
-                "faces_detected": len(faces),
-                "platform_recommendations": self._platform_recs(width, height, brightness, complexity),
-                "ad_readiness_score": self._calculate_readiness(width, height, brightness, complexity, text_score)
+                "width": width,
+                "height": height,
+                "aspect_ratio": round(aspect_ratio, 2),
+                "format": format_type,
+                "mode": mode,
+                "brightness_score": round(brightness_score, 2),
+                "complexity_score": round(complexity_score, 2),
+                "has_transparency": has_transparency,
+                "is_mobile_friendly": is_mobile_friendly,
+                "file_size_kb": round(len(image_bytes) / 1024, 2),
+                "platform_recommendations": platform_recommendations,
+                "hook_strength_estimate": self._estimate_hook_strength(brightness_score, complexity_score, aspect_ratio),
+                "text_readability_estimate": "Good" if brightness_score > 0.3 and brightness_score < 0.8 else "Poor"
             }
 
         except Exception as e:
-            return {"error": f"Image analysis failed: {str(e)}"}
+            return {
+                "error": str(e),
+                "width": 0,
+                "height": 0,
+                "brightness_score": 0.5,
+                "hook_strength_estimate": "Unable to analyze",
+                "platform_recommendations": ["Image analysis failed - please check file format"]
+            }
+
+    def _estimate_hook_strength(self, brightness: float, complexity: float, aspect_ratio: float) -> str:
+        """Estimate visual hook strength based on image metrics"""
+        score = 0.5
+
+        # Brightness factor (optimal is mid-range with contrast)
+        if 0.3 <= brightness <= 0.7:
+            score += 0.2
+        elif brightness < 0.1 or brightness > 0.9:
+            score -= 0.2
+
+        # Complexity factor (some visual interest helps)
+        if complexity > 0.3:
+            score += 0.15
+
+        # Aspect ratio factor (mobile-optimized performs better)
+        if 0.8 <= aspect_ratio <= 1.2:
+            score += 0.15
+        elif aspect_ratio > 2.0 or aspect_ratio < 0.5:
+            score -= 0.1
+
+        if score >= 0.7:
+            return "Strong - high contrast, good composition"
+        elif score >= 0.5:
+            return "Moderate - acceptable but could be optimized"
+        else:
+            return "Weak - consider brighter/more focused imagery"
 
     def analyze_video(self, video_bytes: bytes) -> Dict[str, Any]:
         """
-        Analyze first 5 seconds of video for hook assessment
+        Limited video analysis without OpenCV
+
+        Note: Without OpenCV, we can only do basic file analysis
+        For full video analysis, consider:
+        1. Using a video processing API (Cloudinary, AWS MediaConvert)
+        2. Installing opencv-python-headless in a Docker deployment
         """
-        try:
-            # Write to temp file (OpenCV needs file path for video)
-            temp_path = "/tmp/temp_video.mp4"
-            with open(temp_path, "wb") as f:
-                f.write(video_bytes)
+        file_size_mb = len(video_bytes) / (1024 * 1024)
 
-            cap = cv2.VideoCapture(temp_path)
+        # Basic file header analysis for format detection
+        header = video_bytes[:20]
+        format_guess = "unknown"
 
-            if not cap.isOpened():
-                return {"error": "Could not open video"}
+        # MP4 signature: ftyp at offset 4
+        if b'ftyp' in header:
+            format_guess = "MP4"
+        # MOV signature
+        elif b'moov' in header or b'mdat' in header:
+            format_guess = "QuickTime/MOV"
+        # AVI signature: RIFF....AVI
+        elif header[:4] == b'RIFF' and b'AVI' in header[:12]:
+            format_guess = "AVI"
+        # WebM signature: 1A 45 DF A3 (Matroska)
+        elif header[:4] == b'\x1a\x45\xdf\xa3':
+            format_guess = "WebM/Matroska"
 
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = total_frames / fps if fps > 0 else 0
-
-            # Analyze first 5 seconds (or full video if shorter)
-            frames_to_analyze = min(int(fps * 5), total_frames)
-
-            frame_scores = []
-            faces_detected = 0
-            brightness_changes = []
-
-            prev_brightness = None
-
-            for i in range(frames_to_analyze):
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                # Analyze every 10th frame for performance
-                if i % 10 == 0:
-                    brightness = self._analyze_brightness(frame)
-                    faces = self._detect_faces(frame)
-                    faces_detected = max(faces_detected, len(faces))
-
-                    if prev_brightness is not None:
-                        brightness_changes.append(abs(brightness - prev_brightness))
-                    prev_brightness = brightness
-
-                    frame_scores.append({
-                        "timestamp": round(i / fps, 1),
-                        "brightness": brightness,
-                        "faces": len(faces)
-                    })
-
-            cap.release()
-
-            # Calculate hook indicators
-            avg_brightness_change = np.mean(brightness_changes) if brightness_changes else 0
-            hook_strength = "High" if avg_brightness_change > 20 or faces_detected > 0 else "Medium" if avg_brightness_change > 10 else "Low"
-
-            return {
-                "duration_seconds": round(duration, 1),
-                "fps": round(fps, 1),
-                "resolution": f"{int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}",
-                "first_5s_hook_strength": hook_strength,
-                "faces_in_opening": faces_detected,
-                "visual_dynamics": "High" if avg_brightness_change > 25 else "Medium" if avg_brightness_change > 12 else "Low",
-                "frame_samples": frame_scores[:5],  # First 5 sample frames
-                "platform_notes": self._video_platform_notes(hook_strength, faces_detected, duration)
+        return {
+            "format_detected": format_guess,
+            "file_size_mb": round(file_size_mb, 2),
+            "analysis_type": "Limited (Pillow only - no video frames)",
+            "note": "For full video analysis (hook frames, pacing, faces), install opencv-python-headless or use video processing API",
+            "recommendations": [
+                "Ensure first 3 seconds have strong visual hook",
+                "Keep under 30 seconds for TikTok/Reels",
+                "Add captions - 85% watch without sound",
+                "Front-load key message in first 5 seconds"
+            ],
+            "hook_strength_estimate": "Manual review required (no frame analysis available)",
+            "platform_optimization": {
+                "tiktok": "9:16 aspect ratio, fast cuts, trending audio",
+                "instagram_reels": "9:16 or 4:5, text overlays, loop-friendly",
+                "facebook": "1:1 or 4:5, captions required, slower pacing OK",
+                "youtube_shorts": "9:16, 60s max, vertical text readable"
             }
+        }
 
-        except Exception as e:
-            return {"error": f"Video analysis failed: {str(e)}"}
-
-    def _analyze_colors(self, img: np.ndarray) -> Dict[str, Any]:
-        """Extract dominant colors and contrast"""
-        # Convert to RGB for analysis
-        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        # Reshape for clustering
-        pixels = rgb.reshape(-1, 3).astype(np.float32)
-
-        # K-means for dominant colors
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        _, labels, centers = cv2.kmeans(pixels, 3, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-
-        # Convert to hex
-        dominant = []
-        for center in centers:
-            r, g, b = int(center[0]), int(center[1]), int(center[2])
-            dominant.append(f"#{r:02x}{g:02x}{b:02x}")
-
-        # Calculate contrast (std dev of brightness)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        contrast = round(float(np.std(gray)), 1)
-
-        return {"dominant": dominant, "contrast": contrast}
-
-    def _analyze_brightness(self, img: np.ndarray) -> str:
-        """Assess overall brightness"""
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        mean_brightness = np.mean(gray)
-
-        if mean_brightness < 50:
-            return "Very Dark"
-        elif mean_brightness < 100:
-            return "Dark"
-        elif mean_brightness < 150:
-            return "Medium"
-        elif mean_brightness < 200:
-            return "Bright"
-        else:
-            return "Very Bright"
-
-    def _detect_text_regions(self, img: np.ndarray) -> float:
-        """Heuristic for text detection using edge density"""
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Edge detection
-        edges = cv2.Canny(gray, 50, 150)
-        edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
-
-        return float(edge_density)
-
-    def _analyze_complexity(self, img: np.ndarray) -> str:
-        """Assess visual complexity"""
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Edge density as complexity proxy
-        edges = cv2.Canny(gray, 50, 150)
-        edge_ratio = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
-
-        if edge_ratio < 0.02:
-            return "Minimal"
-        elif edge_ratio < 0.05:
-            return "Simple"
-        elif edge_ratio < 0.1:
-            return "Moderate"
-        elif edge_ratio < 0.2:
-            return "Complex"
-        else:
-            return "Very Complex"
-
-    def _detect_faces(self, img: np.ndarray) -> list:
-        """Detect faces using Haar cascade"""
+    def get_image_thumbnail(self, image_bytes: bytes, size: Tuple[int, int] = (300, 300)) -> bytes:
+        """Generate thumbnail for preview"""
         try:
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-            return faces
-        except:
-            return []
+            img = Image.open(io.BytesIO(image_bytes))
+            img.thumbnail(size, Image.Resampling.LANCZOS)
 
-    def _platform_recs(self, width: int, height: int, brightness: str, complexity: str) -> Dict[str, str]:
-        """Platform-specific recommendations"""
-        aspect = width / height
+            output = io.BytesIO()
+            img.save(output, format='PNG')
+            return output.getvalue()
+        except Exception:
+            return b''
 
-        recs = {}
 
-        # TikTok/Reels (9:16)
-        if aspect < 0.6:
-            recs["vertical_video"] = "Optimal for TikTok/Reels"
-        else:
-            recs["vertical_video"] = "Crop to 9:16 for TikTok/Reels"
+# Singleton instance
+_media_processor: Optional[MediaProcessor] = None
 
-        # Instagram (1:1 or 4:5)
-        if 0.9 < aspect < 1.1:
-            recs["instagram_feed"] = "Perfect for Instagram feed"
-        else:
-            recs["instagram_feed"] = "Consider 1:1 square crop"
 
-        # Facebook (varies)
-        recs["facebook"] = "Works across placements"
-
-        # Brightness note
-        if brightness in ["Very Dark", "Dark"]:
-            recs["brightness"] = "May lose impact on mobile in bright environments"
-
-        return recs
-
-    def _calculate_readiness(self, width: int, height: int, brightness: str, complexity: str, text_score: float) -> int:
-        """Calculate ad readiness score 0-100"""
-        score = 50
-
-        # Resolution bonus
-        if width >= 1080:
-            score += 15
-        elif width >= 720:
-            score += 10
-
-        # Brightness balance
-        if brightness == "Medium":
-            score += 15
-        elif brightness in ["Bright", "Dark"]:
-            score += 5
-
-        # Complexity balance
-        if complexity == "Moderate":
-            score += 10
-        elif complexity == "Simple":
-            score += 5
-
-        # Text presence (usually good for ads)
-        if text_score > 0.1:
-            score += 10
-
-        return min(100, score)
-
-    def _video_platform_notes(self, hook_strength: str, faces: int, duration: float) -> Dict[str, str]:
-        """Video-specific platform notes"""
-        notes = {}
-
-        if hook_strength == "High":
-            notes["tiktok"] = "Strong visual dynamics — will stop scroll"
-            notes["youtube"] = "Good retention potential"
-        else:
-            notes["tiktok"] = "Consider stronger opening hook (brightness change or face)"
-
-        if faces > 0:
-            notes["facebook"] = "Human element increases engagement"
-
-        if duration < 15:
-            notes["instagram_reels"] = "Short format optimal"
-        elif duration > 60:
-            notes["youtube"] = "Better suited for long-form"
-
-        return notes
+def get_media_processor() -> MediaProcessor:
+    """Get or create media processor singleton"""
+    global _media_processor
+    if _media_processor is None:
+        _media_processor = MediaProcessor()
+    return _media_processor
