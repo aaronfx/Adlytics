@@ -1,8 +1,30 @@
+# ADLYTICS - AI Ad Pre-Validation SaaS
+# Updated for Render compatibility with Python 3.11
+# Use PYTHON_VERSION=3.11.0 in Render environment variables
+
+# FastAPI and web framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-requests==2.31.0
-pydantic==2.5.0
-opencv-python==4.8.1.78
+
+# Pydantic - use latest stable with pre-built wheels for Python 3.11
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# HTTP client for OpenRouter
+httpx==0.25.2
+
+# Retry logic
+tenacity==8.2.3
+
+# Image processing - Pillow has pre-built wheels
+Pillow==10.1.0
+
+# Environment management
 python-dotenv==1.0.0
-numpy==1.26.2
+
+# CORS - compatible starlette version
+starlette==0.27.0
+
+# Typing extensions
+typing-extensions==4.9.0
