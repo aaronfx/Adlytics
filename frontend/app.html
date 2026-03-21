@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADLYTICS — Analyze Your Ad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+        .score-ring { 
+            background: conic-gradient(from 0deg, #10b981 var(--score), #374151 var(--score));
+        }
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .tab-active {
+            border-bottom: 2px solid #a855f7;
+            color: #a855f7;
+        }
+        .form-section {
+            border-left: 3px solid #a855f7;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .dependent-field {
+            transition: all 0.3s ease;
+        }
+        .field-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            margin-bottom: 0.25rem;
+        }
+        .info-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .info-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 10;
+            border: 1px solid #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center font-bold">A</div>
+                    <span class="text-xl font-bold tracking-tight">ADLYTICS</span>
+                </a>
+                <a href="index.html" class="text-gray-300 hover:text-white transition">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="pt-20 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Input Form -->
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3 text-purple-400">1</span>
+                        Your Ad
+                    </h2>
+
+                    <form id="analyzeForm" class="space-y-4">
+                        <!-- Ad Copy -->
+                        <div>
+                            <label class="field-label">Ad Copy <span class="text-red-400">*</span></label>
+                            <textarea id="adCopy" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Paste your ad headline and body copy here..."></textarea>
+                        </div>
+
+                        <!-- Platform & Industry -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="field-label">Platform <span class="text-red-400">*</span></label>
+                                <select id="platform" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Platform</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="field-label">Industry <span class="text-red-400">*</span></label>
+                                <select id="industry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Industry</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Objective -->
+                        <div>
+                            <label class="field-label">Campaign Objective <span class="text-red-400">*</span></label>
+                            <select id="objective" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <option value="conversions">Sales / Conversions</option>
+                                <option value="leads">Lead Generation</option>
+                                <option value="traffic">Website Traffic</option>
+                                <option value="awareness">Brand Awareness</option>
+                                <option value="appinstalls">App Installs</option>
+                                <option value="engagement">Engagement</option>
+                            </select>
+                        </div>
+
+                        <!-- Audience Targeting Section -->
+                        <div class="form-section">
+                            <h3 class="text-lg font-semibold mb-4 text-purple-400">🎯 Audience Targeting</h3>
+
+                            <!-- Country & Region -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Country <span class="text-red-400">*</span></label>
+                                    <select id="audienceCountry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Country</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">State/Region</label>
+                                    <select id="audienceRegion" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none" disabled>
+                                        <option value="">Select Region</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Age & Gender -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Age Bracket <span class="text-red-400">*</span></label>
+                                    <select id="audienceAge" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Age</option>
+                                    </select>
+                                    <p id="ageTraits" class="text-xs text-gray-500 mt-1 hidden"></p>
+                                </div>
+                                <div>
+                                    <label class="field-label">Gender</label>
+                                    <select id="audienceGender" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Any</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="all">All Genders</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Income & Education -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="field-label">Income Level <span class="info-tooltip" data-tooltip="Affects purchasing power and price sensitivity">ℹ️</span></label>
+                                    <select id="audienceIncome" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Income</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Education Level</label>
+                                    <select id="audienceEducation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Select Education</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Occupation -->
+                            <div class="mb-4">
+                                <label class="field-label">Occupation <span class="info-tooltip" data-tooltip="Determines daily pain points and availability">ℹ️</span></label>
+                                <select id="audienceOccupation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Occupation</option>
+                                </select>
+                                <p id="occupationPainPoints" class="text-xs text-gray-500 mt-1 hidden"></p>
+                            </div>
+
+                            <!-- Psychographic -->
+                            <div class="mb-4">
+                                <label class="field-label">Psychographic Profile <span class="info-tooltip" data-tooltip="How they adopt new products">ℹ️</span></label>
+                                <select id="audiencePsychographic" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Profile</option>
+                                </select>
+                            </div>
+
+                            <!-- Pain Point -->
+                            <div class="mb-4">
+                                <label class="field-label">Primary Pain Point <span class="info-tooltip" data-tooltip="Main problem your ad addresses">ℹ️</span></label>
+                                <select id="audiencePainPoint" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="">Select Pain Point</option>
+                                </select>
+                            </div>
+
+                            <!-- Tech Savviness & Purchase Behavior -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="field-label">Tech Savviness</label>
+                                    <select id="techSavviness" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="medium">Medium (Default)</option>
+                                        <option value="low">Low - Prefers simple</option>
+                                        <option value="high">High - Early adopter</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Purchase Style</label>
+                                    <select id="purchaseBehavior" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="">Unknown</option>
+                                        <option value="impulse">Impulse Buyer</option>
+                                        <option value="research">Researcher</option>
+                                        <option value="loyal">Brand Loyal</option>
+                                        <option value="bargain">Deal Seeker</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Media Upload -->
+                        <div class="border-t border-white/10 pt-4">
+                            <label class="field-label">Creative (Optional)</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                                    <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
+                                        <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span class="text-xs text-gray-500">Add Image</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                                    <label for="videoUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
+                                        <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        <span class="text-xs text-gray-500">Add Video</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="filePreview" class="mt-2 text-sm text-gray-400 hidden"></div>
+                        </div>
+
+                        <button type="submit" id="analyzeBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-[1.02] transition transform disabled:opacity-50 disabled:cursor-not-allowed">
+                            Analyze Ad →
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="space-y-6">
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden bg-gray-800 rounded-2xl p-12 border border-white/5 text-center">
+                    <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <h3 class="text-xl font-semibold mb-2">Simulating Real User Behavior...</h3>
+                    <p class="text-gray-400">Analyzing across 5 personas • Checking platform fit • Forecasting ROI</p>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="bg-gray-800 rounded-2xl p-12 border border-white/5 text-center">
+                    <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Ready to Analyze</h3>
+                    <p class="text-gray-400">Fill in your ad details and detailed audience targeting to see the simulation results.</p>
+                </div>
+
+                <!-- Results Content -->
+                <div id="resultsContent" class="hidden space-y-6">
+                    <!-- Overall Score -->
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Overall Score</h3>
+                            <span id="verdictBadge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700"></span>
+                        </div>
+                        <div class="flex items-center space-x-6">
+                            <div class="relative w-24 h-24">
+                                <svg class="w-24 h-24 transform -rotate-90">
+                                    <circle cx="48" cy="48" r="40" stroke="#374151" stroke-width="8" fill="none"></circle>
+                                    <circle id="scoreCircle" cx="48" cy="48" r="40" stroke="#a855f7" stroke-width="8" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="overallScore" class="text-2xl font-bold">0</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p id="primaryReason" class="text-gray-300 text-sm"></p>
+                                <div class="mt-3 flex items-center space-x-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">Launch Readiness</span>
+                                        <p id="launchReadiness" class="font-semibold text-white"></p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Failure Risk</span>
+                                        <p id="failureRisk" class="font-semibold text-red-400"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audience Summary -->
+                    <div id="audienceSummary" class="bg-gray-800 rounded-2xl p-4 border border-white/5 hidden">
+                        <h4 class="text-sm font-semibold text-purple-400 mb-2">Target Audience Profile</h4>
+                        <p id="audienceParsed" class="text-sm text-gray-300"></p>
+                    </div>
+
+                    <!-- Detailed Scores -->
+                    <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
+                        <h3 class="text-lg font-semibold mb-4">Performance Breakdown</h3>
+                        <div class="space-y-3" id="scoresGrid"></div>
+                    </div>
+
+                    <!-- Tabs Navigation -->
+                    <div class="bg-gray-800 rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="flex border-b border-white/5 overflow-x-auto">
+                            <button class="tab-btn tab-active px-6 py-3 text-sm font-medium whitespace-nowrap" data-tab="behavior">Behavior</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="weaknesses">Weaknesses</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="rewrite">Rewrite</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="personas">Personas</button>
+                            <button class="tab-btn px-6 py-3 text-sm font-medium text-gray-400 hover:text-white whitespace-nowrap" data-tab="roi">ROI</button>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="p-6">
+                            <!-- Behavior Tab -->
+                            <div id="tab-behavior" class="tab-content space-y-4">
+                                <div id="phaseBreakdown" class="space-y-3"></div>
+                                <div id="platformSpecific" class="mt-6 p-4 bg-gray-900/50 rounded-xl"></div>
+                            </div>
+
+                            <!-- Weaknesses Tab -->
+                            <div id="tab-weaknesses" class="tab-content hidden space-y-4">
+                                <div id="criticalWeaknesses" class="space-y-4"></div>
+                                <div id="improvements" class="mt-4"></div>
+                            </div>
+
+                            <!-- Rewrite Tab -->
+                            <div id="tab-rewrite" class="tab-content hidden space-y-6">
+                                <div id="improvedAd" class="bg-gray-900/50 p-4 rounded-xl border border-green-500/20">
+                                    <h4 class="text-green-400 font-semibold mb-3">Improved Version</h4>
+                                    <div id="improvedContent" class="space-y-2"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-3">Power Hooks</h4>
+                                    <div id="powerHooks" class="space-y-2"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-3">High-Converting CTAs</h4>
+                                    <div id="conversionCTAs" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+
+                            <!-- Personas Tab -->
+                            <div id="tab-personas" class="tab-content hidden space-y-4">
+                                <div id="personaReactions" class="space-y-4"></div>
+                            </div>
+
+                            <!-- ROI Tab -->
+                            <div id="tab-roi" class="tab-content hidden space-y-4">
+                                <div id="roiAnalysis" class="space-y-4"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/analyzer.js"></script>
+</body>
+</html>
