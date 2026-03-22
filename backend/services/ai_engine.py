@@ -1,5 +1,5 @@
 """
-ADLYTICS AI Engine v4.1 - FIXED NoneType errors
+ADLYTICS AI Engine v4.1 - FIXED
 Adds proper None checks to scoring functions
 """
 
@@ -253,6 +253,7 @@ def generate_single_variant(analysis_data, platform, audience, industry, angle_c
     cta_score = evaluate_cta_power(cta, platform)
     audience_score = evaluate_audience_alignment(f"{hook} {body} {cta}", audience)
 
+    # FIXED: Proper parameter names
     predicted_score = calculate_weighted_score(
         hook=hook_score,
         clarity=clarity_score,
