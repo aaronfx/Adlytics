@@ -1,5 +1,5 @@
 """
-ADLYTICS v5.0 - AI Engine with Real Content Analysis
+ADLYTICS v5.1 - AI Engine with Real Content Analysis + Production Output
 """
 
 import os
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIEngineV5:
-    """V5 AI Engine - Real content analysis"""
+    """V5.1 AI Engine - Real content analysis with production-ready outputs"""
 
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -53,7 +53,7 @@ class AIEngineV5:
                                 {"role": "user", "content": prompt}
                             ],
                             "temperature": 0.3,
-                            "max_tokens": 7000
+                            "max_tokens": 8000
                         }
                     )
 
@@ -90,6 +90,8 @@ RULES:
 4. Empty fields = score 0-15
 5. Gibberish = scores 5-20
 6. Only scores 70+ if content demonstrates quality
+7. For variants: generate 5 distinct angles, then create ONE final improved version ready for production
+8. Video analysis must include timecode breakdown if video script provided
 
 You will be verified - fake high scores will be rejected."""
 
@@ -170,9 +172,18 @@ Return JSON:
   }},
   "ad_variants": [
     {{"id": 1, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}},
-    {{"id": 2, ...}},
-    {{"id": 3, ...}}
+    {{"id": 2, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}},
+    {{"id": 3, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}},
+    {{"id": 4, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}},
+    {{"id": 5, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}}
   ],
+  "improved_ad": {{
+    "final_hook": "Copy-paste ready headline (optimized)",
+    "final_body": "Polished body text ready for Meta Ads",
+    "final_cta": "Optimized call-to-action button text",
+    "video_script_ready": "Full video script with timecodes [HOOK 0-3s], [BODY 3-15s], [CTA 15-30s] for production team",
+    "key_changes_made": ["Specific improvement 1", "Specific improvement 2", "Specific improvement 3"]
+  }},
   "winner_prediction": {{"winner_id": number, "angle": "...", "confidence": "...", "reasoning": "..."}},
   "objection_detection": {{
     "scam_triggers": [{{"trigger": "...", "severity": "..."}}],
@@ -191,6 +202,19 @@ Return JSON:
     "tiktok": {{"score": 0-100, "adapted_copy": "...", "changes_needed": "..."}},
     "youtube": {{"score": 0-100, "adapted_copy": "...", "changes_needed": "..."}}
   }},
+  "video_execution_analysis": {{
+    "hook_delivery": "Analysis of opening 0-3 seconds (60+ words)",
+    "speech_flow": "Pacing and rhythm assessment (40+ words)",
+    "visual_dependency": "How much relies on visuals vs audio (40+ words)",
+    "delivery_risk": "Potential execution challenges (40+ words)",
+    "format_recommendation": "talking_head/UGC/screen_recording/mixed",
+    "competitor_advantage": "How to beat competitors with this video (50+ words)",
+    "timecode_breakdown": [
+      {{"segment": "HOOK 0-3s", "content": "What happens", "effectiveness": 0-100}},
+      {{"segment": "BODY 3-15s", "content": "What happens", "effectiveness": 0-100}},
+      {{"segment": "CTA 15-30s", "content": "What happens", "effectiveness": 0-100}}
+    ]
+  }},
   "persona_reactions": [
     {{"name": "...", "demographic": "...", "reaction": "...", "pain_points": ["..."], "objections": ["..."], "conversion_likelihood": "..."}}
   ],
@@ -202,11 +226,20 @@ Return JSON:
     "body_phase": "...",
     "cta_phase": "..."
   }},
-  "roi_comparison": "...",
-  "competitor_advantage": "..."
+  "roi_comparison": {{
+    "your_projection": "X.Xx",
+    "industry_average": "X.Xx", 
+    "top_performer": "X.Xx",
+    "gap_analysis": "Detailed comparison of where user stands vs industry (100+ words)"
+  }},
+  "competitor_advantage": {{
+    "unique_angles": ["Angle 1", "Angle 2", "Angle 3"],
+    "defensible_moat": "What makes this hard to copy (80+ words)",
+    "vulnerability": "Weakness competitors could exploit (60+ words)"
+  }}
 }}
 
-Analyze the ACTUAL text above."""
+Analyze the ACTUAL text above. Generate 5 distinct variants, then create the final improved_ad ready for immediate production use."""
 
     def _verify_analysis(self, analysis: Dict, ad_copy: str, video_script: str) -> None:
         """Verify real analysis"""
@@ -228,7 +261,17 @@ Analyze the ACTUAL text above."""
         if content_len < 50 and scores.get("overall", 100) > 50:
             raise ValueError(f"Short content got high score: {scores.get('overall')}")
 
-        logger.info(f"Verified: {content_len} chars, score: {scores.get('overall')}")
+        # Verify improved_ad exists and has required fields
+        improved = analysis.get("improved_ad", {})
+        if not improved.get("final_hook") or not improved.get("final_body"):
+            raise ValueError("Missing improved_ad production fields")
+
+        # Verify 5 variants
+        variants = analysis.get("ad_variants", [])
+        if len(variants) < 5:
+            raise ValueError(f"Expected 5 variants, got {len(variants)}")
+
+        logger.info(f"Verified: {content_len} chars, score: {scores.get('overall')}, variants: {len(variants)}")
 
 
 _engine_instance = None
