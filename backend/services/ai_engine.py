@@ -69,6 +69,20 @@ class AIEngineV5:
                     analysis = json.loads(content.strip())
                     self._verify_analysis(analysis, ad_copy, video_script)
 
+                    # 🛡️ Ensure final_ad_package always exists
+                    if "final_ad_package" not in analysis:
+                        analysis["final_ad_package"] = {
+                            "hook": "",
+                            "body": "",
+                            "cta": "",
+                            "full_script": "",
+                            "caption": "",
+                            "thumbnail_text": "",
+                            "visual_direction": [],
+                            "editing_style": "",
+                            "posting_recommendation": {}
+                        }
+
                     return analysis
 
             except Exception as e:
@@ -94,36 +108,24 @@ RULES:
 You will be verified - fake high scores will be rejected."""
 
     def _build_prompt(self, data: Dict, ad_copy: str, video_script: str) -> str:
-        content = ad_copy + video_script
-        is_short = len(content) < 50
-        is_gibberish = len([w for w in content.split() if len(w) > 2 and w.isalpha()]) < 2
+        quality_note = "Ensure deep analysis and avoid generic responses."
 
-        quality_note = ""
-        if not ad_copy:
-            quality_note = "⚠️ NO AD COPY - All scores should be 10-25"
-        elif is_gibberish:
-            quality_note = "⚠️ GIBBERISH CONTENT - Clarity/Credibility 5-20"
-        elif is_short:
-            quality_note = "⚠️ SHORT CONTENT - Scores 20-40"
-
-        return f"""Analyze this ad content:
+        return f"""
+You are an elite ad performance analyst.
 
 {quality_note}
 
 AD COPY:
-```
 {ad_copy or "[EMPTY]"}
-```
 
 VIDEO SCRIPT:
-```
 {video_script or "[EMPTY]"}
-```
 
 PLATFORM: {data.get('platform', 'unknown')}
 INDUSTRY: {data.get('industry', 'unknown')}
 
-Return JSON:
+Return JSON ONLY (no explanation):
+
 {{
   "scores": {{
     "overall": 0-100,
@@ -135,25 +137,27 @@ Return JSON:
     "audience_match": 0-100,
     "platform_fit": 0-100
   }},
-  "behavior_summary": "Detailed analysis referencing actual content (150+ chars)",
-  "critical_weaknesses": [{{"issue": "...", "severity": "High/Medium/Low", "impact": "...", "fix": "..."}}],
+  "behavior_summary": "...",
+  "critical_weaknesses": [
+    {{"issue": "...", "severity": "High/Medium/Low", "impact": "...", "fix": "..."}}
+  ],
   "decision_engine": {{
-    "should_run": true/false,
+    "should_run": true,
     "confidence": "0-100%",
-    "reasoning": "Detailed (150+ chars)",
-    "expected_profit": number,
+    "reasoning": "...",
+    "expected_profit": 0,
     "roi_prediction": "X.Xx",
-    "profit_scenarios": {{"low_case": number, "base_case": number, "high_case": number}},
+    "profit_scenarios": {{"low_case": 0, "base_case": 0, "high_case": 0}},
     "kill_threshold": "...",
     "scale_threshold": "...",
     "confidence_breakdown": {{"hook": 0-100, "offer": 0-100, "audience": 0-100}}
   }},
   "budget_optimization": {{
-    "break_even_cpc": number,
-    "safe_test_budget": number,
+    "break_even_cpc": 0,
+    "safe_test_budget": 0,
     "budget_phases": ["...", "...", "..."],
     "risk_level": "Low/Medium/High",
-    "worst_case_loss": number,
+    "worst_case_loss": 0,
     "scaling_rule": "...",
     "scaling_risk": "...",
     "budget_tip": "..."
@@ -165,48 +169,47 @@ Return JSON:
     "urgency": 0-100,
     "trust": 0-100,
     "primary_driver": "...",
-    "emotional_triggers": ["...", "...", "..."],
+    "emotional_triggers": ["...", "..."],
     "psychological_gaps": ["...", "..."]
   }},
   "ad_variants": [
-    {{"id": 1, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}},
-    {{"id": 2, ...}},
-    {{"id": 3, ...}}
+    {{"id": 1, "angle": "...", "hook": "...", "body": "...", "cta": "...", "predicted_score": 0-100, "why_it_works": "..."}}
   ],
-  "winner_prediction": {{"winner_id": number, "angle": "...", "confidence": "...", "reasoning": "..."}},
-  "objection_detection": {{
-    "scam_triggers": [{{"trigger": "...", "severity": "..."}}],
-    "trust_gaps": [{{"gap": "...", "severity": "..."}}],
-    "compliance_risks": [{{"risk": "...", "platform": "..."}}]
+  "winner_prediction": {{
+    "winner_id": 1,
+    "angle": "...",
+    "confidence": "...",
+    "reasoning": "..."
   }},
-  "creative_fatigue": {{
-    "fatigue_level": "Low/Medium/High",
-    "estimated_decline_days": number,
-    "explanation": "...",
-    "refresh_needed": true/false,
-    "refresh_recommendations": ["...", "...", "..."]
-  }},
-  "cross_platform": {{
-    "facebook": {{"score": 0-100, "adapted_copy": "...", "changes_needed": "..."}},
-    "tiktok": {{"score": 0-100, "adapted_copy": "...", "changes_needed": "..."}},
-    "youtube": {{"score": 0-100, "adapted_copy": "...", "changes_needed": "..."}}
-  }},
-  "persona_reactions": [
-    {{"name": "...", "demographic": "...", "reaction": "...", "pain_points": ["..."], "objections": ["..."], "conversion_likelihood": "..."}}
-  ],
-  "line_by_line_analysis": [
-    {{"line_number": 1, "text": "...", "strength": 0-10, "assessment": "...", "issue": "...", "suggestion": "..."}}
-  ],
-  "phase_breakdown": {{
-    "hook_phase": "...",
-    "body_phase": "...",
-    "cta_phase": "..."
-  }},
-  "roi_comparison": "...",
-  "competitor_advantage": "..."
+  "final_ad_package": {{
+    "hook": "...",
+    "body": "...",
+    "cta": "...",
+    "full_script": "...",
+    "caption": "...",
+    "thumbnail_text": "...",
+    "visual_direction": ["...", "..."],
+    "editing_style": "...",
+    "posting_recommendation": {{
+      "platform": "...",
+      "best_time": "...",
+      "format": "..."
+    }}
+  }}
 }}
 
-Analyze the ACTUAL text above."""
+FINAL STEP (MANDATORY):
+
+Take the WINNING VARIANT and EXPAND it into a COMPLETE, READY-TO-RUN AD.
+
+Rules:
+- Must be production-ready
+- Full script must be 30–60 seconds
+- Structure: Hook → Body → Proof → CTA
+- Caption must be engaging
+- Visual direction = real scenes
+- Do NOT repeat — EXPAND
+"""
 
     def _verify_analysis(self, analysis: Dict, ad_copy: str, video_script: str) -> None:
         """Verify real analysis"""
@@ -227,6 +230,58 @@ Analyze the ACTUAL text above."""
         # Check short content
         if content_len < 50 and scores.get("overall", 100) > 50:
             raise ValueError(f"Short content got high score: {scores.get('overall')}")
+
+        # 🔥 FINAL AD VALIDATION (STRICT ENFORCEMENT)
+
+        final_ad = analysis.get("final_ad_package", {})
+
+        if not final_ad:
+            raise ValueError("Missing final_ad_package")
+
+        # Required fields
+        required_fields = ["hook", "body", "cta", "full_script", "caption", "visual_direction"]
+
+        for field in required_fields:
+            if field not in final_ad or not final_ad[field]:
+                raise ValueError(f"Missing final_ad_package field: {field}")
+
+        # Script must be long (forces 30–60 sec)
+        script = final_ad.get("full_script", "")
+        if len(script) < 200:
+            raise ValueError("final_ad_package.full_script too short")
+
+        # Script must be detailed (not lazy output)
+        if len(script.split()) < 80:
+            raise ValueError("Script not detailed enough")
+
+        # Must contain structure
+        if "Hook" not in script or "CTA" not in script:
+            raise ValueError("Script missing Hook/CTA structure")
+
+        # Caption must be meaningful
+        if len(final_ad.get("caption", "")) < 30:
+            raise ValueError("Caption too weak")
+
+        # Visual direction must be real scenes
+        visuals = final_ad.get("visual_direction", [])
+        if not isinstance(visuals, list) or len(visuals) < 3:
+            raise ValueError("visual_direction too shallow")
+
+        logger.info("✅ final_ad_package validated successfully")
+
+        # FIX UNDEFINED VALUES
+        def fix_undefined(obj):
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    if k == "fix" and (not v or v == "undefined"):
+                        obj[k] = "Provide a clear actionable improvement"
+                    else:
+                        fix_undefined(v)
+            elif isinstance(obj, list):
+                for item in obj:
+                    fix_undefined(item)
+
+        fix_undefined(analysis)
 
         logger.info(f"Verified: {content_len} chars, score: {scores.get('overall')}")
 
