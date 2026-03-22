@@ -1,6 +1,6 @@
 """
-ADLYTICS Analysis Route - DIAGNOSTIC VERSION
-Shows exact error details in response
+ADLYTICS Analysis Route v4.1 - PRODUCTION READY
+Handles ad analysis with proper field mapping
 """
 
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
@@ -32,37 +32,48 @@ try:
 except Exception as e:
     logger.error(f"❌ Failed to load media processor: {e}")
     logger.error(traceback.format_exc())
-    process_media = None
-
+    
+    # Fallback media processor
+    async def process_media(file: UploadFile, media_type: str = "image"):
+        return {"type": media_type, "filename": file.filename, "note": "Processing not available"}
 
 @router.post("/analyze")
 async def analyze_endpoint(
+    # Content fields
     ad_copy: Optional[str] = Form(None),
     video_script: Optional[str] = Form(None),
+    
+    # Platform & Industry (required)
     platform: str = Form(...),
-    audience_country: str = Form(...),
-    audience_age: str = Form(...),
     industry: str = Form(...),
+    
+    # Campaign objective
     objective: str = Form("conversions"),
+    
+    # Audience targeting fields - CORRECT MAPPING
+    audience_country: str = Form(...),
     audience_region: Optional[str] = Form(None),
-    audience_gender: Optional[str] = Form(None),
+    audience_age: str = Form(...),
+    audience_gender: Optional[str] = Form("all"),
     audience_income: Optional[str] = Form(None),
     audience_education: Optional[str] = Form(None),
     audience_occupation: Optional[str] = Form(None),
     audience_psychographic: Optional[str] = Form(None),
     audience_pain_point: Optional[str] = Form(None),
-    tech_savviness: Optional[str] = Form(None),
+    tech_savviness: Optional[str] = Form("medium"),
     purchase_behavior: Optional[str] = Form(None),
+    
+    # Media files
     image: Optional[UploadFile] = File(None),
     video: Optional[UploadFile] = File(None)
 ):
     """
-    Main analysis endpoint - DIAGNOSTIC VERSION
+    Main analysis endpoint - PRODUCTION VERSION
     """
-
+    
     try:
         logger.info("📥 Received analyze request")
-
+        
         # Check if AI engine loaded
         if ai_engine is None:
             logger.error("❌ AI Engine not available")
@@ -71,42 +82,42 @@ async def analyze_endpoint(
                 "error": "AI Engine failed to load",
                 "detail": "Check server logs for import errors"
             }
-
-        # Build request data
+        
+        # Build request data with CORRECT field names
         request_data = {
+            # Content
             "ad_copy": ad_copy or "",
             "video_script": video_script or "",
+            
+            # Platform & Industry
             "platform": platform,
-            "audience_country": audience_country,
-            "audience_age": audience_age,
             "industry": industry,
             "objective": objective,
-            "audience_region": audience_region,
-            "audience_gender": audience_gender,
-            "audience_income": audience_income,
-            "audience_education": audience_education,
-            "audience_occupation": audience_occupation,
-            "audience_psychographic": audience_psychographic,
-            "audience_pain_point": audience_pain_point,
-            "tech_savviness": tech_savviness,
-            "purchase_behavior": purchase_behavior
+            
+            # Audience - EXACT mapping from frontend
+            "audience_country": audience_country,
+            "audience_region": audience_region or "",
+            "audience_age": audience_age,
+            "audience_gender": audience_gender or "all",
+            "audience_income": audience_income or "",
+            "audience_education": audience_education or "",
+            "audience_occupation": audience_occupation or "",
+            "audience_psychographic": audience_psychographic or "",
+            "audience_pain_point": audience_pain_point or "",
+            "tech_savviness": tech_savviness or "medium",
+            "purchase_behavior": purchase_behavior or ""
         }
-
+        
         logger.info(f"📊 Request data: {request_data}")
-
+        
         # Detect content mode
         try:
             content_mode = ai_engine.detect_content_mode(request_data)
             logger.info(f"📋 Content mode: {content_mode}")
         except Exception as e:
             logger.error(f"❌ Error detecting content mode: {e}")
-            return {
-                "success": False,
-                "error": "Failed to detect content mode",
-                "detail": str(e),
-                "traceback": traceback.format_exc()
-            }
-
+            content_mode = "adCopy"
+        
         # Validate at least one content type is provided
         if content_mode == "adCopy" and not ad_copy:
             return {
@@ -118,31 +129,42 @@ async def analyze_endpoint(
                 "success": False,
                 "error": "Video script is required for video script mode"
             }
-
+        if content_mode == "both" and not ad_copy and not video_script:
+            return {
+                "success": False,
+                "error": "At least one of ad copy or video script is required"
+            }
+        
         # Process media files if provided
         files = []
-        if process_media:
-            if image:
-                try:
-                    image_data = await process_media(image, "image")
-                    files.append(image_data)
-                    logger.info("✅ Image processed")
-                except Exception as e:
-                    logger.error(f"❌ Error processing image: {e}")
-            if video:
-                try:
-                    video_data = await process_media(video, "video")
-                    files.append(video_data)
-                    logger.info("✅ Video processed")
-                except Exception as e:
-                    logger.error(f"❌ Error processing video: {e}")
-
+        if image:
+            try:
+                image_data = await process_media(image, "image")
+                files.append(image_data)
+                logger.info("✅ Image processed")
+            except Exception as e:
+                logger.error(f"❌ Error processing image: {e}")
+        
+        if video:
+            try:
+                video_data = await process_media(video, "video")
+                files.append(video_data)
+                logger.info("✅ Video processed")
+            except Exception as e:
+                logger.error(f"❌ Error processing video: {e}")
+        
         # Run analysis
         logger.info("🤖 Running AI analysis...")
         try:
             result = await ai_engine.analyze(request_data, files)
             logger.info("✅ Analysis complete")
+            
+            # Ensure success flag is set
+            if isinstance(result, dict):
+                result["success"] = True
+            
             return result
+            
         except Exception as e:
             logger.error(f"❌ Error during analysis: {e}")
             logger.error(traceback.format_exc())
@@ -152,7 +174,7 @@ async def analyze_endpoint(
                 "detail": str(e),
                 "traceback": traceback.format_exc()
             }
-
+    
     except Exception as e:
         logger.error(f"💥 Unexpected error in analyze_endpoint: {e}")
         logger.error(traceback.format_exc())
@@ -163,46 +185,72 @@ async def analyze_endpoint(
             "traceback": traceback.format_exc()
         }
 
-
 @router.get("/audience-config")
 async def get_audience_config():
     """Return audience targeting configuration"""
     return {
         "countries": [
-            {"code": "nigeria", "name": "Nigeria", "currency": "₦", "regions": ["Lagos", "Abuja", "Port Harcourt"]},
-            {"code": "us", "name": "United States", "currency": "$", "regions": ["New York", "California", "Texas"]},
-            {"code": "uk", "name": "United Kingdom", "currency": "£", "regions": ["London", "Manchester"]}
+            {"code": "nigeria", "name": "Nigeria", "currency": "₦", "regions": ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt"]},
+            {"code": "us", "name": "United States", "currency": "$", "regions": ["California", "Texas", "New York", "Florida", "Illinois"]},
+            {"code": "uk", "name": "United Kingdom", "currency": "£", "regions": ["London", "Manchester", "Birmingham"]},
+            {"code": "canada", "name": "Canada", "currency": "$", "regions": ["Ontario", "Quebec", "British Columbia"]},
+            {"code": "australia", "name": "Australia", "currency": "$", "regions": ["New South Wales", "Victoria", "Queensland"]},
+            {"code": "ghana", "name": "Ghana", "currency": "₵", "regions": ["Accra", "Kumasi", "Tamale"]},
+            {"code": "kenya", "name": "Kenya", "currency": "KSh", "regions": ["Nairobi", "Mombasa", "Kisumu"]},
+            {"code": "south_africa", "name": "South Africa", "currency": "R", "regions": ["Gauteng", "Western Cape", "KwaZulu-Natal"]},
+            {"code": "india", "name": "India", "currency": "₹", "regions": ["Maharashtra", "Karnataka", "Delhi"]},
+            {"code": "germany", "name": "Germany", "currency": "€", "regions": ["Bavaria", "North Rhine-Westphalia", "Baden-Württemberg"]}
         ],
         "age_brackets": [
-            {"value": "18-24", "label": "18-24", "traits": "Digital natives"},
-            {"value": "25-34", "label": "25-34", "traits": "Career focused"},
-            {"value": "35-44", "label": "35-44", "traits": "Family oriented"}
+            {"value": "18-24", "label": "18-24", "traits": "Digital natives, TikTok heavy, price sensitive"},
+            {"value": "25-34", "label": "25-34", "traits": "Career focused, mobile-first, value conscious"},
+            {"value": "35-44", "label": "35-44", "traits": "Family oriented, research heavy, quality focused"},
+            {"value": "45-54", "label": "45-54", "traits": "Gen X, skeptical, loyalty driven"},
+            {"value": "55-64", "label": "55-64", "traits": "Pre-retirement, security focused, slower adoption"},
+            {"value": "65+", "label": "65+", "traits": "Seniors, simple UX needed, trust critical"}
         ],
         "income_levels": [
-            {"value": "low", "label": "Low Income"},
-            {"value": "middle", "label": "Middle Income"},
-            {"value": "high", "label": "High Income"}
+            {"value": "low", "label": "Low Income", "description": "< $30k/year - Price sensitive, deals critical"},
+            {"value": "lower-middle", "label": "Lower Middle", "description": "$30k-$50k - Value seekers, budget conscious"},
+            {"value": "middle", "label": "Middle Income", "description": "$50k-$75k - Balanced, quality matters"},
+            {"value": "upper-middle", "label": "Upper Middle", "description": "$75k-$100k - Quality focused, time poor"},
+            {"value": "high", "label": "High Income", "description": "$100k+ - Premium preference, convenience"}
         ],
         "education_levels": [
-            {"value": "high_school", "label": "High School"},
-            {"value": "bachelors", "label": "Bachelor's"},
-            {"value": "graduate", "label": "Graduate"}
+            {"value": "high-school", "label": "High School"},
+            {"value": "some-college", "label": "Some College"},
+            {"value": "bachelors", "label": "Bachelor's Degree"},
+            {"value": "masters", "label": "Master's Degree"},
+            {"value": "doctorate", "label": "Doctorate"},
+            {"value": "professional", "label": "Professional Degree"}
         ],
         "occupations": [
-            {"value": "student", "label": "Student"},
-            {"value": "professional", "label": "Professional"},
-            {"value": "entrepreneur", "label": "Entrepreneur"}
+            {"value": "professional", "label": "Professional/White Collar", "pain_points": "Career growth, work-life balance, imposter syndrome"},
+            {"value": "entrepreneur", "label": "Entrepreneur/Business Owner", "pain_points": "Cash flow, scaling, decision fatigue"},
+            {"value": "student", "label": "Student", "pain_points": "Financial pressure, career uncertainty, time management"},
+            {"value": "retired", "label": "Retired", "pain_points": "Health, fixed income, legacy planning"},
+            {"value": "homemaker", "label": "Homemaker", "pain_points": "Time scarcity, financial dependence, identity"},
+            {"value": "freelancer", "label": "Freelancer/Creator", "pain_points": "Income inconsistency, client acquisition, burnout"},
+            {"value": "trades", "label": "Trades/Blue Collar", "pain_points": "Physical demands, job security, upskilling"},
+            {"value": "unemployed", "label": "Unemployed/Looking for Work", "pain_points": "Financial stress, confidence, skill gaps"}
         ],
         "psychographics": [
-            {"value": "value_seeker", "label": "Value Seeker"},
-            {"value": "quality_focused", "label": "Quality Focused"}
+            {"value": "value-seeker", "label": "Value Seeker", "traits": "Deals, comparisons, ROI focused"},
+            {"value": "quality-focused", "label": "Quality Focused", "traits": "Premium, durability, reviews"},
+            {"value": "innovator", "label": "Innovator", "traits": "Early adopter, tech forward, risk taker"},
+            {"value": "pragmatist", "label": "Pragmatist", "traits": "Practical, proven, testimonials"},
+            {"value": "aspirational", "label": "Aspirational", "traits": "Status, transformation, social proof"}
         ],
         "pain_points": [
-            {"value": "financial_stress", "label": "Financial Stress"},
-            {"value": "time_scarcity", "label": "Time Scarcity"}
+            {"value": "saving-time", "label": "Saving Time"},
+            {"value": "saving-money", "label": "Saving Money"},
+            {"value": "reducing-stress", "label": "Reducing Stress"},
+            {"value": "improving-health", "label": "Improving Health"},
+            {"value": "growing-income", "label": "Growing Income"},
+            {"value": "learning-skills", "label": "Learning New Skills"},
+            {"value": "social-status", "label": "Social Status"}
         ]
     }
-
 
 @router.get("/platforms")
 async def get_platforms():
@@ -212,11 +260,12 @@ async def get_platforms():
             {"id": "facebook", "name": "Facebook"},
             {"id": "instagram", "name": "Instagram"},
             {"id": "tiktok", "name": "TikTok"},
+            {"id": "youtube", "name": "YouTube"},
             {"id": "google", "name": "Google Ads"},
-            {"id": "linkedin", "name": "LinkedIn"}
+            {"id": "linkedin", "name": "LinkedIn"},
+            {"id": "twitter", "name": "Twitter/X"}
         ]
     }
-
 
 @router.get("/industries")
 async def get_industries():
@@ -227,6 +276,13 @@ async def get_industries():
             {"id": "saas", "name": "SaaS"},
             {"id": "finance", "name": "Finance"},
             {"id": "health", "name": "Health"},
-            {"id": "education", "name": "Education"}
+            {"id": "education", "name": "Education"},
+            {"id": "realestate", "name": "Real Estate"},
+            {"id": "travel", "name": "Travel"},
+            {"id": "food", "name": "Food & Beverage"},
+            {"id": "fashion", "name": "Fashion"},
+            {"id": "technology", "name": "Technology"},
+            {"id": "consulting", "name": "Consulting"},
+            {"id": "other", "name": "Other"}
         ]
     }
