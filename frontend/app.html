@@ -3,64 +3,412 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADLYTICS v5.0</title>
+    <title>ADLYTICS v5.0 - Complete Analytics</title>
     <style>
-        :root { --primary: #6366f1; --success: #10b981; --danger: #ef4444; --gray-100: #f3f4f6; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--gray-900);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         header { text-align: center; color: white; margin-bottom: 30px; }
-        .analyzer-form { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+
+        /* Form Styles */
+        .analyzer-form {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
         .form-group { display: flex; flex-direction: column; }
-        .form-group label { font-weight: 600; margin-bottom: 8px; }
-        .form-group label span.required { color: var(--danger); }
-        .form-group input, .form-group select, .form-group textarea { padding: 12px; border: 2px solid var(--gray-100); border-radius: 8px; font-size: 1rem; }
+        .form-group label { font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+        .form-group label .required { color: var(--danger); }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
         .form-group textarea { min-height: 100px; resize: vertical; }
         .form-group.full-width { grid-column: 1 / -1; }
-        .submit-btn { background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; }
-        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Loading & Error */
         .loading, .error-display, .results { display: none; }
         .loading.active, .error-display.active, .results.active { display: block; }
-        .loading { text-align: center; padding: 40px; color: white; }
-        .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: white;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .error-display { background: var(--danger); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .results { background: white; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        .tabs-nav { display: flex; background: var(--gray-100); border-bottom: 1px solid #e5e7eb; overflow-x: auto; }
-        .tab-btn { padding: 16px 20px; border: none; background: none; cursor: pointer; font-weight: 600; white-space: nowrap; }
-        .tab-btn.active { background: white; color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .error-display {
+            background: var(--danger);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Results Container */
+        .results {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* Tab Navigation */
+        .tabs-nav {
+            display: flex;
+            background: var(--gray-100);
+            border-bottom: 1px solid var(--gray-200);
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+        .tab-btn {
+            padding: 16px 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            color: var(--gray-700);
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.5); }
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Tab Content */
         .tab-content { display: none; padding: 30px; }
         .tab-content.active { display: block; }
-        .scores-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .score-card { background: var(--gray-100); border-radius: 12px; padding: 20px; text-align: center; border-left: 4px solid #e5e7eb; }
-        .score-card.excellent { border-left-color: var(--success); }
-        .score-value { font-size: 2.5rem; font-weight: 700; }
-        .decision-card { padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
-        .decision-card.success { background: #d1fae5; border: 2px solid var(--success); }
-        .decision-card.danger { background: #fee2e2; border: 2px solid var(--danger); }
+
+        /* Score Cards */
+        .scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .score-card {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid var(--gray-200);
+            transition: transform 0.2s;
+        }
+        .score-card:hover { transform: translateY(-2px); }
+        .score-card.excellent { border-left-color: var(--success); background: #ecfdf5; }
+        .score-card.good { border-left-color: var(--info); background: #eff6ff; }
+        .score-card.average { border-left-color: var(--warning); background: #fffbeb; }
+        .score-card.poor { border-left-color: var(--danger); background: #fef2f2; }
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .score-label { font-size: 0.85rem; color: var(--gray-700); font-weight: 500; }
+
+        /* Decision Card */
+        .decision-card {
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .decision-card.success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid var(--success);
+        }
+        .decision-card.danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid var(--danger);
+        }
+        .decision-card h2 { font-size: 2rem; margin-bottom: 15px; }
+        .decision-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .decision-metric {
+            background: rgba(255,255,255,0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .decision-metric-value { font-size: 1.5rem; font-weight: 700; }
+        .decision-metric-label { font-size: 0.85rem; opacity: 0.8; }
+
+        /* Content Sections */
+        .section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--gray-900);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-content {
+            background: var(--gray-50);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Lists */
+        .item-list { list-style: none; }
+        .item-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .item-list li:last-child { border-bottom: none; }
+        .item-icon { font-size: 1.2rem; }
+
+        /* Variants */
+        .variant-card {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        .variant-card.winner {
+            border-color: var(--success);
+            background: #ecfdf5;
+        }
+        .variant-card.winner::before {
+            content: "🏆 WINNER";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-bottom-left-radius: 8px;
+        }
+        .variant-angle {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .variant-predicted-score {
+            float: right;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        /* Fatigue Meter */
+        .fatigue-meter {
+            height: 20px;
+            background: var(--gray-200);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .fatigue-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        .fatigue-fill.low { background: var(--success); }
+        .fatigue-fill.medium { background: var(--warning); }
+        .fatigue-fill.high { background: var(--danger); }
+
+        /* Cross Platform Cards */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .platform-card {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .platform-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        .platform-score {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        /* Persona Card */
+        .persona-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid var(--gray-200);
+        }
+        .persona-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .persona-name { font-weight: 700; font-size: 1.1rem; }
+        .persona-conversion {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Objection Tags */
+        .objection-tag {
+            display: inline-block;
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 5px;
+            font-weight: 500;
+        }
+        .objection-tag.moderate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Line Analysis */
+        .line-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--gray-200);
+        }
+        .line-item.strong { border-left-color: var(--success); }
+        .line-item.weak { border-left-color: var(--danger); }
+        .line-item.neutral { border-left-color: var(--gray-400); }
+
+        /* Grid Layouts */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+        @media (max-width: 768px) {
+            .two-col, .three-col { grid-template-columns: 1fr; }
+            .tabs-nav { flex-wrap: wrap; }
+        }
     </style>
 <base target="_blank">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>ADLYTICS <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem;">v5.0</span></h1>
-            <p>AI-Powered Ad Pre-Validation</p>
+            <h1>ADLYTICS <span class="badge">v5.0 PRO</span></h1>
+            <p>AI-Powered Ad Pre-Validation & Optimization</p>
         </header>
-        
+
         <form id="analyzerForm" class="analyzer-form">
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label>Ad Copy / Headline</label>
+                    <label>Ad Copy / Headline <span class="required">*</span></label>
                     <textarea name="ad_copy" id="adCopy" placeholder="Enter your ad copy..."></textarea>
                 </div>
-                
+
                 <div class="form-group full-width">
                     <label>Video Script (Optional)</label>
-                    <textarea name="video_script" id="videoScript" placeholder="Enter video script with timecodes..."></textarea>
+                    <textarea name="video_script" id="videoScript" placeholder="[HOOK 0-3s] Your hook here...
+[BODY 3-15s] Main content...
+[CTA 15-30s] Call to action..."></textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Platform <span class="required">*</span></label>
                     <select name="platform" id="platform" required>
@@ -68,9 +416,10 @@
                         <option value="facebook">Facebook</option>
                         <option value="instagram">Instagram</option>
                         <option value="youtube">YouTube</option>
+                        <option value="google">Google Ads</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Industry <span class="required">*</span></label>
                     <select name="industry" id="industry" required>
@@ -78,9 +427,11 @@
                         <option value="ecommerce">E-commerce</option>
                         <option value="finance">Finance</option>
                         <option value="health">Health</option>
+                        <option value="education">Education</option>
+                        <option value="real_estate">Real Estate</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Target Country <span class="required">*</span></label>
                     <select name="audience_country" id="audienceCountry" required>
@@ -89,16 +440,17 @@
                         <option value="us">United States</option>
                         <option value="uk">United Kingdom</option>
                         <option value="canada">Canada</option>
+                        <option value="australia">Australia</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Region/State</label>
                     <select name="audience_region" id="audienceRegion">
                         <option value="">Select Region</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Age Range <span class="required">*</span></label>
                     <select name="audience_age" id="audienceAge" required>
@@ -106,9 +458,11 @@
                         <option value="25-34">25-34</option>
                         <option value="35-44">35-44</option>
                         <option value="45-54">45-54</option>
+                        <option value="55-64">55-64</option>
+                        <option value="65+">65+</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Income Level</label>
                     <select name="audience_income" id="audienceIncome">
@@ -116,9 +470,10 @@
                         <option value="low">Low Income</option>
                         <option value="middle">Middle Income</option>
                         <option value="high">High Income</option>
+                        <option value="affluent">Affluent</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Occupation</label>
                     <select name="audience_occupation" id="audienceOccupation">
@@ -126,56 +481,184 @@
                         <option value="professional">Professional</option>
                         <option value="entrepreneur">Entrepreneur</option>
                         <option value="student">Student</option>
+                        <option value="retired">Retired</option>
+                        <option value="blue_collar">Blue Collar</option>
+                        <option value="creative">Creative</option>
                     </select>
                 </div>
             </div>
-            
-            <button type="submit" id="analyzeBtn" class="submit-btn">🚀 Analyze Ad Performance</button>
+
+            <button type="submit" id="analyzeBtn" class="submit-btn">
+                🚀 Analyze Ad Performance
+            </button>
         </form>
-        
+
         <div id="errorDisplay" class="error-display"></div>
-        
+
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Analyzing your ad...</p>
+            <p>Analyzing your ad with AI...</p>
+            <p style="font-size: 0.9rem; opacity: 0.8;">This may take 10-30 seconds</p>
         </div>
-        
+
         <div id="results" class="results">
             <nav class="tabs-nav">
-                <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-                <button class="tab-btn" data-tab="decision" onclick="switchTab('decision')">🎯 Decision</button>
-                <button class="tab-btn" data-tab="budget" onclick="switchTab('budget')">💰 Budget</button>
-                <button class="tab-btn" data-tab="neuro" onclick="switchTab('neuro')">🧠 Neuro</button>
+                <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+                <button class="tab-btn" data-tab="decision">🎯 Decision</button>
+                <button class="tab-btn" data-tab="budget">💰 Budget</button>
+                <button class="tab-btn" data-tab="neuro">🧠 Neuro</button>
+                <button class="tab-btn" data-tab="variants">🎨 Variants</button>
+                <button class="tab-btn" data-tab="objections">⚠️ Objections</button>
+                <button class="tab-btn" data-tab="fatigue">😴 Fatigue</button>
+                <button class="tab-btn" data-tab="crossplatform">📱 Cross-Platform</button>
+                <button class="tab-btn" data-tab="video">🎥 Video</button>
+                <button class="tab-btn" data-tab="personas">👥 Personas</button>
+                <button class="tab-btn" data-tab="analysis">🔍 Analysis</button>
+                <button class="tab-btn" data-tab="comparison">⚖️ Comparison</button>
             </nav>
-            
+
+            <!-- Overview Tab -->
             <div id="tab-overview" class="tab-content active">
                 <div id="scoresContainer" class="scores-grid"></div>
-                <div id="behaviorSummary"></div>
+                <div id="behaviorSummary" class="section">
+                    <div class="section-title">📝 Behavior Summary</div>
+                    <div class="section-content" id="behaviorContent"></div>
+                </div>
+                <div id="criticalWeaknesses" class="section">
+                    <div class="section-title">⚠️ Critical Weaknesses</div>
+                    <div class="section-content" id="weaknessesContent"></div>
+                </div>
             </div>
-            
+
+            <!-- Decision Tab -->
             <div id="tab-decision" class="tab-content">
                 <div id="decisionEngine"></div>
+                <div class="section">
+                    <div class="section-title">📈 Profit Forecast</div>
+                    <div class="section-content" id="profitForecast"></div>
+                </div>
             </div>
-            
+
+            <!-- Budget Tab -->
             <div id="tab-budget" class="tab-content">
-                <div id="budgetOptimization"></div>
+                <div class="three-col" id="budgetMetrics"></div>
+                <div class="section">
+                    <div class="section-title">📊 Scaling Strategy</div>
+                    <div class="section-content" id="scalingStrategy"></div>
+                </div>
             </div>
-            
+
+            <!-- Neuro Tab -->
             <div id="tab-neuro" class="tab-content">
                 <div id="neuroResponse"></div>
+                <div class="section">
+                    <div class="section-title">🧪 Emotional Triggers</div>
+                    <div class="section-content" id="emotionalTriggers"></div>
+                </div>
+            </div>
+
+            <!-- Variants Tab -->
+            <div id="tab-variants" class="tab-content">
+                <div class="section">
+                    <div class="section-title">🎨 Ad Variants (A/B Test)</div>
+                    <div id="variantsList"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🏆 Winner Prediction</div>
+                    <div class="section-content" id="winnerPrediction"></div>
+                </div>
+            </div>
+
+            <!-- Objections Tab -->
+            <div id="tab-objections" class="tab-content">
+                <div class="two-col">
+                    <div class="section">
+                        <div class="section-title">🚩 Scam Triggers</div>
+                        <div class="section-content" id="scamTriggers"></div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">🔍 Trust Gaps</div>
+                        <div class="section-content" id="trustGaps"></div>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">⚖️ Compliance Risks</div>
+                    <div class="section-content" id="complianceRisks"></div>
+                </div>
+            </div>
+
+            <!-- Fatigue Tab -->
+            <div id="tab-fatigue" class="tab-content">
+                <div class="section">
+                    <div class="section-title">😴 Creative Fatigue Prediction</div>
+                    <div id="fatigueContent"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🔄 Refresh Recommendations</div>
+                    <div class="section-content" id="refreshRecommendations"></div>
+                </div>
+            </div>
+
+            <!-- Cross-Platform Tab -->
+            <div id="tab-crossplatform" class="tab-content">
+                <div class="platform-grid" id="platformGrid"></div>
+            </div>
+
+            <!-- Video Tab -->
+            <div id="tab-video" class="tab-content">
+                <div class="section">
+                    <div class="section-title">🎬 Video Execution Analysis</div>
+                    <div id="videoExecution"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">⏱️ Timecode Breakdown</div>
+                    <div class="section-content" id="timecodeBreakdown"></div>
+                </div>
+            </div>
+
+            <!-- Personas Tab -->
+            <div id="tab-personas" class="tab-content">
+                <div id="personasList"></div>
+            </div>
+
+            <!-- Analysis Tab -->
+            <div id="tab-analysis" class="tab-content">
+                <div class="section">
+                    <div class="section-title">📋 Line-by-Line Analysis</div>
+                    <div id="lineByLine"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">📊 Phase Breakdown</div>
+                    <div class="section-content" id="phaseBreakdown"></div>
+                </div>
+            </div>
+
+            <!-- Comparison Tab -->
+            <div id="tab-comparison" class="tab-content">
+                <div class="section">
+                    <div class="section-title">⚖️ ROI Comparison</div>
+                    <div class="section-content" id="roiComparison"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🏆 Competitor Advantage</div>
+                    <div class="section-content" id="competitorAdvantage"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Region Data
         const regionData = {
             nigeria: ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt"],
             ghana: ["Accra", "Kumasi", "Tamale"],
-            us: ["California", "Texas", "New York", "Florida"],
-            uk: ["London", "Manchester", "Birmingham"],
-            canada: ["Ontario", "Quebec", "British Columbia"]
+            us: ["California", "Texas", "New York", "Florida", "Illinois"],
+            uk: ["London", "Manchester", "Birmingham", "Glasgow"],
+            canada: ["Ontario", "Quebec", "British Columbia", "Alberta"],
+            australia: ["New South Wales", "Victoria", "Queensland"]
         };
 
+        // DOM Elements
         const countrySelect = document.getElementById('audienceCountry');
         const regionSelect = document.getElementById('audienceRegion');
         const form = document.getElementById('analyzerForm');
@@ -183,6 +666,7 @@
         const results = document.getElementById('results');
         const errorDisplay = document.getElementById('errorDisplay');
 
+        // Update regions
         function updateRegions() {
             const country = countrySelect.value;
             const regions = regionData[country] || [];
@@ -193,42 +677,34 @@
                 option.textContent = region;
                 regionSelect.appendChild(option);
             });
-            console.log(`✅ Loaded ${regions.length} regions for ${country}`);
         }
 
         countrySelect.addEventListener('change', updateRegions);
         updateRegions();
 
+        // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             loading.classList.add('active');
             results.classList.remove('active');
             errorDisplay.classList.remove('active');
-            
+
             const formData = new FormData(form);
-            
-            // DEBUG: Log what we're sending
-            console.log("📤 Sending FormData:");
-            for (let [key, value] of formData.entries()) {
-                console.log(`   ${key}: ${value}`);
-            }
-            
+
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("❌ Server response:", errorText);
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    renderResults(result.data);
+                    renderAllResults(result.data);
                 } else {
                     throw new Error(result.error?.message || 'Analysis failed');
                 }
@@ -241,60 +717,401 @@
             }
         });
 
-        function renderResults(data) {
+        // Render all results
+        function renderAllResults(data) {
             results.classList.add('active');
-            const scores = data.scores || {};
-            document.getElementById('scoresContainer').innerHTML = `
-                <div class="score-card ${scores.overall >= 81 ? 'excellent' : scores.overall >= 61 ? 'good' : 'average'}">
-                    <div class="score-value">${scores.overall || 0}</div>
-                    <div>Overall</div>
-                </div>
-                <div class="score-card ${scores.hook_strength >= 81 ? 'excellent' : 'average'}">
-                    <div class="score-value">${scores.hook_strength || 0}</div>
-                    <div>Hook</div>
-                </div>
-                <div class="score-card ${scores.clarity >= 81 ? 'excellent' : 'average'}">
-                    <div class="score-value">${scores.clarity || 0}</div>
-                    <div>Clarity</div>
-                </div>
-            `;
-            
-            const decision = data.decision_engine || {};
-            document.getElementById('decisionEngine').innerHTML = `
+
+            // Overview
+            renderScores(data.scores);
+            renderSection('behaviorContent', data.behavior_summary);
+            renderWeaknesses(data.critical_weaknesses);
+
+            // Decision
+            renderDecision(data.decision_engine);
+            renderSection('profitForecast', data.roi_analysis?.profit_forecast);
+
+            // Budget
+            renderBudget(data.budget_optimization);
+
+            // Neuro
+            renderNeuro(data.neuro_response);
+            renderSection('emotionalTriggers', data.neuro_response?.emotional_triggers);
+
+            // Variants
+            renderVariants(data.ad_variants, data.winner_prediction);
+
+            // Objections
+            renderObjections(data.objection_detection);
+
+            // Fatigue
+            renderFatigue(data.creative_fatigue);
+
+            // Cross-platform
+            renderCrossPlatform(data.cross_platform);
+
+            // Video
+            renderVideo(data.video_execution_analysis);
+
+            // Personas
+            renderPersonas(data.persona_reactions);
+
+            // Analysis
+            renderLineByLine(data.line_by_line_analysis);
+            renderSection('phaseBreakdown', data.phase_breakdown);
+
+            // Comparison
+            renderSection('roiComparison', data.roi_comparison);
+            renderSection('competitorAdvantage', data.competitor_advantage);
+        }
+
+        function renderScores(scores) {
+            const container = document.getElementById('scoresContainer');
+            const scoreFields = [
+                { key: 'overall', label: 'Overall' },
+                { key: 'hook_strength', label: 'Hook' },
+                { key: 'clarity', label: 'Clarity' },
+                { key: 'credibility', label: 'Credibility' },
+                { key: 'emotional_pull', label: 'Emotional' },
+                { key: 'cta_strength', label: 'CTA' },
+                { key: 'audience_match', label: 'Audience' },
+                { key: 'platform_fit', label: 'Platform' }
+            ];
+
+            container.innerHTML = scoreFields.map(field => {
+                const score = scores?.[field.key] || 0;
+                const className = score >= 81 ? 'excellent' : score >= 61 ? 'good' : score >= 41 ? 'average' : 'poor';
+                return `
+                    <div class="score-card ${className}">
+                        <div class="score-value">${score}</div>
+                        <div class="score-label">${field.label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDecision(decision) {
+            const container = document.getElementById('decisionEngine');
+            if (!decision) return;
+
+            container.innerHTML = `
                 <div class="decision-card ${decision.should_run ? 'success' : 'danger'}">
-                    <h3>${decision.should_run ? '✅ RECOMMENDED' : '❌ DO NOT RUN'}</h3>
-                    <p>Confidence: ${decision.confidence || 'N/A'}</p>
-                    <p>Expected Profit: $${decision.expected_profit || 0}</p>
-                </div>
-            `;
-            
-            const budget = data.budget_optimization || {};
-            document.getElementById('budgetOptimization').innerHTML = `
-                <div style="background: #f9fafb; padding: 20px; border-radius: 12px;">
-                    <h4>Break-Even CPC: $${budget.break_even_cpc || 0}</h4>
-                    <h4>Safe Test Budget: $${budget.safe_test_budget || 0}</h4>
-                </div>
-            `;
-            
-            const neuro = data.neuro_response || {};
-            document.getElementById('neuroResponse').innerHTML = `
-                <div style="background: #faf5ff; padding: 20px; border-radius: 12px;">
-                    <h4>Primary Driver: ${neuro.primary_driver?.toUpperCase() || 'UNKNOWN'}</h4>
-                    <p>Dopamine: ${neuro.dopamine || 0}/100</p>
-                    <p>Fear: ${neuro.fear || 0}/100</p>
-                    <p>Curiosity: ${neuro.curiosity || 0}/100</p>
+                    <h2>${decision.should_run ? '✅ RECOMMENDED TO RUN' : '❌ DO NOT RUN'}</h2>
+                    <p style="font-size: 1.1rem; margin-bottom: 20px;">${decision.reasoning || ''}</p>
+                    <div class="decision-metrics">
+                        <div class="decision-metric">
+                            <div class="decision-metric-value">${decision.confidence || '0%'}</div>
+                            <div class="decision-metric-label">Confidence</div>
+                        </div>
+                        <div class="decision-metric">
+                            <div class="decision-metric-value">$${decision.expected_profit?.toLocaleString() || 0}</div>
+                            <div class="decision-metric-label">Expected Profit</div>
+                        </div>
+                        <div class="decision-metric">
+                            <div class="decision-metric-value">${decision.roi_prediction || '0x'}</div>
+                            <div class="decision-metric-label">Predicted ROI</div>
+                        </div>
+                    </div>
                 </div>
             `;
         }
 
-        function switchTab(tabName) {
+        function renderBudget(budget) {
+            const container = document.getElementById('budgetMetrics');
+            if (!budget) return;
+
+            container.innerHTML = `
+                <div class="score-card">
+                    <div class="score-value">$${budget.break_even_cpc || 0}</div>
+                    <div class="score-label">Break-Even CPC</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-value">$${budget.safe_test_budget?.toLocaleString() || 0}</div>
+                    <div class="score-label">Safe Test Budget</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-value">${budget.days_to_profit || 0}</div>
+                    <div class="score-label">Days to Profit</div>
+                </div>
+            `;
+
+            document.getElementById('scalingStrategy').innerHTML = `
+                <ul class="item-list">
+                    <li><span class="item-icon">📈</span> ${budget.scaling_rule || 'N/A'}</li>
+                    <li><span class="item-icon">⚠️</span> ${budget.scaling_risk || 'N/A'}</li>
+                    <li><span class="item-icon">💡</span> ${budget.budget_tip || 'N/A'}</li>
+                </ul>
+            `;
+        }
+
+        function renderNeuro(neuro) {
+            const container = document.getElementById('neuroResponse');
+            if (!neuro) return;
+
+            container.innerHTML = `
+                <div class="section">
+                    <div class="section-title">🧠 Neuro-Response Profile</div>
+                    <div class="section-content">
+                        <div class="scores-grid">
+                            <div class="score-card">
+                                <div class="score-value">${neuro.dopamine || 0}</div>
+                                <div class="score-label">Dopamine</div>
+                            </div>
+                            <div class="score-card">
+                                <div class="score-value">${neuro.fear || 0}</div>
+                                <div class="score-label">Fear</div>
+                            </div>
+                            <div class="score-card">
+                                <div class="score-value">${neuro.curiosity || 0}</div>
+                                <div class="score-label">Curiosity</div>
+                            </div>
+                            <div class="score-card">
+                                <div class="score-value">${neuro.urgency || 0}</div>
+                                <div class="score-label">Urgency</div>
+                            </div>
+                            <div class="score-card">
+                                <div class="score-value">${neuro.trust || 0}</div>
+                                <div class="score-label">Trust</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 15px; font-weight: 600;">
+                            Primary Driver: <span style="color: var(--primary);">${neuro.primary_driver?.toUpperCase() || 'N/A'}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVariants(variants, winner) {
+            const container = document.getElementById('variantsList');
+            if (!variants || !Array.isArray(variants)) {
+                container.innerHTML = '<p>No variants generated</p>';
+                return;
+            }
+
+            container.innerHTML = variants.map((variant, idx) => `
+                <div class="variant-card ${winner?.winner_id === variant.id ? 'winner' : ''}">
+                    <span class="variant-angle">${variant.angle || 'Variant ' + (idx + 1)}</span>
+                    <span class="variant-predicted-score">${variant.predicted_score || 0}</span>
+                    <h4 style="margin: 10px 0; clear: both;">${variant.hook || ''}</h4>
+                    <p style="color: var(--gray-700); margin-bottom: 10px;">${variant.body || ''}</p>
+                    <p style="font-weight: 600; color: var(--primary);">${variant.cta || ''}</p>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--gray-200);">
+                        <small><strong>Why it works:</strong> ${variant.why_it_works || ''}</small>
+                    </div>
+                </div>
+            `).join('');
+
+            if (winner) {
+                document.getElementById('winnerPrediction').innerHTML = `
+                    <p><strong>Predicted Winner:</strong> ${winner.angle || 'N/A'} (Confidence: ${winner.confidence || 'N/A'})</p>
+                    <p>${winner.reasoning || ''}</p>
+                `;
+            }
+        }
+
+        function renderObjections(objections) {
+            if (!objections) return;
+
+            const scamTriggers = objections.scam_triggers || [];
+            const trustGaps = objections.trust_gaps || [];
+            const compliance = objections.compliance_risks || [];
+
+            document.getElementById('scamTriggers').innerHTML = scamTriggers.length ? 
+                scamTriggers.map(t => `<span class="objection-tag">${t.trigger}</span>`).join('') :
+                '<p>✅ No scam triggers detected</p>';
+
+            document.getElementById('trustGaps').innerHTML = trustGaps.length ?
+                `<ul class="item-list">${trustGaps.map(g => `<li><span class="item-icon">🔍</span> ${g.gap} <span class="objection-tag moderate">Severity: ${g.severity}</span></li>`).join('')}</ul>` :
+                '<p>✅ No trust gaps detected</p>';
+
+            document.getElementById('complianceRisks').innerHTML = compliance.length ?
+                `<ul class="item-list">${compliance.map(r => `<li><span class="item-icon">⚖️</span> ${r.risk} <span class="objection-tag">${r.platform}</span></li>`).join('')}</ul>` :
+                '<p>✅ No compliance risks detected</p>';
+        }
+
+        function renderFatigue(fatigue) {
+            const container = document.getElementById('fatigueContent');
+            if (!fatigue) return;
+
+            const level = fatigue.fatigue_level || 'Low';
+            const percentage = level === 'High' ? 80 : level === 'Medium' ? 50 : 20;
+
+            container.innerHTML = `
+                <div class="section-content">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Fatigue Level: <strong>${level}</strong></span>
+                        <span>${fatigue.estimated_decline_days || 14} days until decline</span>
+                    </div>
+                    <div class="fatigue-meter">
+                        <div class="fatigue-fill ${level.toLowerCase()}" style="width: ${percentage}%"></div>
+                    </div>
+                    <p style="margin-top: 15px;">${fatigue.explanation || ''}</p>
+                    ${fatigue.refresh_needed ? '<p style="color: var(--danger); font-weight: 600;">⚠️ Refresh recommended</p>' : ''}
+                </div>
+            `;
+
+            const refresh = fatigue.refresh_recommendations || [];
+            document.getElementById('refreshRecommendations').innerHTML = refresh.length ?
+                `<ul class="item-list">${refresh.map(r => `<li><span class="item-icon">🔄</span> ${r}</li>`).join('')}</ul>` :
+                '<p>No refresh needed at this time</p>';
+        }
+
+        function renderCrossPlatform(platforms) {
+            const container = document.getElementById('platformGrid');
+            if (!platforms) return;
+
+            const platformNames = {
+                facebook: 'Facebook',
+                instagram: 'Instagram',
+                tiktok: 'TikTok',
+                youtube: 'YouTube',
+                google: 'Google'
+            };
+
+            container.innerHTML = Object.entries(platforms).map(([key, data]) => `
+                <div class="platform-card">
+                    <h4>${platformNames[key] || key}</h4>
+                    <div class="platform-score">${data.score || 0}</div>
+                    <p style="margin-bottom: 15px;">${data.adapted_copy || ''}</p>
+                    <div style="background: var(--gray-50); padding: 10px; border-radius: 6px; font-size: 0.9rem;">
+                        <strong>Changes:</strong> ${data.changes_needed || 'None'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderVideo(video) {
+            if (!video) {
+                document.getElementById('videoExecution').innerHTML = '<p>No video analysis available</p>';
+                return;
+            }
+
+            document.getElementById('videoExecution').innerHTML = `
+                <div class="section-content">
+                    <div class="scores-grid">
+                        <div class="score-card">
+                            <div class="score-value">${video.hook_delivery || 0}</div>
+                            <div class="score-label">Hook Delivery</div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-value">${video.speech_flow || 0}</div>
+                            <div class="score-label">Speech Flow</div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-value">${video.visual_dependency || 0}</div>
+                            <div class="score-label">Visual Dependency</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 15px;"><strong>Recommended Format:</strong> ${video.recommended_format || 'N/A'}</p>
+                    <p><strong>Delivery Risk:</strong> ${video.delivery_risk || 'N/A'}</p>
+                </div>
+            `;
+
+            const timecode = video.timecode_breakdown || [];
+            document.getElementById('timecodeBreakdown').innerHTML = timecode.length ?
+                timecode.map(t => `
+                    <div class="line-item ${t.quality}">
+                        <strong>${t.segment}</strong> (${t.timestamp})<br>
+                        ${t.content}<br>
+                        <small>Quality: ${t.quality}</small>
+                    </div>
+                `).join('') : '<p>No timecode analysis available</p>';
+        }
+
+        function renderPersonas(personas) {
+            const container = document.getElementById('personasList');
+            if (!personas || !Array.isArray(personas)) {
+                container.innerHTML = '<p>No persona data available</p>';
+                return;
+            }
+
+            container.innerHTML = personas.map(p => `
+                <div class="persona-card">
+                    <div class="persona-header">
+                        <div>
+                            <div class="persona-name">${p.name || 'Unknown Persona'}</div>
+                            <small style="color: var(--gray-700);">${p.demographic || ''}</small>
+                        </div>
+                        <div class="persona-conversion">${p.conversion_likelihood || '0%'} Conversion</div>
+                    </div>
+                    <p style="margin-bottom: 10px;"><strong>Reaction:</strong> ${p.reaction || ''}</p>
+                    <p style="margin-bottom: 10px;"><strong>Pain Points:</strong> ${(p.pain_points || []).join(', ')}</p>
+                    <div style="background: var(--gray-50); padding: 10px; border-radius: 6px;">
+                        <strong>Objections:</strong>
+                        <ul style="margin: 5px 0 0 20px;">
+                            ${(p.objections || []).map(o => `<li>${o}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderLineByLine(lines) {
+            const container = document.getElementById('lineByLine');
+            if (!lines || !Array.isArray(lines)) {
+                container.innerHTML = '<p>No line-by-line analysis available</p>';
+                return;
+            }
+
+            container.innerHTML = lines.map(line => `
+                <div class="line-item ${line.assessment}">
+                    <strong>Line ${line.line_number}:</strong> "${line.text}"<br>
+                    <small>Strength: ${line.strength}/10 | Issue: ${line.issue || 'None'} | Suggestion: ${line.suggestion || 'None'}</small>
+                </div>
+            `).join('');
+        }
+
+        function renderWeaknesses(weaknesses) {
+            const container = document.getElementById('weaknessesContent');
+            if (!weaknesses || !Array.isArray(weaknesses) || weaknesses.length === 0) {
+                container.innerHTML = '<p>✅ No critical weaknesses detected</p>';
+                return;
+            }
+
+            container.innerHTML = `<ul class="item-list">${weaknesses.map(w => `
+                <li>
+                    <span class="item-icon">⚠️</span>
+                    <div>
+                        <strong>${w.issue}</strong> (Severity: ${w.severity})<br>
+                        <small>${w.impact} | Fix: ${w.fix}</small>
+                    </div>
+                </li>
+            `).join('')}</ul>`;
+        }
+
+        function renderSection(elementId, content) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            if (typeof content === 'string') {
+                element.innerHTML = `<p>${content}</p>`;
+            } else if (Array.isArray(content)) {
+                element.innerHTML = `<ul class="item-list">${content.map(item => `
+                    <li><span class="item-icon">•</span> ${typeof item === 'string' ? item : item.description || JSON.stringify(item)}</li>
+                `).join('')}</ul>`;
+            } else if (typeof content === 'object' && content !== null) {
+                element.innerHTML = `<ul class="item-list">${Object.entries(content).map(([key, value]) => `
+                    <li><span class="item-icon">📊</span> <strong>${key}:</strong> ${value}</li>
+                `).join('')}</ul>`;
+            } else {
+                element.innerHTML = '<p>N/A</p>';
+            }
+        }
+
+        // Tab switching
+        window.switchTab = function(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.toggle('active', content.id === `tab-${tabName}`);
             });
-        }
+        };
+
+        // Add click handlers to tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
     </script>
 </body>
 </html>
