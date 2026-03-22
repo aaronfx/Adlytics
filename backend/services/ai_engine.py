@@ -1,6 +1,6 @@
 """
-ADLYTICS AI Engine v4.4 - PRODUCTION GRADE
-Complete data guarantee, short-form scripts, zero empty states
+ADLYTICS AI Engine v4.6 - CRITICAL BUG FIX
+Fixed missing function definitions and response format
 """
 
 import os
@@ -133,7 +133,7 @@ FALLBACK_VARIANT = {
 FALLBACK_IMPROVEMENT = "Refine messaging to better resonate with target audience pain points"
 
 # ============================================
-# SCRIPT LENGTH ENFORCEMENT - CRITICAL
+# SCRIPT LENGTH ENFORCEMENT
 # ============================================
 
 MAX_SCRIPT_WORDS = 150
@@ -150,9 +150,6 @@ def estimate_duration(text: str) -> int:
     return max(5, words // 3)
 
 def enforce_script_length(script: str) -> str:
-    """
-    HARD ENFORCEMENT: Script must be ≤ 150 words, 20-60 seconds
-    """
     if not script:
         return script
     
@@ -165,27 +162,22 @@ def enforce_script_length(script: str) -> str:
     sections = extract_script_sections(script)
     trimmed_sections = {}
     
-    # HOOK: Keep as-is but limit to 15 words max
     hook_text = sections.get("hook", "")
     hook_words = hook_text.split()
     trimmed_sections["hook"] = " ".join(hook_words[:15]) + "." if len(hook_words) > 15 else hook_text
     
-    # CTA: Keep as-is but limit to 12 words max
     cta_text = sections.get("cta", "")
     cta_words = cta_text.split()
     trimmed_sections["cta"] = " ".join(cta_words[:12]) if len(cta_words) > 12 else cta_text
     
-    # PROBLEM: Keep essence, max 20 words
     problem_text = sections.get("problem", "")
     problem_words = problem_text.split()
     trimmed_sections["problem"] = " ".join(problem_words[:20]) + "." if len(problem_words) > 20 else problem_text
     
-    # SOLUTION: Keep essence, max 25 words
     solution_text = sections.get("solution", "")
     solution_words = solution_text.split()
     trimmed_sections["solution"] = " ".join(solution_words[:25]) + "." if len(solution_words) > 25 else solution_text
     
-    # PROOF: Heavy trim, max 20 words
     proof_text = sections.get("proof", "")
     proof_words = proof_text.split()
     trimmed_sections["proof"] = " ".join(proof_words[:20]) + "." if len(proof_words) > 20 else proof_text
@@ -264,21 +256,13 @@ def reconstruct_script(sections: dict) -> str:
     return "\n\n".join(parts)
 
 def generate_multi_scripts(base_script: str) -> dict:
-    """
-    PRO FEATURE: Generate 15s, 30s, 60s versions
-    """
     if not base_script:
         return {"15s": "", "30s": "", "60s": ""}
     
     words = base_script.split()
     
-    # 15s version (~40 words)
     script_15s = " ".join(words[:40]) if len(words) >= 40 else base_script
-    
-    # 30s version (~80 words)
     script_30s = " ".join(words[:80]) if len(words) >= 80 else base_script
-    
-    # 60s version (~150 words)
     script_60s = " ".join(words[:150]) if len(words) >= 150 else base_script
     
     return {
@@ -304,9 +288,6 @@ def validate_script(script: str) -> dict:
 # ============================================
 
 def enforce_complete_structure(data: dict) -> dict:
-    """
-    ENSURE: No missing keys, no None values, no empty arrays without fallbacks
-    """
     if not isinstance(data, dict):
         data = {}
     
@@ -569,7 +550,6 @@ def enforce_variants(variants: list) -> list:
 
 def enforce_winner_prediction(prediction: dict, variants: list) -> dict:
     if not isinstance(prediction, dict) or not prediction.get("best_variant_id"):
-        # Generate from variants if available
         if variants and len(variants) > 0:
             best = max(variants, key=lambda x: x.get("predicted_score", 0))
             score = best.get("predicted_score", 0)
@@ -761,13 +741,10 @@ def evaluate_audience_alignment(content: str, audience: dict) -> int:
 
 
 # ============================================
-# VARIANT GENERATION - FORCE GENERATION
+# VARIANT GENERATION
 # ============================================
 
 def generate_ad_variants(analysis_data: dict, platform: str, audience: dict, industry: str) -> list:
-    """
-    FORCE GENERATE: Always return 3 variants
-    """
     variants = []
 
     angles = [
@@ -895,13 +872,10 @@ def generate_cta_for_platform(platform: str, audience: dict, analysis_data: dict
 
 
 # ============================================
-# IMPROVED AD GENERATION - FORCE CREATION
+# IMPROVED AD GENERATION
 # ============================================
 
 def generate_improved_ad(variants: list, original_copy: str) -> dict:
-    """
-    FORCE: Always generate improved_ad from best variant
-    """
     if not variants or len(variants) == 0:
         return {
             "headline": "Struggling with results? Here's a better approach",
@@ -927,13 +901,45 @@ def generate_improved_ad(variants: list, original_copy: str) -> dict:
 
 
 # ============================================
-# ROI ANALYSIS GENERATION - FORCE CREATION
+# RE-SCORE IMPROVED AD - CRITICAL FIX
+# ============================================
+
+def re_score_improved_ad(improved_ad: dict, audience: dict, platform: str) -> dict:
+    """
+    CRITICAL FIX: Re-score the improved ad with FRESH calculation
+    This function was missing and causing the error!
+    """
+    content = f"{improved_ad.get('headline', '')} {improved_ad.get('body_copy', '')} {improved_ad.get('cta', '')}"
+
+    hook_score = evaluate_hook_strength(improved_ad.get("headline", ""), audience)
+    clarity_score = evaluate_clarity(improved_ad.get("body_copy", ""))
+    trust_score = evaluate_trust_building(improved_ad.get("body_copy", ""), audience)
+    cta_score = evaluate_cta_power(improved_ad.get("cta", ""), platform)
+    audience_score = evaluate_audience_alignment(content, audience)
+
+    new_overall = calculate_weighted_score(
+        hook=hook_score,
+        clarity=clarity_score,
+        trust=trust_score,
+        cta=cta_score,
+        audience=audience_score
+    )
+
+    return {
+        "overall": new_overall,
+        "hook_strength": hook_score,
+        "clarity": clarity_score,
+        "trust_building": trust_score,
+        "cta_power": cta_score,
+        "audience_alignment": audience_score
+    }
+
+
+# ============================================
+# ROI ANALYSIS GENERATION
 # ============================================
 
 def generate_roi_analysis(scores: dict) -> dict:
-    """
-    FORCE: Always generate complete ROI analysis
-    """
     overall = scores.get("overall", 50) if isinstance(scores, dict) else 50
     
     if overall >= 80:
@@ -977,13 +983,10 @@ def generate_roi_analysis(scores: dict) -> dict:
 
 
 # ============================================
-# WINNER PREDICTION - FORCE GENERATION
+# WINNER PREDICTION GENERATION
 # ============================================
 
 def generate_winner_prediction(variants: list) -> dict:
-    """
-    FORCE: Always generate winner prediction from variants
-    """
     if not variants or len(variants) == 0:
         return {
             "best_variant_id": 1,
@@ -1024,9 +1027,6 @@ def detect_content_mode(request_data: dict) -> str:
 
 
 def generate_short_form_video_script(analysis_data: dict, audience: dict, platform: str, objective: str) -> str:
-    """
-    Generate SHORT-FORM video script (20-60 seconds, ≤150 words)
-    """
     pain_point = audience.get("pain_point") or "this problem"
     industry = analysis_data.get("industry") or "this industry"
     
@@ -1188,13 +1188,13 @@ async def call_openrouter(prompt: str, system_prompt: str = "", temperature: flo
 
 
 # ============================================
-# MAIN ANALYSIS FLOW - COMPLETE DATA GUARANTEE
+# MAIN ANALYSIS FLOW
 # ============================================
 
 async def analyze_ad(request_data: dict, files: list = None) -> dict:
     """
-    MAIN ANALYSIS - v4.4 PRODUCTION GRADE
-    Guarantees: variants, improved_ad, winner_prediction, roi_analysis
+    MAIN ANALYSIS - v4.6 CRITICAL BUG FIX
+    Fixed missing re_score_improved_ad function
     """
     
     # 1. Detect content mode
@@ -1219,15 +1219,13 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
         audience=audience,
         industry=industry
     )
-    
-    # FORCE: Ensure variants are in result
     base_analysis["ad_variants"] = variants
 
     # 6. FORCE: Generate improved_ad (ALWAYS)
     improved_ad = generate_improved_ad(variants, original_copy)
     base_analysis["improved_ad"] = improved_ad
 
-    # 7. Re-score the improved ad
+    # 7. CRITICAL FIX: Re-score the improved ad using the NOW-DEFINED function
     improved_scores = re_score_improved_ad(improved_ad, audience, platform)
     base_analysis["scores"] = improved_scores
 
@@ -1251,7 +1249,6 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
             objective=request_data.get("objective") or "conversions"
         )
         
-        # ENFORCE: Must pass length validation
         validation = validate_script(video_script)
         if not validation["valid"]:
             video_script = _generate_ultra_short_script(
@@ -1261,14 +1258,10 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
                 platform
             )
         
-        # PRO FEATURE: Generate multi-length scripts
         video_scripts = generate_multi_scripts(video_script)
-        
-        # Update improved ad with script
         improved_ad["video_script_version"] = video_script
         base_analysis["improved_ad"] = improved_ad
         
-        # Update video analysis
         video_analysis["is_video_script"] = "Yes"
         video_analysis["hook_delivery_strength"] = evaluate_video_hook_delivery(video_script)
         video_analysis["speech_flow_quality"] = evaluate_speech_flow(video_script)
@@ -1292,21 +1285,22 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
     if not base_analysis.get("line_by_line_analysis") or len(base_analysis.get("line_by_line_analysis", [])) == 0:
         base_analysis["line_by_line_analysis"] = [FALLBACK_LINE.copy()]
 
-    # 12. FINAL ENFORCEMENT: Ensure absolutely no missing fields
+    # 12. FINAL ENFORCEMENT
     final_analysis = enforce_complete_structure(base_analysis)
 
-    # ASSEMBLE FINAL RESPONSE
+    # ASSEMBLE FINAL RESPONSE - CRITICAL FIX: Always return wrapped format
     response = {
         "success": True,
-        "analysis": final_analysis,
-        "audience_parsed": format_audience_summary(audience),
-        "content_mode": content_mode
+        "data": {
+            "analysis": final_analysis,
+            "audience_parsed": format_audience_summary(audience),
+            "content_mode": content_mode
+        }
     }
     
-    # Add script info if video
     if video_scripts:
-        response["video_scripts"] = video_scripts
-        response["script_info"] = {
+        response["data"]["video_scripts"] = video_scripts
+        response["data"]["script_info"] = {
             "word_count": count_words(video_scripts["60s"]),
             "duration_estimate": estimate_duration(video_scripts["60s"]),
             "max_words": MAX_SCRIPT_WORDS,
@@ -1361,7 +1355,6 @@ def calculate_run_decision(scores: dict) -> dict:
 
 
 async def run_ai_analysis(request_data: dict, content_mode: str) -> dict:
-    """Run base AI analysis with STRICT schema enforcement"""
     ad_copy = request_data.get("ad_copy") or ""
     video_script = request_data.get("video_script") or ""
 
@@ -1523,5 +1516,6 @@ __all__ = [
     'extract_audience', 
     'enforce_complete_structure',
     'enforce_script_length',
-    'generate_multi_scripts'
+    'generate_multi_scripts',
+    're_score_improved_ad'  # CRITICAL FIX: Export the function
 ]
