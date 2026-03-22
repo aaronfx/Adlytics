@@ -1,17 +1,16 @@
 // ============================================
 // ADLYTICS v4.1 - FULLY FIXED VERSION
-// All selects working + input boxes persistent
+// All bugs fixed, production-ready
 // ============================================
 
 // Global state
 let currentContentMode = 'adCopy';
 let analysisResults = null;
 let currentTab = 'behavior';
-let audienceConfig = null;
 let isInitialized = false;
 
 // ============================================
-// INITIALIZATION - Run immediately if DOM ready
+// INITIALIZATION
 // ============================================
 function init() {
     if (isInitialized) return;
@@ -19,25 +18,20 @@ function init() {
 
     console.log('🚀 ADLYTICS v4.1 Initializing...');
 
-    // Fix selects immediately
-    fixAllSelects();
-
-    // Setup content tabs
+    // Setup content tabs first
     setupContentTabs();
 
-    // Setup form
+    // Setup form handler
     setupFormHandler();
 
     // Setup results tabs
     setupResultsTabs();
 
-    // Ensure input boxes are visible
-    ensureInputBoxesVisible();
+    // Setup region dependency
+    setupRegionDependency();
 
-    // Load audience config for regions
-    loadAudienceConfig().then(() => {
-        setupRegionDependency();
-    });
+    // Setup character counters
+    setupCharCounters();
 
     console.log('✅ ADLYTICS v4.1 Ready');
 }
@@ -49,321 +43,66 @@ if (document.readyState === 'loading') {
     init();
 }
 
-// Also run on window load (backup)
-window.addEventListener('load', () => {
-    if (!isInitialized) init();
-    ensureInputBoxesVisible();
-});
-
 // ============================================
-// FIX ALL SELECTS - Comprehensive fix
-// ============================================
-function fixAllSelects() {
-    console.log('🔧 Fixing all selects...');
-
-    const allSelectData = {
-        'platform': [
-            ['', 'Select Platform'],
-            ['facebook', 'Facebook'],
-            ['instagram', 'Instagram'],
-            ['tiktok', 'TikTok'],
-            ['youtube', 'YouTube'],
-            ['google', 'Google Ads'],
-            ['linkedin', 'LinkedIn'],
-            ['twitter', 'Twitter/X']
-        ],
-        'industry': [
-            ['', 'Select Industry'],
-            ['ecommerce', 'E-commerce'],
-            ['saas', 'SaaS / Software'],
-            ['finance', 'Finance / Crypto'],
-            ['health', 'Health & Fitness'],
-            ['education', 'Education'],
-            ['realestate', 'Real Estate'],
-            ['travel', 'Travel'],
-            ['food', 'Food & Beverage'],
-            ['fashion', 'Fashion'],
-            ['technology', 'Technology'],
-            ['consulting', 'Consulting'],
-            ['other', 'Other']
-        ],
-        'campaign_objective': [
-            ['', 'Select Objective'],
-            ['sales', 'Sales / Conversions'],
-            ['leads', 'Lead Generation'],
-            ['traffic', 'Website Traffic'],
-            ['awareness', 'Brand Awareness'],
-            ['engagement', 'Engagement']
-        ],
-        'country': [
-            ['', 'Select Country'],
-            ['us', 'United States'],
-            ['uk', 'United Kingdom'],
-            ['ca', 'Canada'],
-            ['au', 'Australia'],
-            ['ng', 'Nigeria'],
-            ['gh', 'Ghana'],
-            ['ke', 'Kenya'],
-            ['za', 'South Africa'],
-            ['in', 'India'],
-            ['de', 'Germany']
-        ],
-        'region': [['', 'Select Region']],
-        'age': [
-            ['', 'Select Age'],
-            ['18-24', '18-24 (Gen Z)'],
-            ['25-34', '25-34 (Millennials)'],
-            ['35-44', '35-44'],
-            ['45-54', '45-54 (Gen X)'],
-            ['55-64', '55-64'],
-            ['65+', '65+ (Seniors)']
-        ],
-        'gender': [
-            ['any', 'Any'],
-            ['male', 'Male'],
-            ['female', 'Female']
-        ],
-        'income': [
-            ['', 'Select Income Level'],
-            ['low', 'Low (< $30k/year)'],
-            ['lower-middle', 'Lower Middle ($30k-$50k)'],
-            ['middle', 'Middle ($50k-$75k)'],
-            ['upper-middle', 'Upper Middle ($75k-$100k)'],
-            ['high', 'High ($100k+)']
-        ],
-        'education': [
-            ['', 'Select Education'],
-            ['high-school', 'High School'],
-            ['some-college', 'Some College'],
-            ['bachelors', "Bachelor's Degree"],
-            ['masters', "Master's Degree"],
-            ['doctorate', 'Doctorate'],
-            ['professional', 'Professional Degree']
-        ],
-        'occupation': [
-            ['', 'Select Occupation'],
-            ['professional', 'Professional/White Collar'],
-            ['entrepreneur', 'Entrepreneur/Business Owner'],
-            ['student', 'Student'],
-            ['retired', 'Retired'],
-            ['homemaker', 'Homemaker'],
-            ['freelancer', 'Freelancer/Creator'],
-            ['trades', 'Trades/Blue Collar'],
-            ['unemployed', 'Unemployed/Looking for Work']
-        ],
-        'psychographic': [
-            ['', 'Select Psychographic'],
-            ['value-seeker', 'Value Seeker'],
-            ['quality-focused', 'Quality Focused'],
-            ['innovator', 'Innovator'],
-            ['pragmatist', 'Pragmatist'],
-            ['aspirational', 'Aspirational']
-        ],
-        'pain_point': [
-            ['', 'Select Pain Point'],
-            ['saving-time', 'Saving Time'],
-            ['saving-money', 'Saving Money'],
-            ['reducing-stress', 'Reducing Stress'],
-            ['improving-health', 'Improving Health'],
-            ['growing-income', 'Growing Income'],
-            ['learning-skills', 'Learning New Skills'],
-            ['social-status', 'Social Status']
-        ],
-        'tech_savviness': [
-            ['medium', 'Medium'],
-            ['low', 'Low'],
-            ['high', 'High']
-        ],
-        'purchase_behavior': [
-            ['research', 'Researcher'],
-            ['impulse', 'Impulse Buyer'],
-            ['loyal', 'Brand Loyal'],
-            ['bargain', 'Bargain Hunter']
-        ]
-    };
-
-    // Find ALL selects on the page and fix them
-    const allSelects = document.querySelectorAll('select');
-    console.log(`Found ${allSelects.length} select elements`);
-
-    allSelects.forEach(select => {
-        const id = select.id || select.name;
-        if (!id) {
-            console.log('Select has no id/name, skipping');
-            return;
-        }
-
-        // Find matching data
-        let data = allSelectData[id];
-
-        // Try partial match
-        if (!data) {
-            for (const [key, value] of Object.entries(allSelectData)) {
-                if (id.includes(key) || key.includes(id)) {
-                    data = value;
-                    break;
-                }
-            }
-        }
-
-        if (data) {
-            populateSelect(select, data);
-            console.log(`✅ Fixed: ${id}`);
-        } else {
-            console.log(`⚠️ No data for: ${id}`);
-        }
-    });
-
-    console.log('✅ All selects fixed');
-}
-
-function populateSelect(select, options) {
-    // Save current value
-    const currentValue = select.value;
-
-    // Clear and rebuild
-    select.innerHTML = '';
-
-    options.forEach(([value, label]) => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        select.appendChild(option);
-    });
-
-    // Restore value if valid
-    if (currentValue) {
-        const exists = Array.from(select.options).some(o => o.value === currentValue);
-        if (exists) {
-            select.value = currentValue;
-        }
-    }
-
-    // Ensure select is enabled and visible
-    select.disabled = false;
-    select.style.display = 'block';
-}
-
-// ============================================
-// ENSURE INPUT BOXES VISIBLE
-// ============================================
-function ensureInputBoxesVisible() {
-    console.log('👁️ Ensuring input boxes visible...');
-
-    const adCopyContainer = document.getElementById('adCopyContainer');
-    const videoScriptContainer = document.getElementById('videoScriptContainer');
-    const adCopy = document.getElementById('adCopy');
-    const videoScript = document.getElementById('videoScript');
-
-    // Make sure containers exist
-    if (!adCopyContainer) {
-        console.log('Creating adCopyContainer...');
-        createInputContainer('adCopyContainer', 'adCopy', 'Enter your ad copy here...');
-    }
-    if (!videoScriptContainer) {
-        console.log('Creating videoScriptContainer...');
-        createInputContainer('videoScriptContainer', 'videoScript', 'Enter your video script here...');
-    }
-
-    // Show correct container based on mode
-    if (adCopyContainer) {
-        adCopyContainer.style.display = currentContentMode === 'adCopy' ? 'block' : 'none';
-    }
-    if (videoScriptContainer) {
-        videoScriptContainer.style.display = currentContentMode === 'videoScript' ? 'block' : 'none';
-    }
-
-    // Ensure textareas exist and are visible
-    if (adCopy) {
-        adCopy.style.display = 'block';
-        adCopy.style.width = '100%';
-        adCopy.style.minHeight = '150px';
-    }
-    if (videoScript) {
-        videoScript.style.display = 'block';
-        videoScript.style.width = '100%';
-        videoScript.style.minHeight = '150px';
-    }
-
-    console.log('✅ Input boxes visible');
-}
-
-function createInputContainer(containerId, textareaId, placeholder) {
-    // Find the content tabs container
-    const contentTabs = document.querySelector('.content-tabs') || document.querySelector('[class*="tab"]');
-    if (!contentTabs) {
-        console.log('Could not find content tabs container');
-        return;
-    }
-
-    // Create container
-    const container = document.createElement('div');
-    container.id = containerId;
-    container.style.marginTop = '20px';
-    container.style.display = containerId === 'adCopyContainer' ? 'block' : 'none';
-
-    // Create textarea
-    const textarea = document.createElement('textarea');
-    textarea.id = textareaId;
-    textarea.name = textareaId;
-    textarea.placeholder = placeholder;
-    textarea.style.width = '100%';
-    textarea.style.minHeight = '150px';
-    textarea.style.padding = '12px';
-    textarea.style.borderRadius = '8px';
-    textarea.style.border = '1px solid #475569';
-    textarea.style.background = '#1e293b';
-    textarea.style.color = '#f8fafc';
-    textarea.style.fontSize = '14px';
-    textarea.style.resize = 'vertical';
-
-    container.appendChild(textarea);
-    contentTabs.parentNode.insertBefore(container, contentTabs.nextSibling);
-}
-
-// ============================================
-// CONTENT TABS
+// CONTENT TABS - FIXED
 // ============================================
 function setupContentTabs() {
     const tabs = document.querySelectorAll('.content-tab');
+    const containers = document.querySelectorAll('.textarea-container');
 
-    if (tabs.length === 0) {
-        console.log('No content tabs found');
-        return;
-    }
+    console.log(`Found ${tabs.length} tabs, ${containers.length} containers`);
 
     tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
             const mode = tab.dataset.mode;
-            if (!mode) return;
+            const targetId = tab.dataset.target;
 
+            console.log(`Tab clicked: mode=${mode}, target=${targetId}`);
+
+            if (!mode || !targetId) return;
+
+            // Update state
             currentContentMode = mode;
-            console.log('Content mode:', mode);
 
-            // Update active state
+            // Update tab UI
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            // Show/hide containers
-            ensureInputBoxesVisible();
+            // Update containers
+            containers.forEach(c => c.classList.remove('active'));
+            const targetContainer = document.getElementById(targetId);
+            if (targetContainer) {
+                targetContainer.classList.add('active');
+                console.log(`Activated container: ${targetId}`);
+            }
+
+            // Ensure textareas are visible
+            const textareas = targetContainer?.querySelectorAll('textarea');
+            textareas?.forEach(ta => {
+                ta.style.display = 'block';
+                ta.style.width = '100%';
+                ta.style.minHeight = '150px';
+            });
         });
     });
 
-    // Set initial active tab
-    const activeTab = document.querySelector('.content-tab.active') || tabs[0];
+    // Set initial state
+    const activeTab = document.querySelector('.content-tab.active');
     if (activeTab) {
         currentContentMode = activeTab.dataset.mode || 'adCopy';
-        activeTab.classList.add('active');
     }
+
+    console.log(`Content mode initialized: ${currentContentMode}`);
 }
 
 // ============================================
-// FORM HANDLER
+// FORM HANDLER - FIXED
 // ============================================
 function setupFormHandler() {
     const form = document.getElementById('analyzeForm');
     if (!form) {
-        console.log('Form not found');
+        console.error('❌ Form not found');
         return;
     }
 
@@ -372,38 +111,72 @@ function setupFormHandler() {
         console.log('📝 Form submitted');
 
         const analyzeBtn = document.getElementById('analyzeBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const resultsSection = document.getElementById('resultsSection');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const resultsContent = document.getElementById('resultsContent');
 
-        if (analyzeBtn) analyzeBtn.disabled = true;
-        if (loadingIndicator) loadingIndicator.style.display = 'block';
+        // Disable button and show loading
+        if (analyzeBtn) {
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+        }
+        if (loadingState) loadingState.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (resultsContent) resultsContent.classList.add('hidden');
 
         try {
+            // Build FormData
             const formData = new FormData(form);
 
-            // Get content based on mode
-            const adCopy = document.getElementById('adCopy')?.value?.trim() || '';
-            const videoScript = document.getElementById('videoScript')?.value?.trim() || '';
+            // Get content based on mode with correct field mapping
+            let adCopy = '';
+            let videoScript = '';
 
-            console.log('Mode:', currentContentMode);
+            if (currentContentMode === 'adCopy') {
+                adCopy = document.getElementById('adCopy')?.value?.trim() || '';
+                formData.set('ad_copy', adCopy);
+                formData.delete('video_script');
+            } else if (currentContentMode === 'videoScript') {
+                videoScript = document.getElementById('videoScript')?.value?.trim() || '';
+                formData.set('video_script', videoScript);
+                formData.delete('ad_copy');
+            } else if (currentContentMode === 'both') {
+                adCopy = document.getElementById('adCopyBoth')?.value?.trim() || '';
+                videoScript = document.getElementById('videoScriptBoth')?.value?.trim() || '';
+                formData.set('ad_copy', adCopy);
+                formData.set('video_script', videoScript);
+            }
+
+            console.log('Content mode:', currentContentMode);
             console.log('Ad copy length:', adCopy.length);
             console.log('Video script length:', videoScript.length);
 
-            // Add to form data
-            if (currentContentMode === 'adCopy' && adCopy) {
-                formData.set('ad_copy', adCopy);
-            } else if (currentContentMode === 'videoScript' && videoScript) {
-                formData.set('video_script', videoScript);
-            } else if (currentContentMode === 'both') {
-                if (adCopy) formData.set('ad_copy', adCopy);
-                if (videoScript) formData.set('video_script', videoScript);
+            // Validate content
+            if (!adCopy && !videoScript) {
+                throw new Error('Please enter ad copy or video script');
+            }
+
+            // Ensure all audience fields are properly mapped
+            const country = document.getElementById('country')?.value;
+            const age = document.getElementById('age')?.value;
+            const platform = document.getElementById('platform')?.value;
+            const industry = document.getElementById('industry')?.value;
+
+            if (!country || !age || !platform || !industry) {
+                throw new Error('Please fill in all required fields (Platform, Industry, Country, Age)');
             }
 
             // Debug: log form data
+            console.log('=== Form Data ===');
             for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value.toString().substring(0, 50)}...`);
+                if (value instanceof File) {
+                    console.log(`${key}: File (${value.name}, ${value.size} bytes)`);
+                } else {
+                    console.log(`${key}: ${value.toString().substring(0, 100)}`);
+                }
             }
 
+            // Send request
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 body: formData
@@ -414,35 +187,39 @@ function setupFormHandler() {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Server error:', errorText);
-                throw new Error(`Server error: ${response.status}`);
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            console.log('Response:', data);
+            console.log('Response data:', data);
 
             if (data.success) {
                 analysisResults = data.analysis;
                 renderResults(analysisResults);
-                if (resultsSection) {
-                    resultsSection.style.display = 'block';
-                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+                
+                if (resultsContent) {
+                    resultsContent.classList.remove('hidden');
+                    resultsContent.scrollIntoView({ behavior: 'smooth' });
                 }
             } else {
-                alert('Analysis failed: ' + (data.error || 'Unknown error'));
+                throw new Error(data.error || data.detail || 'Analysis failed');
             }
 
         } catch (error) {
             console.error('❌ Error:', error);
             alert('Error: ' + error.message);
         } finally {
-            if (analyzeBtn) analyzeBtn.disabled = false;
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (analyzeBtn) {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze Ad →';
+            }
+            if (loadingState) loadingState.classList.add('hidden');
         }
     });
 }
 
 // ============================================
-// RESULTS TABS
+// RESULTS TABS - FIXED
 // ============================================
 function setupResultsTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -459,13 +236,15 @@ function setupResultsTabs() {
 
             // Update buttons
             tabButtons.forEach(b => {
-                b.classList.toggle('active', b.dataset.tab === tabId);
+                b.classList.toggle('tab-active', b.dataset.tab === tabId);
+                b.classList.toggle('text-gray-400', b.dataset.tab !== tabId);
             });
 
             // Update content
             tabContents.forEach(content => {
                 const isActive = content.id === `tab-${tabId}`;
                 content.style.display = isActive ? 'block' : 'none';
+                content.classList.toggle('hidden', !isActive);
             });
         });
     });
@@ -477,10 +256,10 @@ function setupResultsTabs() {
 }
 
 // ============================================
-// RENDER RESULTS (Full implementation)
+// RENDER RESULTS - FIXED
 // ============================================
 function renderResults(analysis) {
-    console.log('🎨 Rendering results...');
+    console.log('🎨 Rendering results...', analysis);
 
     if (!analysis) {
         console.error('No analysis data');
@@ -492,20 +271,42 @@ function renderResults(analysis) {
 
     // Update score displays
     updateText('overallScore', overallScore);
-    updateText('scoreCircle', overallScore);
-
-    // Color code the score
-    const scoreColor = overallScore >= 70 ? '#22c55e' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
+    
+    // Update score circle
     const scoreCircle = document.getElementById('scoreCircle');
-    if (scoreCircle) scoreCircle.style.background = scoreColor;
+    if (scoreCircle) {
+        const circumference = 2 * Math.PI * 40; // r=40
+        const offset = circumference - (overallScore / 100) * circumference;
+        scoreCircle.style.strokeDashoffset = offset;
+        
+        // Color code
+        let color = '#ef4444'; // red
+        if (overallScore >= 70) color = '#22c55e'; // green
+        else if (overallScore >= 50) color = '#f59e0b'; // yellow
+        scoreCircle.style.stroke = color;
+    }
 
-    // Verdict
-    const verdict = analysis.run_decision?.verdict || 'REVIEW';
-    updateText('verdictBadge', verdict);
+    // Verdict badge
+    const runDecision = analysis.run_decision || {};
+    const verdict = runDecision.should_run || 'REVIEW';
+    const verdictEl = document.getElementById('verdictBadge');
+    if (verdictEl) {
+        verdictEl.textContent = verdict;
+        let badgeColor = 'bg-gray-700';
+        if (verdict.includes('Yes')) badgeColor = 'bg-green-500/20 text-green-400';
+        else if (verdict.includes('No')) badgeColor = 'bg-red-500/20 text-red-400';
+        else if (verdict.includes('fixes')) badgeColor = 'bg-yellow-500/20 text-yellow-400';
+        verdictEl.className = `px-3 py-1 rounded-full text-sm font-medium ${badgeColor}`;
+    }
 
     // Readiness and risk
-    updateText('launchReadiness', (analysis.run_decision?.readiness || 0) + '%');
-    updateText('failureRisk', (analysis.run_decision?.risk || 0) + '%');
+    const behaviorSummary = analysis.behavior_summary || {};
+    updateText('launchReadiness', behaviorSummary.launch_readiness || '0%');
+    updateText('failureRisk', behaviorSummary.failure_risk || '0%');
+    updateText('primaryReason', behaviorSummary.primary_reason || '');
+
+    // Run decision banner
+    renderRunDecision(runDecision);
 
     // Render all sections
     renderPerformanceBreakdown(scores);
@@ -520,6 +321,14 @@ function renderResults(analysis) {
     renderPersonas(analysis.persona_reactions);
     renderROI(analysis.roi_analysis);
     renderVideoExecution(analysis.video_execution_analysis);
+    renderCompetitorAdvantage(analysis.competitor_advantage);
+
+    // Audience summary
+    const audienceEl = document.getElementById('audienceParsed');
+    if (audienceEl && analysis.audience_parsed) {
+        audienceEl.textContent = analysis.audience_parsed;
+        document.getElementById('audienceSummary')?.classList.remove('hidden');
+    }
 
     console.log('✅ Results rendered');
 }
@@ -529,162 +338,425 @@ function updateText(id, text) {
     if (el) el.textContent = text;
 }
 
-// [All render helper functions from previous version...]
-// Including: renderPerformanceBreakdown, renderPhaseBreakdown, etc.
+function renderRunDecision(runDecision) {
+    const container = document.getElementById('runDecision');
+    if (!container || !runDecision) return;
+
+    const shouldRun = runDecision.should_run || 'Review';
+    const riskLevel = runDecision.risk_level || 'Unknown';
+    const reason = runDecision.reason || '';
+
+    let bgColor = 'bg-gray-700';
+    let textColor = 'text-white';
+    
+    if (shouldRun.includes('Yes')) {
+        bgColor = 'bg-green-500/20';
+        textColor = 'text-green-400';
+    } else if (shouldRun.includes('No')) {
+        bgColor = 'bg-red-500/20';
+        textColor = 'text-red-400';
+    } else {
+        bgColor = 'bg-yellow-500/20';
+        textColor = 'text-yellow-400';
+    }
+
+    container.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold ${textColor}">Run Decision: ${shouldRun}</h3>
+                <p class="text-sm text-gray-400 mt-1">${reason}</p>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-gray-500">Risk Level</span>
+                <p class="font-semibold ${textColor}">${riskLevel}</p>
+            </div>
+        </div>
+    `;
+}
 
 function renderPerformanceBreakdown(scores) {
-    const container = document.getElementById('performanceBreakdown');
+    const container = document.getElementById('scoresGrid');
     if (!container) return;
 
     const metrics = [
-        ['hook_strength', 'Hook Strength'],
-        ['clarity', 'Clarity'],
-        ['trust_building', 'Trust Building'],
-        ['cta_power', 'CTA Power'],
-        ['audience_alignment', 'Audience Alignment']
+        ['hook_strength', 'Hook Strength', 'How well the opening captures attention'],
+        ['clarity', 'Clarity', 'How clear the message is'],
+        ['trust_building', 'Trust Building', 'Credibility and proof elements'],
+        ['cta_power', 'CTA Power', 'Call-to-action effectiveness'],
+        ['audience_alignment', 'Audience Alignment', 'Match with target demographic']
     ];
 
-    container.innerHTML = metrics.map(([key, label]) => {
+    container.innerHTML = metrics.map(([key, label, description]) => {
         const score = scores[key] || 0;
-        const color = score >= 70 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
-        return `<div class="metric"><span>${label}</span><div class="bar" style="width:${score}%;background:${color}"></div><span>${score}</span></div>`;
+        let color = '#ef4444';
+        if (score >= 70) color = '#22c55e';
+        else if (score >= 50) color = '#f59e0b';
+        
+        return `
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium">${label}</span>
+                        <span class="text-sm font-bold">${score}/100</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: ${score}%; background: ${color};"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">${description}</p>
+                </div>
+            </div>
+        `;
     }).join('');
 }
 
 function renderPhaseBreakdown(phases) {
     const container = document.getElementById('phaseBreakdown');
-    if (!container || !phases?.phases) return;
-    container.innerHTML = phases.phases.map((p, i) => 
-        `<div>${i+1}. ${p.name}: ${p.score}/100</div>`
-    ).join('');
+    if (!container) return;
+
+    if (!phases || typeof phases !== 'object') {
+        container.innerHTML = '<p class="text-gray-500">No phase breakdown available</p>';
+        return;
+    }
+
+    const phaseOrder = [
+        ['micro_stop_0_1s', '0-1s: Micro-Stop'],
+        ['scroll_stop_1_2s', '1-2s: Scroll-Stop'],
+        ['attention_2_5s', '2-5s: Attention'],
+        ['trust_evaluation', 'Trust Evaluation'],
+        ['click_and_post_click', 'Click & Post-Click']
+    ];
+
+    container.innerHTML = phaseOrder.map(([key, label]) => {
+        const text = phases[key] || 'N/A';
+        return `<div class="p-3 bg-gray-900/50 rounded-lg"><strong>${label}:</strong> ${text}</div>`;
+    }).join('');
 }
 
 function renderBehaviorSummary(summary) {
-    const container = document.getElementById('behaviorSummary');
-    if (!container || !summary) return;
+    const container = document.getElementById('platformSpecific');
+    if (!container) return;
+
+    if (!summary) {
+        container.innerHTML = '<p class="text-gray-500">No behavior summary available</p>';
+        return;
+    }
+
     container.innerHTML = `
-        <div>Attention: ${summary.attention_capture || 'N/A'}</div>
-        <div>Interest: ${summary.interest_maintenance || 'N/A'}</div>
-        <div>Desire: ${summary.desire_generation || 'N/A'}</div>
-        <div>Action: ${summary.action_motivation || 'N/A'}</div>
+        <h4 class="font-semibold mb-3 text-purple-400">📊 Behavior Summary</h4>
+        <div class="space-y-2 text-sm">
+            <div><strong>Verdict:</strong> ${summary.verdict || 'N/A'}</div>
+            <div><strong>Launch Readiness:</strong> ${summary.launch_readiness || 'N/A'}</div>
+            <div><strong>Failure Risk:</strong> ${summary.failure_risk || 'N/A'}</div>
+            <div><strong>Primary Reason:</strong> ${summary.primary_reason || 'N/A'}</div>
+        </div>
     `;
 }
 
 function renderLineByLine(lines) {
     const container = document.getElementById('lineByLineAnalysis');
     if (!container) return;
-    if (!lines || lines.length === 0) {
-        container.innerHTML = '<p>No line analysis</p>';
+
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No line-by-line analysis available</p>';
         return;
     }
-    container.innerHTML = lines.map(l => 
-        `<div>"${l.text}" - Score: ${l.score}</div>`
-    ).join('');
+
+    container.innerHTML = lines.map((l, i) => {
+        const score = l.score || 0;
+        let color = 'text-red-400';
+        if (score >= 70) color = 'text-green-400';
+        else if (score >= 50) color = 'text-yellow-400';
+        
+        return `
+            <div class="line-analysis-item p-3 bg-gray-900/30 rounded-lg border-l-4 ${score >= 70 ? 'border-green-500' : score >= 50 ? 'border-yellow-500' : 'border-red-500'}">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs text-gray-500">Line ${i + 1}</span>
+                    <span class="text-sm font-bold ${color}">${score}/100</span>
+                </div>
+                <p class="text-sm text-white">"${l.text || 'N/A'}"</p>
+                <p class="text-xs text-gray-400 mt-1">${l.analysis || ''}</p>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderWeaknesses(weaknesses) {
     const container = document.getElementById('criticalWeaknesses');
     if (!container) return;
-    if (!weaknesses || weaknesses.length === 0) {
-        container.innerHTML = '<p>✅ No critical weaknesses</p>';
+
+    if (!weaknesses || !Array.isArray(weaknesses) || weaknesses.length === 0) {
+        container.innerHTML = '<p class="text-green-400">✅ No critical weaknesses found</p>';
         return;
     }
-    container.innerHTML = weaknesses.map(w => 
-        `<div><strong>${w.severity}:</strong> ${w.title} - ${w.fix}</div>`
-    ).join('');
+
+    container.innerHTML = weaknesses.map((w, i) => `
+        <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-red-400 font-semibold">${w.severity || 'Medium'} Priority</span>
+                <span class="text-xs text-gray-500">Issue #${i + 1}</span>
+            </div>
+            <h5 class="font-medium mb-1">${w.title || w.issue || 'Unknown Issue'}</h5>
+            <p class="text-sm text-gray-400 mb-2">${w.impact || w.behavior_impact || ''}</p>
+            <div class="text-sm text-green-400">
+                <strong>Fix:</strong> ${w.fix || w.precise_fix || 'Review and revise'}
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderImprovements(improvements) {
-    const container = document.getElementById('improvementsList');
+    const container = document.getElementById('improvements');
     if (!container) return;
-    if (!improvements || improvements.length === 0) {
-        container.innerHTML = '<p>No improvements</p>';
+
+    if (!improvements || !Array.isArray(improvements) || improvements.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No specific improvements suggested</p>';
         return;
     }
-    container.innerHTML = improvements.map((imp, i) => 
-        `<div>${i+1}. ${imp}</div>`
-    ).join('');
+
+    container.innerHTML = `
+        <h4 class="font-semibold mb-3 text-yellow-400">💡 Suggested Improvements</h4>
+        <ul class="space-y-2">
+            ${improvements.map((imp, i) => `
+                <li class="flex items-start">
+                    <span class="text-purple-400 mr-2">${i + 1}.</span>
+                    <span class="text-sm">${typeof imp === 'string' ? imp : imp.description || JSON.stringify(imp)}</span>
+                </li>
+            `).join('')}
+        </ul>
+    `;
 }
 
 function renderImprovedAd(ad) {
-    const container = document.getElementById('improvedAdContent');
+    const container = document.getElementById('improvedContent');
     if (!container) return;
+
     if (!ad) {
-        container.innerHTML = '<p>No improved ad</p>';
+        container.innerHTML = '<p class="text-gray-500">No improved ad generated</p>';
         return;
     }
+
     container.innerHTML = `
-        <div><strong>Headline:</strong> ${ad.headline || 'N/A'}</div>
-        <div><strong>Body:</strong> ${ad.body_copy || 'N/A'}</div>
-        <div><strong>CTA:</strong> ${ad.cta || 'N/A'}</div>
-        <div>Score: ${ad.predicted_score || 0}/100 | ROI: ${ad.roi_potential || 'N/A'}</div>
-        <button onclick="copyImprovedAd()">Copy</button>
+        <div class="space-y-3">
+            <div class="p-3 bg-gray-800 rounded-lg">
+                <span class="text-xs text-gray-500 uppercase">Headline</span>
+                <p class="text-lg font-semibold text-white mt-1">${ad.headline || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-800 rounded-lg">
+                <span class="text-xs text-gray-500 uppercase">Body Copy</span>
+                <p class="text-sm text-gray-300 mt-1 whitespace-pre-wrap">${ad.body_copy || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-800 rounded-lg border border-purple-500/30">
+                <span class="text-xs text-gray-500 uppercase">Call to Action</span>
+                <p class="text-md font-semibold text-purple-400 mt-1">${ad.cta || 'N/A'}</p>
+            </div>
+            ${ad.video_script_version ? `
+                <div class="p-3 bg-gray-800 rounded-lg border border-blue-500/30">
+                    <span class="text-xs text-gray-500 uppercase">Video Script Version</span>
+                    <p class="text-sm text-gray-300 mt-1 whitespace-pre-wrap">${ad.video_script_version}</p>
+                </div>
+            ` : ''}
+            <div class="flex items-center justify-between pt-2">
+                <span class="text-sm text-gray-400">Predicted Score: <strong class="text-white">${ad.predicted_score || 0}/100</strong></span>
+                <span class="text-sm text-gray-400">ROI: <strong class="text-green-400">${ad.roi_potential || 'N/A'}</strong></span>
+            </div>
+            <button onclick="copyImprovedAd()" class="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition">
+                📋 Copy Improved Ad
+            </button>
+        </div>
     `;
 }
 
 function renderVariants(variants) {
-    const container = document.getElementById('adVariantsList');
+    const container = document.getElementById('adVariants');
     if (!container) return;
-    if (!variants || variants.length === 0) {
-        container.innerHTML = '<p>No variants</p>';
+
+    if (!variants || !Array.isArray(variants) || variants.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No variants generated</p>';
         return;
     }
-    container.innerHTML = variants.map((v, i) => 
-        `<div class="${i===0?'best':''}">Variant #${v.id}: ${v.angle} - ${v.predicted_score}/100 ${i===0?'🏆':''}</div>`
-    ).join('');
+
+    container.innerHTML = variants.map((v, i) => `
+        <div class="variant-card p-4 bg-gray-900/50 rounded-xl border ${i === 0 ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/5'}">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                    <span class="text-lg font-bold ${i === 0 ? 'text-purple-400' : 'text-gray-400'} mr-2">#${v.id || i + 1}</span>
+                    <span class="text-sm font-medium">${v.angle || 'Variant'}</span>
+                    ${i === 0 ? '<span class="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">🏆 Best</span>' : ''}
+                </div>
+                <span class="text-xl font-bold ${v.predicted_score >= 70 ? 'text-green-400' : v.predicted_score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${v.predicted_score || 0}/100</span>
+            </div>
+            <p class="text-sm text-gray-400 mb-2">${v.reason || ''}</p>
+            <div class="p-3 bg-gray-800 rounded-lg text-sm text-gray-300 whitespace-pre-wrap">${v.copy || v.hook || 'N/A'}</div>
+            <div class="mt-2 text-xs text-gray-500">ROI Potential: ${v.roi_potential || 'N/A'}</div>
+        </div>
+    `).join('');
 }
 
 function renderWinnerPrediction(prediction) {
     const container = document.getElementById('winnerPrediction');
     if (!container) return;
+
     if (!prediction) {
-        container.innerHTML = '<p>No prediction</p>';
+        container.innerHTML = '<p class="text-gray-500">No winner prediction available</p>';
         return;
     }
+
+    const confidence = prediction.confidence || 'Unknown';
+    let color = 'text-gray-400';
+    if (confidence === 'High') color = 'text-green-400';
+    else if (confidence === 'Medium') color = 'text-yellow-400';
+    else if (confidence === 'Low') color = 'text-red-400';
+
     container.innerHTML = `
-        <div>${prediction.confidence} Confidence</div>
-        <div>${prediction.reason}</div>
-        <div>Lift: ${prediction.expected_lift || 'N/A'}</div>
+        <h3 class="text-lg font-semibold mb-4">🏆 Winner Prediction</h3>
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-400">Confidence</span>
+            <span class="font-bold ${color}">${confidence}</span>
+        </div>
+        <p class="text-sm text-gray-300 mb-3">${prediction.reason || 'N/A'}</p>
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-500">Best Variant: #${prediction.best_variant_id || 'N/A'}</span>
+            <span class="text-purple-400 font-semibold">${prediction.expected_lift || 'N/A'}</span>
+        </div>
     `;
 }
 
 function renderPersonas(personas) {
     const container = document.getElementById('personaReactions');
     if (!container) return;
-    if (!personas || personas.length === 0) {
-        container.innerHTML = '<p>No personas</p>';
+
+    if (!personas || !Array.isArray(personas) || personas.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No persona reactions available</p>';
         return;
     }
-    container.innerHTML = personas.map(p => 
-        `<div>${p.name}: ${p.reaction} - "${p.thought}"</div>`
-    ).join('');
+
+    container.innerHTML = personas.map(p => `
+        <div class="p-4 bg-gray-900/50 rounded-xl border border-white/5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="font-semibold text-purple-400">${p.persona || p.name || 'Unknown'}</span>
+                <span class="text-xs text-gray-500">${p.reaction || 'Neutral'}</span>
+            </div>
+            <p class="text-sm text-gray-300 italic">"${p.exact_quote || p.thought || p.quote || 'No reaction'}"</p>
+        </div>
+    `).join('');
 }
 
 function renderROI(roi) {
     const container = document.getElementById('roiAnalysis');
     if (!container) return;
+
     if (!roi) {
-        container.innerHTML = '<p>No ROI data</p>';
+        container.innerHTML = '<p class="text-gray-500">No ROI analysis available</p>';
         return;
     }
+
     container.innerHTML = `
-        <div>ROAS: ${roi.roas || 'N/A'}</div>
-        <div>Break-even: ${roi.break_even || 'N/A'}</div>
-        <div>Risk: ${roi.risk || 'N/A'}</div>
+        <div class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+                <div class="p-3 bg-gray-900/50 rounded-lg text-center">
+                    <div class="text-xs text-gray-500 mb-1">ROI Potential</div>
+                    <div class="font-bold text-green-400">${roi.roi_potential || 'N/A'}</div>
+                </div>
+                <div class="p-3 bg-gray-900/50 rounded-lg text-center">
+                    <div class="text-xs text-gray-500 mb-1">Break-even</div>
+                    <div class="font-bold text-blue-400">${roi.break_even_probability || 'N/A'}</div>
+                </div>
+                <div class="p-3 bg-gray-900/50 rounded-lg text-center">
+                    <div class="text-xs text-gray-500 mb-1">Risk</div>
+                    <div class="font-bold ${(roi.risk_classification || '').includes('Low') ? 'text-green-400' : (roi.risk_classification || '').includes('High') ? 'text-red-400' : 'text-yellow-400'}">${roi.risk_classification || 'N/A'}</div>
+                </div>
+            </div>
+            ${roi.key_metrics ? `
+                <div class="p-3 bg-gray-900/30 rounded-lg">
+                    <h5 class="text-sm font-semibold mb-2">Key Metrics</h5>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div>CTR: ${roi.key_metrics.expected_ctr_range || 'N/A'}</div>
+                        <div>CPC: ${roi.key_metrics.realistic_cpc_range || 'N/A'}</div>
+                        <div>Conv: ${roi.key_metrics.conversion_rate_range || 'N/A'}</div>
+                    </div>
+                </div>
+            ` : ''}
+            ${roi.roi_scenarios ? `
+                <div class="p-3 bg-gray-900/30 rounded-lg">
+                    <h5 class="text-sm font-semibold mb-2">ROI Scenarios</h5>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">Worst:</span> <span class="text-red-400">${roi.roi_scenarios.worst_case || 'N/A'}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Expected:</span> <span class="text-yellow-400">${roi.roi_scenarios.expected_case || 'N/A'}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Best:</span> <span class="text-green-400">${roi.roi_scenarios.best_case || 'N/A'}</span></div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
     `;
 }
 
 function renderVideoExecution(video) {
-    const container = document.getElementById('videoExecution');
+    const container = document.getElementById('videoAnalysis');
     if (!container) return;
+
     if (!video) {
-        container.innerHTML = '<p>No video analysis</p>';
+        container.innerHTML = '<p class="text-gray-500">No video execution analysis available</p>';
         return;
     }
+
     container.innerHTML = `
-        <div>Hook: ${video.hook_delivery || 'N/A'}</div>
-        <div>Flow: ${video.speech_flow || 'N/A'}</div>
-        <div>Visual: ${video.visual_dependency || 'N/A'}</div>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                <span class="text-gray-400">Hook Delivery</span>
+                <span class="font-semibold ${(video.hook_delivery_strength || '').includes('Strong') ? 'text-green-400' : 'text-yellow-400'}">${video.hook_delivery_strength || 'N/A'}</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                <span class="text-gray-400">Speech Flow</span>
+                <span class="font-semibold ${(video.speech_flow_quality || '').includes('Natural') ? 'text-green-400' : 'text-yellow-400'}">${video.speech_flow_quality || 'N/A'}</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                <span class="text-gray-400">Visual Dependency</span>
+                <span class="font-semibold">${video.visual_dependency || 'N/A'}</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
+                <span class="text-gray-400">Delivery Risk</span>
+                <span class="font-semibold ${(video.delivery_risk || '').includes('Low') ? 'text-green-400' : 'text-red-400'}">${video.delivery_risk || 'N/A'}</span>
+            </div>
+            <div class="p-3 bg-gray-900/30 rounded-lg">
+                <span class="text-gray-500 text-sm">Recommended Format:</span>
+                <span class="ml-2 px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-sm">${video.recommended_format || 'N/A'}</span>
+            </div>
+            ${video.execution_gaps && video.execution_gaps.length > 0 ? `
+                <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <span class="text-yellow-400 text-sm font-semibold">Execution Gaps:</span>
+                    <ul class="mt-1 text-sm text-gray-400">
+                        ${video.execution_gaps.map(g => `<li>• ${g}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function renderCompetitorAdvantage(competitor) {
+    const container = document.getElementById('competitorAdvantage');
+    if (!container) return;
+
+    if (!competitor) {
+        container.innerHTML = '<p class="text-gray-500">No competitor analysis available</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="space-y-4">
+            <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <h5 class="text-red-400 font-semibold mb-2">⚠️ Why Users Might Choose Competitor</h5>
+                <p class="text-sm text-gray-300">${competitor.why_user_might_choose_competitor || 'N/A'}</p>
+            </div>
+            <div class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <h5 class="text-yellow-400 font-semibold mb-2">📊 What Competitor Does Better</h5>
+                <p class="text-sm text-gray-300">${competitor.what_competitor_is_doing_better || 'N/A'}</p>
+            </div>
+            <div class="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <h5 class="text-green-400 font-semibold mb-2">🎯 How to Outperform</h5>
+                <p class="text-sm text-gray-300">${competitor.how_to_outperform || 'N/A'}</p>
+            </div>
+        </div>
     `;
 }
 
@@ -694,41 +766,62 @@ function renderVideoExecution(video) {
 function copyImprovedAd() {
     if (!analysisResults?.improved_ad) return;
     const ad = analysisResults.improved_ad;
-    const text = `${ad.headline}\n\n${ad.body_copy}\n\n${ad.cta}`;
-    navigator.clipboard.writeText(text).then(() => alert('✅ Copied!'));
-}
-
-async function loadAudienceConfig() {
-    try {
-        const response = await fetch('/api/audience-config');
-        if (response.ok) {
-            audienceConfig = await response.json();
-        }
-    } catch (e) {
-        audienceConfig = {
-            countries: {
-                us: { regions: ['California', 'Texas', 'New York'] },
-                uk: { regions: ['England', 'Scotland'] },
-                ng: { regions: ['Lagos', 'Abuja', 'Kano'] }
-            }
-        };
-    }
+    const text = `${ad.headline || ''}\n\n${ad.body_copy || ''}\n\n${ad.cta || ''}`;
+    navigator.clipboard.writeText(text).then(() => alert('✅ Copied to clipboard!'));
 }
 
 function setupRegionDependency() {
     const countrySelect = document.getElementById('country');
     const regionSelect = document.getElementById('region');
+
     if (!countrySelect || !regionSelect) return;
+
+    const regions = {
+        nigeria: ['Lagos', 'Abuja', 'Kano', 'Ibadan', 'Port Harcourt'],
+        us: ['California', 'Texas', 'New York', 'Florida', 'Illinois'],
+        uk: ['London', 'Manchester', 'Birmingham', 'Glasgow', 'Liverpool'],
+        canada: ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
+        australia: ['New South Wales', 'Victoria', 'Queensland'],
+        ghana: ['Accra', 'Kumasi', 'Tamale'],
+        kenya: ['Nairobi', 'Mombasa', 'Kisumu'],
+        south_africa: ['Gauteng', 'Western Cape', 'KwaZulu-Natal'],
+        india: ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu'],
+        germany: ['Bavaria', 'North Rhine-Westphalia', 'Baden-Württemberg']
+    };
 
     countrySelect.addEventListener('change', () => {
         const country = countrySelect.value;
-        const regions = audienceConfig?.countries?.[country]?.regions || [];
+        const countryRegions = regions[country] || [];
+
         regionSelect.innerHTML = '<option value="">Select Region</option>';
-        regions.forEach(r => {
+        countryRegions.forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.toLowerCase().replace(/\s+/g, '-');
             opt.textContent = r;
             regionSelect.appendChild(opt);
         });
+
+        regionSelect.disabled = countryRegions.length === 0;
     });
+}
+
+function setupCharCounters() {
+    const adCopy = document.getElementById('adCopy');
+    const adCopyCount = document.getElementById('adCopyCount');
+    const videoScript = document.getElementById('videoScript');
+    const videoScriptCount = document.getElementById('videoScriptCount');
+
+    if (adCopy && adCopyCount) {
+        adCopy.addEventListener('input', () => {
+            adCopyCount.textContent = `${adCopy.value.length} chars`;
+        });
+    }
+
+    if (videoScript && videoScriptCount) {
+        videoScript.addEventListener('input', () => {
+            const words = videoScript.value.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const readTime = Math.ceil(words / 3); // ~3 words per second
+            videoScriptCount.textContent = `${words} words (~${readTime}s)`;
+        });
+    }
 }
