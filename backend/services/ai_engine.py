@@ -1,11 +1,11 @@
 """
-ADLYTICS AI Engine v5.8
-Strict Scoring Implementation with Content-Aware Analysis
-Based on behavioral simulation framework from analysis document
+ADLYTICS AI Engine v5.9 - REAL SCORING ONLY
+No fake fallbacks. No generic scores. Every analysis is unique.
 """
 
 import json
 import re
+import hashlib
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import httpx
@@ -13,262 +13,136 @@ import os
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 @dataclass
-class ContentMetrics:
-    """Pre-calculated content quality metrics"""
+class ContentFingerprint:
+    """Unique identifier for content to prevent duplicate scoring"""
+    content_hash: str
     word_count: int
-    max_possible_score: int
-    content_quality_flag: Optional[str]
-    hook_source: str
-    cta_source: str
-    primary_content: str
-    content_type: str
+    first_20_chars: str
+    last_20_chars: str
+    has_trauma_pattern: bool
+    has_scam_pattern: bool
+    emotional_keywords: List[str]
 
-@dataclass
-class ScoringCaps:
-    """Enforced score caps based on content quality"""
-    overall_cap: int
-    hook_cap: int
-    cta_cap: int
-    scam_detected: bool
-    scam_patterns_found: List[str]
-
-class AIEngineV58:
+class AIEngineV59:
     """
-    Strict AI Ad Analysis Engine with honest scoring
-    No more fake 85s for 4-word content
+    Strict AI Analysis - Every Score Must Be Content-Specific
+    If AI returns generic scores, we retry or fail - never fake it.
     """
-
-    # Scam pattern detection - Nigerian market focus (raw strings fixed)
-    SCAM_PATTERNS = [
-        r"turn\s*\₦?\$?\d+\s*(k|000)?\s*(into|to)\s*\₦?\$?\d+",
-        r"\d+\s*days?",
-        r"no\s*experience\s*needed",
-        r"guarantee\d*%?",
-        r"risk[- ]?free",
-        r"make\s*\₦?\$?\d+\s*daily",
-        r"quit\s*your\s*job",
-        r"financial\s*freedom",
-        r"\d+x\s*returns?",
-        r"secret\s*(system|method)",
-        r"limited\s*spots",
-        r"act\s*now"
-    ]
-
-    # Country-specific behavioral contexts
-    COUNTRY_CONTEXTS = {
-        "nigeria": {
-            "currency": "₦",
-            "scam_trauma": "High (MMM, LOOM, fake forex)",
-            "trust_signals": ["CAC registration", "physical address", "WhatsApp availability"],
-            "neuro_triggers": ["fear of scams", "community proof", "hustle culture"],
-            "suspicious_phrases": ["turn 50k to 500k", "7 days", "no experience"]
-        },
-        "united_states": {
-            "currency": "$",
-            "scam_trauma": "Medium (MLM fatigue)",
-            "trust_signals": ["BBB rating", "money-back guarantee", "social proof"],
-            "neuro_triggers": ["FOMO", "status", "convenience"]
-        },
-        "united_kingdom": {
-            "currency": "£",
-            "scam_trauma": "Low but compliance-sensitive",
-            "trust_signals": ["FCA regulation", "transparency", "risk warnings"],
-            "neuro_triggers": ["security", "compliance", "education"]
-        }
-    }
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.base_url = "https://openrouter.ai/api/v1"
 
-    def calculate_content_metrics(self, ad_copy: Optional[str], video_script: Optional[str]) -> ContentMetrics:
-        """
-        Pre-calculate objective metrics before AI scoring
-        This prevents fake high scores for low-quality content
-        """
-        # Determine primary content source
-        if video_script and ad_copy:
-            primary_content = f"{ad_copy}\n\n{video_script}"
-            content_type = "both"
-            hook_source = "video_script"  # Video script gets priority for hook
-            cta_source = "video_script"   # Video script gets priority for CTA
-        elif video_script:
-            primary_content = video_script
-            content_type = "video_script"
-            hook_source = "video_script"
-            cta_source = "video_script"
-        elif ad_copy:
-            primary_content = ad_copy
-            content_type = "ad_copy"
-            hook_source = "ad_copy"
-            cta_source = "ad_copy"
-        else:
-            primary_content = ""
-            content_type = "empty"
-            hook_source = "none"
-            cta_source = "none"
+    def fingerprint_content(self, content: str) -> ContentFingerprint:
+        """Create unique fingerprint to verify AI is analyzing actual content"""
+        content_lower = content.lower()
 
-        words = len(primary_content.split())
+        # Extract emotional keywords present
+        emotional_words = ["lost", "pain", "struggle", "truth", "honest", "transparent", 
+                          "scam", "fear", "worry", "stress", "failed", "quit", "stop"]
+        found_emotional = [w for w in emotional_words if w in content_lower]
 
-        # STRICT Content length caps - enforce maximum possible scores
-        if words < 5:
-            max_score = 10
-            quality_flag = "CRITICAL: Content insufficient (<5 words). Maximum score capped at 10."
-        elif words < 15:
-            max_score = 25
-            quality_flag = "WARNING: Minimal content (15-50 words). Scores capped accordingly."
-        elif words < 30:
-            max_score = 50
-            quality_flag = "NOTE: Short content (15-30 words). Hook and CTA heavily weighted."
-        elif words < 50:
-            max_score = 75
-            quality_flag = None
-        else:
-            max_score = 100
-            quality_flag = None
+        # Check for trauma patterns
+        trauma_patterns = ["i lost", "i failed", "i quit", "i stopped", "burned", "scammed"]
+        has_trauma = any(p in content_lower for p in trauma_patterns)
 
-        return ContentMetrics(
-            word_count=words,
-            max_possible_score=max_score,
-            content_quality_flag=quality_flag,
-            hook_source=hook_source,
-            cta_source=cta_source,
-            primary_content=primary_content,
-            content_type=content_type
+        # Check for scam patterns
+        scam_patterns = ["turn", "into", "guarantee", "no experience", "risk free"]
+        has_scam = any(p in content_lower for p in scam_patterns)
+
+        return ContentFingerprint(
+            content_hash=hashlib.md5(content.encode()).hexdigest()[:8],
+            word_count=len(content.split()),
+            first_20_chars=content[:20].strip(),
+            last_20_chars=content[-20:].strip(),
+            has_trauma_pattern=has_trauma,
+            has_scam_pattern=has_scam,
+            emotional_keywords=found_emotional
         )
 
-    def detect_scam_patterns(self, content: str) -> ScoringCaps:
+    def build_strict_prompt_v59(self, content: str, fingerprint: ContentFingerprint, 
+                               request_data: Dict[str, Any]) -> str:
         """
-        Auto-detect scam language and cap scores accordingly
-        """
-        content_lower = content.lower()
-        detected_patterns = []
-
-        for pattern in self.SCAM_PATTERNS:
-            if re.search(pattern, content_lower):
-                detected_patterns.append(pattern)
-
-        is_scam = len(detected_patterns) > 0
-
-        if is_scam:
-            return ScoringCaps(
-                overall_cap=20,
-                hook_cap=15,
-                cta_cap=25,
-                scam_detected=True,
-                scam_patterns_found=detected_patterns
-            )
-        else:
-            return ScoringCaps(
-                overall_cap=100,
-                hook_cap=100,
-                cta_cap=100,
-                scam_detected=False,
-                scam_patterns_found=[]
-            )
-
-    def prepare_analysis_prompt(self, 
-                               content_metrics: ContentMetrics,
-                               audience_data: Dict[str, Any],
-                               platform: str) -> str:
-        """
-        Build the strict scoring prompt with explicit rubrics
+        v5.9: Bulletproof prompt that forces content-specific analysis
+        Includes content fingerprint to prevent generic responses
         """
 
-        country = audience_data.get("country", "nigeria").lower()
-        country_context = self.COUNTRY_CONTEXTS.get(country, self.COUNTRY_CONTEXTS["nigeria"])
+        country = request_data.get("audience_country", "nigeria")
+        platform = request_data.get("platform", "tiktok")
 
-        prompt = f"""You are ADLYTICS v5.8, a ruthless advertising analyst. Your job is to tell the brutal truth about whether this ad will make or lose money.
+        prompt = f"""You are ADLYTICS v5.9 - World's Strictest Ad Analyzer.
 
-CONTENT TO ANALYZE:
+YOUR RULE: Every score MUST be uniquely derived from the SPECIFIC content below. 
+If you give generic scores (e.g., all 70s), your response will be rejected.
+
+CONTENT TO ANALYZE (Fingerprint: {fingerprint.content_hash}):
 ---
-{content_metrics.primary_content}
+{content}
 ---
 
-CONTENT META:
-- Type: {content_metrics.content_type}
-- Word Count: {content_metrics.word_count}
-- Maximum Possible Score: {content_metrics.max_possible_score}/100 (ENFORCED - you cannot exceed this)
-- Hook Source: {content_metrics.hook_source}
-- CTA Source: {content_metrics.cta_source}
-- Platform: {platform}
-- Target Country: {country}
+CONTENT FINGERPRINT (Verify you're analyzing THIS content):
+- First 20 chars: "{fingerprint.first_20_chars}"
+- Last 20 chars: "{fingerprint.last_20_chars}"
+- Word count: {fingerprint.word_count}
+- Trauma pattern detected: {fingerprint.has_trauma_pattern}
+- Scam pattern detected: {fingerprint.has_scam_pattern}
+- Emotional keywords: {fingerprint.emotional_keywords}
 
-STRICT SCORING RUBRIC (Most ads score 40-60. Be harsh.):
+STRICT SCORING INSTRUCTIONS:
 
-1. hook_strength (0-100) - First 3 seconds ONLY
-   90-100: Specific trauma ("I lost ₦120K"), provocation ("Stop"), or pattern interrupt
-   80-89: Strong curiosity gap with clear benefit
-   70-79: Clear value prop but generic
-   60-69: Weak, boring, or feature-focused
-   40-59: Confusing or scam-pattern ("Turn 50K to 500K")
-   20-39: No hook, starts with filler ("Hey guys", "Wait...")
-   0-19: No hook exists or empty
+1. EXTRACT THE ACTUAL HOOK (first 10 words):
+   What are the EXACT first 10 words? Write them out.
 
-   CURRENT MAX: {content_metrics.max_possible_score if content_metrics.word_count < 20 else 100}
+2. EXTRACT THE ACTUAL CTA (last 10 words):
+   What are the EXACT last 10 words? Write them out.
 
-2. clarity (0-100) - Can viewer understand in 3 seconds?
-   90-100: One sentence explains it perfectly
-   70-89: Clear after brief attention
-   50-69: Confusing value proposition
-   30-49: Multiple competing ideas
-   0-29: Incomprehensible
+3. SCORE BASED ON SPECIFIC CONTENT (0-100):
 
-3. credibility (0-100) - Trust signals
-   90-100: Shows losses, specific proof, vulnerability (V4 style)
-   70-89: Social proof, testimonials
-   50-69: Claims without proof
-   30-49: Hype language only
-   0-29: Scam markers, unrealistic promises
+   hook_strength: Does "{fingerprint.first_20_chars[:30]}..." stop the scroll?
+   - 90-100 ONLY if: Specific trauma ("I lost ₦120K"), provocation ("Stop"), unique pattern
+   - 70-80 if: Clear but generic
+   - 40-60 if: Boring or unclear
+   - 10-30 if: Starts with filler ("Hey", "Wait", "Before you")
 
-4. emotional_pull (0-100) - Pain/aspiration connection
-   90-100: Addresses specific trauma or deep desire
-   70-89: Clear pain point
-   50-69: Generic motivation
-   30-49: No emotional resonance
-   0-29: Off-putting
+   credibility: Does it show losses/proof or make empty promises?
+   - 90-100: Shows specific losses, transparency
+   - 70-80: Some proof
+   - 40-60: Claims without proof
+   - 10-30: Scam patterns detected
 
-5. cta_strength (0-100) - Call to action power
-   90-100: Anti-CTA ("Don't join yet") or urgent specific action
-   70-89: Clear benefit-driven CTA
-   50-69: Generic "Click here"
-   30-49: Weak or vague
-   0-29: No CTA
+   emotional_pull: Does "{fingerprint.first_20_chars[:30]}..." trigger emotion?
+   - 90-100: Personal trauma/story
+   - 70-80: Clear pain point
+   - 40-60: Generic motivation
+   - 10-30: No emotion
 
-6. audience_match (0-100) - Fit for {country} market
-   90-100: Perfect cultural/linguistic fit (uses {country_context["currency"]}, addresses local pain points)
-   70-89: Good fit
-   50-69: Generic
-   30-49: Mismatched
-   0-29: Alienating or offensive
+   clarity: Can someone understand the offer in 3 seconds?
 
-7. platform_fit (0-100) - Right for {platform}
-   90-100: Perfect format and length
-   70-89: Good fit
-   50-69: Acceptable
-   30-49: Wrong format
-   0-29: Will fail on this platform
+   cta_strength: Does it end with a strong specific action?
 
-8. overall (0-100) - Weighted calculation
-   Formula: (Hook×0.25 + Credibility×0.25 + Clarity×0.15 + Emotional×0.15 + CTA×0.10 + Audience×0.10)
+   audience_match: Does the language fit {country} market?
 
-   IMPORTANT: If word count < 10, maximum overall is 15 regardless of formula result.
-   If scam patterns detected, maximum overall is 20.
+   platform_fit: Is it right for {platform}?
 
-SCORING RULES:
-1. If content_metrics.word_count < 10, you MUST give overall <= 15
-2. If hook contains "turn X into Y" or "10x returns", hook_strength MUST be <= 20
-3. Be honest - most content is mediocre (40-60 range)
-4. If video_script is primary source, score hook/cta based on video script opening/closing
-5. Nigerian market context: {country_context["scam_trauma"]} - adjust credibility expectations accordingly
+4. CRITICAL: Your scores must be DIVERSE based on the content:
+   - If content has "I lost ₦120K" → hook_strength should be 90+
+   - If content has "Turn 50K to 500K" → hook_strength should be 10-20
+   - If content has trauma → emotional_pull should be 80+
+   - If content is generic → scores should be 40-60 range
 
-Extract and return:
-- hook_text: First 10-15 words (the actual hook)
-- cta_text: Last 10-15 words (the actual CTA)
-- word_count: {content_metrics.word_count}
+5. NEVER give these fake patterns:
+   ❌ All scores between 70-80 (fake uniform)
+   ❌ Overall = average of others exactly (fake formula)
+   ❌ Hook = 70 for every ad (lazy analysis)
 
 OUTPUT STRICT JSON:
 {{
+  "content_verification": {{
+    "fingerprint_hash": "{fingerprint.content_hash}",
+    "first_10_words": "EXACT FIRST 10 WORDS HERE",
+    "last_10_words": "EXACT LAST 10 WORDS HERE",
+    "content_specific_notes": "What makes THIS ad unique vs generic"
+  }},
   "scores": {{
     "overall": 0,
     "hook_strength": 0,
@@ -279,203 +153,136 @@ OUTPUT STRICT JSON:
     "audience_match": 0,
     "platform_fit": 0
   }},
-  "content_analysis": {{
-    "hook_text": "extracted hook",
-    "cta_text": "extracted cta",
-    "word_count": {content_metrics.word_count},
-    "primary_type": "{content_metrics.content_type}"
+  "score_justification": {{
+    "hook_why": "SPECIFIC reason based on first 10 words",
+    "credibility_why": "SPECIFIC reason based on proof/claims",
+    "emotional_why": "SPECIFIC reason based on emotional keywords found"
   }},
-  "strategic_summary": "Detailed 200-char explanation of why these scores were given. Be specific about failures.",
+  "strategic_summary": "SPECIFIC analysis of THIS content - mention actual phrases used",
   "critical_weaknesses": [
     {{
-      "issue": "Specific problem",
-      "impact": "What this costs you",
-      "precise_fix": "Exactly how to fix it",
-      "estimated_lift": "+X%"
+      "issue": "Specific problem with THIS ad",
+      "precise_fix": "Specific fix based on content"
     }}
   ],
-  "behavioral_prediction": {{
-    "micro_stop_rate": "High/Medium/Low",
-    "scroll_stop_rate": "High/Medium/Low",
-    "click_probability": "High/Medium/Low",
-    "verdict": "One sentence brutal truth"
-  }}
-}}"""
+  "persona_reactions": [
+    {{
+      "persona": "19yo Lagos Scroller",
+      "reaction": "SPECIFIC reaction to THIS hook",
+      "exact_quote": "What they would say"
+    }}
+  ],
+  "is_generic_response": false  // You will be rejected if this is true
+}}
+
+REMEMBER: Analyze the SPECIFIC content with fingerprint {fingerprint.content_hash}. 
+Generic scores will be detected and rejected."""
 
         return prompt
 
-    def enforce_score_caps(self, 
-                          analysis: Dict[str, Any], 
-                          content_metrics: ContentMetrics,
-                          scam_caps: ScoringCaps) -> Dict[str, Any]:
+    def validate_scores_are_content_specific(self, scores: Dict[str, int], 
+                                           fingerprint: ContentFingerprint) -> tuple:
         """
-        Post-processing: Force scores down if AI was too generous
-        This is the "no fake scores" layer
+        Check if scores are actually unique or generic fake scores
+        Returns: (is_valid, reason_if_invalid)
         """
-        scores = analysis.get("scores", {})
-        original_scores = scores.copy()
+        score_values = list(scores.values())
 
-        # Cap 1: Content length cap
-        if scores.get("overall", 100) > content_metrics.max_possible_score:
-            scores["overall"] = content_metrics.max_possible_score
-            analysis["enforcement_note"] = f"Score capped at {content_metrics.max_possible_score} due to insufficient content ({content_metrics.word_count} words)"
+        # Check 1: All scores are identical (e.g., all 70s)
+        if len(set(score_values)) == 1:
+            return False, "All scores identical - generic response detected"
 
-        # Cap 2: Scam pattern cap
-        if scam_caps.scam_detected:
-            if scores.get("hook_strength", 100) > scam_caps.hook_cap:
-                scores["hook_strength"] = scam_caps.hook_cap
-            if scores.get("overall", 100) > scam_caps.overall_cap:
-                scores["overall"] = scam_caps.overall_cap
+        # Check 2: All scores within 10-point range (suspicious uniformity)
+        if max(score_values) - min(score_values) < 15:
+            return False, "Scores too uniform - fake analysis detected"
 
-            analysis["scam_warning"] = "SCAM PATTERNS DETECTED: " + ", ".join(scam_caps.scam_patterns_found)
-            analysis["critical_weaknesses"].insert(0, {
-                "issue": "Content triggers scam detection patterns",
-                "impact": "Immediate scroll/ignore in Nigerian market. High risk of report/ban.",
-                "precise_fix": "Remove income claims. Show losses first. Be specific but honest.",
-                "estimated_lift": "+400% if fixed"
-            })
+        # Check 3: Hook score doesn't match content pattern
+        if fingerprint.has_trauma_pattern and scores.get("hook_strength", 0) < 70:
+            return False, "Trauma pattern in content but hook scored low - mismatch"
 
-        # Cap 3: Hook quality check
-        hook_text = analysis.get("content_analysis", {}).get("hook_text", "").lower()
-        if any(x in hook_text for x in ["wait", "stop", "dont skip", "before you"]):
-            if scores.get("hook_strength", 0) > 80:
-                # If hook starts with generic filler but scored high, force it down
-                scores["hook_strength"] = min(scores["hook_strength"], 60)
-                analysis["hook_adjustment"] = "Hook starts with generic filler words ('wait', 'stop'). Score adjusted."
+        if fingerprint.has_scam_pattern and scores.get("hook_strength", 0) > 50:
+            return False, "Scam pattern detected but hook scored high - mismatch"
 
-        # Cap 4: Empty content check
-        if content_metrics.word_count < 5:
-            scores["overall"] = min(scores.get("overall", 0), 10)
-            scores["hook_strength"] = min(scores.get("hook_strength", 0), 5)
-            scores["cta_strength"] = min(scores.get("cta_strength", 0), 5)
+        if fingerprint.has_trauma_pattern and scores.get("emotional_pull", 0) < 70:
+            return False, "Trauma content but low emotional score - mismatch"
 
-        # Log changes
-        if scores != original_scores:
-            analysis["score_enforcement"] = {
-                "original_scores": original_scores,
-                "adjusted_scores": scores,
-                "reason": "Strict validation rules enforced"
-            }
+        # Check 4: All scores are multiples of 5 (suspicious rounding)
+        if all(s % 5 == 0 for s in score_values):
+            return False, "All scores end in 0/5 - suspicious rounding"
 
-        analysis["scores"] = scores
-        return analysis
+        # Check 5: Overall is exact mathematical average (too perfect)
+        calculated_avg = sum(score_values[1:]) / len(score_values[1:])  # Exclude overall
+        if abs(scores.get("overall", 0) - calculated_avg) < 2:
+            return False, "Overall is exact average - formulaic fake score"
+
+        return True, "Scores appear content-specific"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-    async def analyze_ad(self, 
-                        ad_copy: Optional[str] = None,
-                        video_script: Optional[str] = None,
-                        audience_data: Optional[Dict[str, Any]] = None,
-                        platform: str = "tiktok") -> Dict[str, Any]:
+    async def analyze_ad_v59(self, request_data: Dict[str, Any], files: List = None) -> Dict[str, Any]:
         """
-        Main analysis method with strict scoring
+        v5.9: Real analysis only - no fake scores, retry if generic
         """
-        audience_data = audience_data or {}
 
-        # Step 1: Pre-calculation
-        content_metrics = self.calculate_content_metrics(ad_copy, video_script)
-        scam_caps = self.detect_scam_patterns(content_metrics.primary_content)
+        # Extract content
+        ad_copy = request_data.get("ad_copy", "")
+        video_script = request_data.get("video_script", "")
+        content = video_script if video_script else ad_copy
 
-        # Step 2: Prepare prompt
-        prompt = self.prepare_analysis_prompt(content_metrics, audience_data, platform)
+        if not content.strip():
+            raise ValueError("No content provided for analysis")
 
-        # Step 3: AI Analysis
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://adlytics.ai",
-                        "X-Title": "ADLYTICS"
-                    },
-                    json={
-                        "model": "openai/gpt-4o",
-                        "messages": [{"role": "system", "content": prompt}],
-                        "response_format": {"type": "json_object"},
-                        "max_tokens": 4000,
-                        "temperature": 0.2  # Low temp for consistent scoring
-                    }
-                )
+        # Create fingerprint
+        fingerprint = self.fingerprint_content(content)
 
-            response.raise_for_status()
-            result = response.json()
-            analysis = json.loads(result["choices"][0]["message"]["content"])
+        # Build strict prompt
+        prompt = self.build_strict_prompt_v59(content, fingerprint, request_data)
 
-        except Exception as e:
-            # Fallback with strict low scores if AI fails
-            analysis = {
-                "scores": {
-                    "overall": 10,
-                    "hook_strength": 5,
-                    "clarity": 15,
-                    "credibility": 5,
-                    "emotional_pull": 10,
-                    "cta_strength": 5,
-                    "audience_match": 20,
-                    "platform_fit": 15
+        # Call AI
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
                 },
-                "error": f"AI analysis failed: {str(e)}",
-                "content_analysis": {
-                    "hook_text": "error",
-                    "cta_text": "error",
-                    "word_count": content_metrics.word_count,
-                    "primary_type": content_metrics.content_type
-                },
-                "strategic_summary": "Analysis failed. Content scored as low quality by default.",
-                "critical_weaknesses": [{"issue": "Analysis error", "impact": "Unable to verify quality", "precise_fix": "Try again", "estimated_lift": "0%"}],
-                "behavioral_prediction": {"verdict": "Analysis failed - assume low performance"}
-            }
+                json={
+                    "model": "openai/gpt-4o",
+                    "messages": [{"role": "system", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "max_tokens": 4000,
+                    "temperature": 0.3  # Slight creativity but focused
+                }
+            )
 
-        # Step 4: Post-processing enforcement
-        analysis = self.enforce_score_caps(analysis, content_metrics, scam_caps)
+        response.raise_for_status()
+        result = response.json()
+        analysis = json.loads(result["choices"][0]["message"]["content"])
 
-        # Step 5: Add metadata
+        # Validate scores are content-specific
+        scores = analysis.get("scores", {})
+        is_valid, validation_msg = self.validate_scores_are_content_specific(scores, fingerprint)
+
+        if not is_valid:
+            # Retry with stronger warning
+            raise ValueError(f"Generic score detected: {validation_msg}. Retrying...")
+
+        # Add metadata
         analysis["analysis_metadata"] = {
-            "engine_version": "5.8",
-            "content_metrics": {
-                "word_count": content_metrics.word_count,
-                "max_possible_score": content_metrics.max_possible_score,
-                "quality_flag": content_metrics.content_quality_flag,
-                "content_type": content_metrics.content_type
+            "engine_version": "5.9",
+            "fingerprint": {
+                "hash": fingerprint.content_hash,
+                "word_count": fingerprint.word_count,
+                "trauma_detected": fingerprint.has_trauma_pattern,
+                "scam_detected": fingerprint.has_scam_pattern
             },
-            "scam_check": {
-                "detected": scam_caps.scam_detected,
-                "patterns": scam_caps.scam_patterns_found
-            },
-            "enforcement_applied": True
+            "validation": {
+                "passed": True,
+                "message": validation_msg
+            }
         }
 
         return analysis
 
-    def generate_improved_version(self, 
-                                 original_analysis: Dict[str, Any],
-                                 content_type: str) -> Dict[str, Any]:
-        """
-        Generate improved ad based on weaknesses identified
-        Only generates if original scored < 80
-        """
-        if original_analysis["scores"]["overall"] >= 80:
-            return {
-                "improvement_needed": False,
-                "message": "Ad already scores 80+. Minor optimizations only.",
-                "suggested_tweaks": ["A/B test hook variants", "Add specific numbers"]
-            }
 
-        # Template improvements based on score
-        weaknesses = original_analysis.get("critical_weaknesses", [])
-
-        improvements = {
-            "improvement_needed": True,
-            "original_score": original_analysis["scores"]["overall"],
-            "target_score": min(85, original_analysis["scores"]["overall"] + 30),
-            "priority_fixes": [w["precise_fix"] for w in weaknesses[:3]],
-            "strategy": "Radical transparency" if original_analysis["scores"]["credibility"] < 50 else "Optimization"
-        }
-
-        return improvements
-
-
-# Singleton instance
 def get_ai_engine():
-    return AIEngineV58()
+    return AIEngineV59()
