@@ -1,6 +1,6 @@
 """
-ADLYTICS Analysis Route v4.1 - PRODUCTION READY
-Handles ad analysis with proper field mapping
+ADLYTICS Analysis Route v4.5 - RESPONSE FORMAT FIX
+Ensures consistent {success: true, data: {...}} format
 """
 
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
@@ -17,7 +17,7 @@ router = APIRouter()
 
 # Try to import AI engine with error handling
 try:
-    from backend.services.ai_engine import get_ai_engine
+    from backend.services.ai_engine import get_ai_engine, enforce_complete_structure
     ai_engine = get_ai_engine()
     logger.info("✅ AI Engine loaded successfully")
 except Exception as e:
@@ -33,9 +33,8 @@ except Exception as e:
     logger.error(f"❌ Failed to load media processor: {e}")
     logger.error(traceback.format_exc())
     
-    # Fallback media processor
     async def process_media(file: UploadFile, media_type: str = "image"):
-        return {"type": media_type, "filename": file.filename, "note": "Processing not available"}
+        return {"type": media_type, "filename": file.filename if file else "unknown", "note": "Processing not available"}
 
 @router.post("/analyze")
 async def analyze_endpoint(
@@ -50,7 +49,7 @@ async def analyze_endpoint(
     # Campaign objective
     objective: str = Form("conversions"),
     
-    # Audience targeting fields - CORRECT MAPPING
+    # Audience targeting fields
     audience_country: str = Form(...),
     audience_region: Optional[str] = Form(None),
     audience_age: str = Form(...),
@@ -68,7 +67,8 @@ async def analyze_endpoint(
     video: Optional[UploadFile] = File(None)
 ):
     """
-    Main analysis endpoint - PRODUCTION VERSION
+    Main analysis endpoint - CONSISTENT RESPONSE FORMAT
+    Always returns: {success: bool, data: {...}} or {success: false, error: str}
     """
     
     try:
@@ -85,16 +85,11 @@ async def analyze_endpoint(
         
         # Build request data with CORRECT field names
         request_data = {
-            # Content
             "ad_copy": ad_copy or "",
             "video_script": video_script or "",
-            
-            # Platform & Industry
             "platform": platform,
             "industry": industry,
             "objective": objective,
-            
-            # Audience - EXACT mapping from frontend
             "audience_country": audience_country,
             "audience_region": audience_region or "",
             "audience_age": audience_age,
@@ -108,7 +103,7 @@ async def analyze_endpoint(
             "purchase_behavior": purchase_behavior or ""
         }
         
-        logger.info(f"📊 Request data: {request_data}")
+        logger.info(f"📊 Request data prepared")
         
         # Detect content mode
         try:
@@ -159,11 +154,17 @@ async def analyze_endpoint(
             result = await ai_engine.analyze(request_data, files)
             logger.info("✅ Analysis complete")
             
-            # Ensure success flag is set
-            if isinstance(result, dict):
-                result["success"] = True
+            # CRITICAL FIX: Ensure proper response format
+            # If result already has success/data structure, use it
+            if isinstance(result, dict) and "success" in result:
+                # Result is already wrapped, return as-is
+                return result
             
-            return result
+            # Otherwise, wrap the result
+            return {
+                "success": True,
+                "data": result
+            }
             
         except Exception as e:
             logger.error(f"❌ Error during analysis: {e}")
@@ -189,100 +190,109 @@ async def analyze_endpoint(
 async def get_audience_config():
     """Return audience targeting configuration"""
     return {
-        "countries": [
-            {"code": "nigeria", "name": "Nigeria", "currency": "₦", "regions": ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt"]},
-            {"code": "us", "name": "United States", "currency": "$", "regions": ["California", "Texas", "New York", "Florida", "Illinois"]},
-            {"code": "uk", "name": "United Kingdom", "currency": "£", "regions": ["London", "Manchester", "Birmingham"]},
-            {"code": "canada", "name": "Canada", "currency": "$", "regions": ["Ontario", "Quebec", "British Columbia"]},
-            {"code": "australia", "name": "Australia", "currency": "$", "regions": ["New South Wales", "Victoria", "Queensland"]},
-            {"code": "ghana", "name": "Ghana", "currency": "₵", "regions": ["Accra", "Kumasi", "Tamale"]},
-            {"code": "kenya", "name": "Kenya", "currency": "KSh", "regions": ["Nairobi", "Mombasa", "Kisumu"]},
-            {"code": "south_africa", "name": "South Africa", "currency": "R", "regions": ["Gauteng", "Western Cape", "KwaZulu-Natal"]},
-            {"code": "india", "name": "India", "currency": "₹", "regions": ["Maharashtra", "Karnataka", "Delhi"]},
-            {"code": "germany", "name": "Germany", "currency": "€", "regions": ["Bavaria", "North Rhine-Westphalia", "Baden-Württemberg"]}
-        ],
-        "age_brackets": [
-            {"value": "18-24", "label": "18-24", "traits": "Digital natives, TikTok heavy, price sensitive"},
-            {"value": "25-34", "label": "25-34", "traits": "Career focused, mobile-first, value conscious"},
-            {"value": "35-44", "label": "35-44", "traits": "Family oriented, research heavy, quality focused"},
-            {"value": "45-54", "label": "45-54", "traits": "Gen X, skeptical, loyalty driven"},
-            {"value": "55-64", "label": "55-64", "traits": "Pre-retirement, security focused, slower adoption"},
-            {"value": "65+", "label": "65+", "traits": "Seniors, simple UX needed, trust critical"}
-        ],
-        "income_levels": [
-            {"value": "low", "label": "Low Income", "description": "< $30k/year - Price sensitive, deals critical"},
-            {"value": "lower-middle", "label": "Lower Middle", "description": "$30k-$50k - Value seekers, budget conscious"},
-            {"value": "middle", "label": "Middle Income", "description": "$50k-$75k - Balanced, quality matters"},
-            {"value": "upper-middle", "label": "Upper Middle", "description": "$75k-$100k - Quality focused, time poor"},
-            {"value": "high", "label": "High Income", "description": "$100k+ - Premium preference, convenience"}
-        ],
-        "education_levels": [
-            {"value": "high-school", "label": "High School"},
-            {"value": "some-college", "label": "Some College"},
-            {"value": "bachelors", "label": "Bachelor's Degree"},
-            {"value": "masters", "label": "Master's Degree"},
-            {"value": "doctorate", "label": "Doctorate"},
-            {"value": "professional", "label": "Professional Degree"}
-        ],
-        "occupations": [
-            {"value": "professional", "label": "Professional/White Collar", "pain_points": "Career growth, work-life balance, imposter syndrome"},
-            {"value": "entrepreneur", "label": "Entrepreneur/Business Owner", "pain_points": "Cash flow, scaling, decision fatigue"},
-            {"value": "student", "label": "Student", "pain_points": "Financial pressure, career uncertainty, time management"},
-            {"value": "retired", "label": "Retired", "pain_points": "Health, fixed income, legacy planning"},
-            {"value": "homemaker", "label": "Homemaker", "pain_points": "Time scarcity, financial dependence, identity"},
-            {"value": "freelancer", "label": "Freelancer/Creator", "pain_points": "Income inconsistency, client acquisition, burnout"},
-            {"value": "trades", "label": "Trades/Blue Collar", "pain_points": "Physical demands, job security, upskilling"},
-            {"value": "unemployed", "label": "Unemployed/Looking for Work", "pain_points": "Financial stress, confidence, skill gaps"}
-        ],
-        "psychographics": [
-            {"value": "value-seeker", "label": "Value Seeker", "traits": "Deals, comparisons, ROI focused"},
-            {"value": "quality-focused", "label": "Quality Focused", "traits": "Premium, durability, reviews"},
-            {"value": "innovator", "label": "Innovator", "traits": "Early adopter, tech forward, risk taker"},
-            {"value": "pragmatist", "label": "Pragmatist", "traits": "Practical, proven, testimonials"},
-            {"value": "aspirational", "label": "Aspirational", "traits": "Status, transformation, social proof"}
-        ],
-        "pain_points": [
-            {"value": "saving-time", "label": "Saving Time"},
-            {"value": "saving-money", "label": "Saving Money"},
-            {"value": "reducing-stress", "label": "Reducing Stress"},
-            {"value": "improving-health", "label": "Improving Health"},
-            {"value": "growing-income", "label": "Growing Income"},
-            {"value": "learning-skills", "label": "Learning New Skills"},
-            {"value": "social-status", "label": "Social Status"}
-        ]
+        "success": True,
+        "data": {
+            "countries": [
+                {"code": "nigeria", "name": "Nigeria", "currency": "₦", "regions": ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt"]},
+                {"code": "us", "name": "United States", "currency": "$", "regions": ["California", "Texas", "New York", "Florida", "Illinois"]},
+                {"code": "uk", "name": "United Kingdom", "currency": "£", "regions": ["London", "Manchester", "Birmingham"]},
+                {"code": "canada", "name": "Canada", "currency": "$", "regions": ["Ontario", "Quebec", "British Columbia"]},
+                {"code": "australia", "name": "Australia", "currency": "$", "regions": ["New South Wales", "Victoria", "Queensland"]},
+                {"code": "ghana", "name": "Ghana", "currency": "₵", "regions": ["Accra", "Kumasi", "Tamale"]},
+                {"code": "kenya", "name": "Kenya", "currency": "KSh", "regions": ["Nairobi", "Mombasa", "Kisumu"]},
+                {"code": "south_africa", "name": "South Africa", "currency": "R", "regions": ["Gauteng", "Western Cape", "KwaZulu-Natal"]},
+                {"code": "india", "name": "India", "currency": "₹", "regions": ["Maharashtra", "Karnataka", "Delhi"]},
+                {"code": "germany", "name": "Germany", "currency": "€", "regions": ["Bavaria", "North Rhine-Westphalia", "Baden-Württemberg"]}
+            ],
+            "age_brackets": [
+                {"value": "18-24", "label": "18-24", "traits": "Digital natives, TikTok heavy, price sensitive"},
+                {"value": "25-34", "label": "25-34", "traits": "Career focused, mobile-first, value conscious"},
+                {"value": "35-44", "label": "35-44", "traits": "Family oriented, research heavy, quality focused"},
+                {"value": "45-54", "label": "45-54", "traits": "Gen X, skeptical, loyalty driven"},
+                {"value": "55-64", "label": "55-64", "traits": "Pre-retirement, security focused, slower adoption"},
+                {"value": "65+", "label": "65+", "traits": "Seniors, simple UX needed, trust critical"}
+            ],
+            "income_levels": [
+                {"value": "low", "label": "Low Income", "description": "< $30k/year - Price sensitive, deals critical"},
+                {"value": "lower-middle", "label": "Lower Middle", "description": "$30k-$50k - Value seekers, budget conscious"},
+                {"value": "middle", "label": "Middle Income", "description": "$50k-$75k - Balanced, quality matters"},
+                {"value": "upper-middle", "label": "Upper Middle", "description": "$75k-$100k - Quality focused, time poor"},
+                {"value": "high", "label": "High Income", "description": "$100k+ - Premium preference, convenience"}
+            ],
+            "education_levels": [
+                {"value": "high-school", "label": "High School"},
+                {"value": "some-college", "label": "Some College"},
+                {"value": "bachelors", "label": "Bachelor's Degree"},
+                {"value": "masters", "label": "Master's Degree"},
+                {"value": "doctorate", "label": "Doctorate"},
+                {"value": "professional", "label": "Professional Degree"}
+            ],
+            "occupations": [
+                {"value": "professional", "label": "Professional/White Collar", "pain_points": "Career growth, work-life balance, imposter syndrome"},
+                {"value": "entrepreneur", "label": "Entrepreneur/Business Owner", "pain_points": "Cash flow, scaling, decision fatigue"},
+                {"value": "student", "label": "Student", "pain_points": "Financial pressure, career uncertainty, time management"},
+                {"value": "retired", "label": "Retired", "pain_points": "Health, fixed income, legacy planning"},
+                {"value": "homemaker", "label": "Homemaker", "pain_points": "Time scarcity, financial dependence, identity"},
+                {"value": "freelancer", "label": "Freelancer/Creator", "pain_points": "Income inconsistency, client acquisition, burnout"},
+                {"value": "trades", "label": "Trades/Blue Collar", "pain_points": "Physical demands, job security, upskilling"},
+                {"value": "unemployed", "label": "Unemployed/Looking for Work", "pain_points": "Financial stress, confidence, skill gaps"}
+            ],
+            "psychographics": [
+                {"value": "value-seeker", "label": "Value Seeker", "traits": "Deals, comparisons, ROI focused"},
+                {"value": "quality-focused", "label": "Quality Focused", "traits": "Premium, durability, reviews"},
+                {"value": "innovator", "label": "Innovator", "traits": "Early adopter, tech forward, risk taker"},
+                {"value": "pragmatist", "label": "Pragmatist", "traits": "Practical, proven, testimonials"},
+                {"value": "aspirational", "label": "Aspirational", "traits": "Status, transformation, social proof"}
+            ],
+            "pain_points": [
+                {"value": "saving-time", "label": "Saving Time"},
+                {"value": "saving-money", "label": "Saving Money"},
+                {"value": "reducing-stress", "label": "Reducing Stress"},
+                {"value": "improving-health", "label": "Improving Health"},
+                {"value": "growing-income", "label": "Growing Income"},
+                {"value": "learning-skills", "label": "Learning New Skills"},
+                {"value": "social-status", "label": "Social Status"}
+            ]
+        }
     }
 
 @router.get("/platforms")
 async def get_platforms():
     """Return supported platforms"""
     return {
-        "platforms": [
-            {"id": "facebook", "name": "Facebook"},
-            {"id": "instagram", "name": "Instagram"},
-            {"id": "tiktok", "name": "TikTok"},
-            {"id": "youtube", "name": "YouTube"},
-            {"id": "google", "name": "Google Ads"},
-            {"id": "linkedin", "name": "LinkedIn"},
-            {"id": "twitter", "name": "Twitter/X"}
-        ]
+        "success": True,
+        "data": {
+            "platforms": [
+                {"id": "facebook", "name": "Facebook"},
+                {"id": "instagram", "name": "Instagram"},
+                {"id": "tiktok", "name": "TikTok"},
+                {"id": "youtube", "name": "YouTube"},
+                {"id": "google", "name": "Google Ads"},
+                {"id": "linkedin", "name": "LinkedIn"},
+                {"id": "twitter", "name": "Twitter/X"}
+            ]
+        }
     }
 
 @router.get("/industries")
 async def get_industries():
     """Return supported industries"""
     return {
-        "industries": [
-            {"id": "ecommerce", "name": "E-commerce"},
-            {"id": "saas", "name": "SaaS"},
-            {"id": "finance", "name": "Finance"},
-            {"id": "health", "name": "Health"},
-            {"id": "education", "name": "Education"},
-            {"id": "realestate", "name": "Real Estate"},
-            {"id": "travel", "name": "Travel"},
-            {"id": "food", "name": "Food & Beverage"},
-            {"id": "fashion", "name": "Fashion"},
-            {"id": "technology", "name": "Technology"},
-            {"id": "consulting", "name": "Consulting"},
-            {"id": "other", "name": "Other"}
-        ]
+        "success": True,
+        "data": {
+            "industries": [
+                {"id": "ecommerce", "name": "E-commerce"},
+                {"id": "saas", "name": "SaaS"},
+                {"id": "finance", "name": "Finance"},
+                {"id": "health", "name": "Health"},
+                {"id": "education", "name": "Education"},
+                {"id": "realestate", "name": "Real Estate"},
+                {"id": "travel", "name": "Travel"},
+                {"id": "food", "name": "Food & Beverage"},
+                {"id": "fashion", "name": "Fashion"},
+                {"id": "technology", "name": "Technology"},
+                {"id": "consulting", "name": "Consulting"},
+                {"id": "other", "name": "Other"}
+            ]
+        }
     }
