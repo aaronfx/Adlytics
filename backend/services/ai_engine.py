@@ -1,6 +1,5 @@
 """
-ADLYTICS v5.5 - AI Engine with Full Production Copy & Country Intelligence (CLEAN)
-Fixes: Proper prompt formatting, correct scoring logic, validation balance
+ADLYTICS v5.7 - AI Engine with Detailed Scoring Rubrics
 """
 
 import os
@@ -19,103 +18,61 @@ COUNTRY_PROFILES = {
         "behavioral_traits": [
             "High scam sensitivity from Ponzi history",
             "Reliance on social proof and peer validation",
-            "Mobile-first digital access",
-            "Trust in video over text claims",
-            "Entrepreneurial hustle culture",
-            "Installment payment preference",
-            "Voice note trust preference"
-        ],
-        "scam_triggers": [
-            "Get rich quick without substance",
-            "Vague income claims",
-            "No verifiable contact",
-            "International transfer requests"
+            "Mobile-first digital access"
         ],
         "trust_builders": [
             "Local testimonials with faces",
             "Community validation",
-            "Video testimonials",
-            "Domestic currency",
-            "Official registration",
-            "Physical location"
-        ],
-        "neuro_triggers": {
-            "dopamine": "Financial freedom",
-            "fear": "Scam avoidance",
-            "trust": "Community proof",
-            "urgency": "Economic pressure"
-        }
+            "Official registration"
+        ]
     },
     "kenya": {
         "currency": "KSh",
         "currency_name": "Shilling",
         "behavioral_traits": [
             "Mobile money integration",
-            "Community decision making",
-            "Educational value emphasis"
+            "Community decision making"
         ],
         "trust_builders": [
             "Mobile payment",
-            "Community endorsement",
-            "Local presence"
-        ],
-        "neuro_triggers": {
-            "trust": "Community leader",
-            "urgency": "Seasonal cycles"
-        }
+            "Community endorsement"
+        ]
     },
     "united_states": {
         "currency": "$",
         "currency_name": "USD",
         "behavioral_traits": [
             "Individual achievement focus",
-            "Privacy awareness",
-            "Influencer skepticism"
+            "Privacy awareness"
         ],
         "trust_builders": [
             "Money-back guarantee",
             "Third-party reviews"
-        ],
-        "neuro_triggers": {
-            "dopamine": "Side hustle",
-            "fear": "Job security",
-            "trust": "Accreditation"
-        }
+        ]
     },
     "united_kingdom": {
         "currency": "£",
         "currency_name": "Pound",
         "behavioral_traits": [
             "Reserved skepticism",
-            "Understated communication",
-            "Regulation awareness"
+            "Understated communication"
         ],
         "trust_builders": [
             "Official registration",
             "Transparent terms"
-        ],
-        "neuro_triggers": {
-            "trust": "Verification",
-            "fear": "Uncertainty"
-        }
+        ]
     },
     "india": {
         "currency": "₹",
         "currency_name": "Rupee",
         "behavioral_traits": [
             "Family decision dynamics",
-            "Regional diversity",
             "Value-conscious"
         ],
         "trust_builders": [
             "Tax transparency",
-            "Regional language",
-            "Flexible payment"
-        ],
-        "neuro_triggers": {
-            "trust": "Family approval",
-            "dopamine": "Status"
-        }
+            "Regional language"
+        ]
     }
 }
 
@@ -123,14 +80,12 @@ DEFAULT_PROFILE = {
     "currency": "$",
     "currency_name": "USD",
     "behavioral_traits": ["General best practices"],
-    "scam_triggers": ["Unrealistic promises"],
-    "trust_builders": ["Testimonials"],
-    "neuro_triggers": {"dopamine": "Success", "trust": "Social proof"}
+    "trust_builders": ["Testimonials"]
 }
 
 
 class AIEngineV5:
-    """V5.5 AI Engine - Clean implementation with proper scoring"""
+    """V5.7 AI Engine - Detailed scoring rubrics"""
 
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -143,29 +98,38 @@ class AIEngineV5:
         logger.info(f"🤖 Using model: {self.model}")
 
     def _get_country_profile(self, country: str) -> Dict[str, Any]:
-        """Get behavioral profile for selected country"""
         country_lower = country.lower().replace(" ", "_")
-        profile = COUNTRY_PROFILES.get(country_lower, DEFAULT_PROFILE)
-        logger.info(f"🌍 Loaded profile: {country} ({profile['currency']})")
-        return profile
+        return COUNTRY_PROFILES.get(country_lower, DEFAULT_PROFILE)
+
+    def _analyze_content_quality(self, ad_copy: str, video_script: str) -> Dict[str, Any]:
+        """Pre-analyze content"""
+        content = (ad_copy + " " + video_script).strip()
+        words = content.split()
+        real_words = [w for w in words if len(w) > 2 and w.isalpha()]
+
+        return {
+            "total_chars": len(content),
+            "total_words": len(words),
+            "real_words": len(real_words),
+            "is_empty": len(content) < 5,
+            "is_short": len(real_words) < 10,
+            "has_ad_copy": len(ad_copy.strip()) > 0,
+            "has_video": len(video_script.strip()) > 0
+        }
 
     async def analyze_ad(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze ad with proper content handling"""
+        """Analyze with detailed rubrics"""
         ad_copy = request_data.get('ad_copy', '').strip()
         video_script = request_data.get('video_script', '').strip()
         country = request_data.get('country', 'united_states')
 
-        if not ad_copy and not video_script:
+        content_analysis = self._analyze_content_quality(ad_copy, video_script)
+
+        if content_analysis["is_empty"]:
             raise ValueError("No content provided")
 
         country_profile = self._get_country_profile(country)
-
-        # Log input for debugging
-        content_preview = (ad_copy + video_script)[:100] + "..." if len(ad_copy + video_script) > 100 else (ad_copy + video_script)
-        logger.info(f"📄 Input content: {content_preview}")
-        logger.info(f"📊 Content length: {len(ad_copy + video_script)} chars")
-
-        prompt = self._build_prompt(request_data, ad_copy, video_script, country_profile)
+        prompt = self._build_prompt(request_data, ad_copy, video_script, country_profile, content_analysis)
 
         for attempt in range(3):
             try:
@@ -181,10 +145,10 @@ class AIEngineV5:
                         json={
                             "model": self.model,
                             "messages": [
-                                {"role": "system", "content": self._get_system_prompt(country_profile)},
+                                {"role": "system", "content": self._get_system_prompt(content_analysis)},
                                 {"role": "user", "content": prompt}
                             ],
-                            "temperature": 0.3,
+                            "temperature": 0.2,
                             "max_tokens": 8000
                         }
                     )
@@ -192,205 +156,190 @@ class AIEngineV5:
                     result = response.json()
                     content = result["choices"][0]["message"]["content"]
 
-                    # Extract JSON
                     if "```json" in content:
                         content = content.split("```json")[1].split("```")[0]
                     elif "```" in content:
                         content = content.split("```")[1].split("```")[0]
 
                     analysis = json.loads(content.strip())
-
-                    # Verification (balanced - not too strict)
-                    self._verify_analysis(analysis, ad_copy, video_script, country_profile)
-
-                    logger.info(f"✅ Analysis complete: {analysis.get('scores', {}).get('overall', 'N/A')} overall")
-                    return analysis
+                    return self._enforce_score_limits(analysis, content_analysis)
 
             except Exception as e:
-                logger.warning(f"Attempt {attempt+1} failed: {str(e)}")
+                logger.warning(f"Attempt {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise
 
-        raise ValueError("Analysis failed after 3 attempts")
+        raise ValueError("Analysis failed")
 
-    def _get_system_prompt(self, country_profile: Dict) -> str:
-        """Clean system prompt without formatting issues"""
+    def _get_system_prompt(self, content_analysis: Dict) -> str:
+        """Detailed scoring rubrics"""
+        max_score = 15 if content_analysis["real_words"] < 10 else (35 if content_analysis["real_words"] < 20 else (50 if content_analysis["real_words"] < 30 else 100))
+
+        return f"""You are a STRICT performance marketing analyst using DETAILED RUBRICS.
+
+CONTENT METRICS:
+- Real words: {content_analysis['real_words']}
+- Max allowable score: {max_score}
+
+SCORING RUBRICS - Use these EXACT criteria:
+
+=== HOOK STRENGTH (0-100) ===
+90-100: Stops scroll in 0-3s, specific numbers, curiosity gap, emotional trigger, clear value in first 15 words
+80-89: Strong opening, clear benefit, some curiosity, professional tone
+70-79: Decent hook, clear but generic, minor improvements needed
+60-69: Weak hook, boring opening, vague benefit
+40-59: Poor hook, feature-focused not benefit-focused, no curiosity
+20-39: Terrible hook, confusing opening, no value proposition
+0-19: No hook exists, starts with filler, random words
+
+=== CLARITY (0-100) ===
+90-100: Understood in 3 seconds, one clear message, no jargon, logical flow
+80-89: Very clear, easy to understand, minimal cognitive load
+70-79: Mostly clear, one minor confusion point
+60-69: Somewhat clear, requires re-reading, minor ambiguity
+40-59: Confusing, multiple messages competing, jargon present
+20-39: Very unclear, reader confused about offer
+0-19: Gibberish, no discernible message, random text
+
+=== CREDIBILITY (0-100) ===
+90-100: Specific proof (numbers, testimonials, results), guarantees, trust signals, transparency
+80-89: Good credibility markers, some social proof, professional presentation
+70-79: Basic credibility, mentions results but vague
+60-69: Weak credibility, claims without proof
+40-59: Poor credibility, exaggerated claims, no proof
+20-39: No credibility, sounds like scam, unrealistic promises
+0-19: Active red flags, obvious deception, Nigerian prince vibes
+
+=== EMOTIONAL PULL (0-100) ===
+90-100: Addresses deep pain point, creates urgency, aspiration trigger, fear of loss, strong desire
+80-89: Good emotional connection, clear pain/pleasure dynamic
+70-79: Some emotional appeal, but surface level
+60-69: Weak emotion, mostly logical, boring
+40-59: No emotional hook, dry facts only
+20-39: Wrong emotion, tone-deaf, offensive
+0-19: Confusing emotional signals, contradictory
+
+=== CTA STRENGTH (0-100) ===
+90-100: Clear action, specific benefit, urgency, low friction, one step only
+80-89: Strong CTA, clear what to do, good motivation
+70-79: Decent CTA, clear action but weak motivation
+60-69: Weak CTA, vague action, no urgency
+40-59: Poor CTA, multiple choices, high friction
+20-39: Terrible CTA, confusing action, hidden button
+0-19: No CTA, or CTA is broken/missing
+
+=== AUDIENCE MATCH (0-100) ===
+90-100: Perfect language for demographic, addresses specific pain points, resonates deeply
+80-89: Good match, appropriate tone and vocabulary
+70-79: Decent match, minor mismatches
+60-69: Generic, could be for anyone, not targeted
+40-59: Poor match, wrong language level, tone-deaf
+20-39: Completely wrong audience, alienating
+0-19: Insulting or offensive to target demographic
+
+=== PLATFORM FIT (0-100) ===
+90-100: Perfect for platform (TikTok=short/native, FB=story/community, IG=visual/lifestyle)
+80-89: Good fit, follows platform conventions
+70-79: Decent fit, minor platform violations
+60-69: Poor fit, wrong format for platform
+40-59: Very poor fit, ignores platform culture
+20-39: Completely wrong platform
+0-19: Violates platform policies
+
+=== OVERALL (0-100) ===
+Calculate as weighted average:
+- Hook: 20%, Clarity: 15%, Credibility: 15%, Emotional: 20%, CTA: 15%, Audience: 10%, Platform: 5%
+
+SCORING RULES:
+1. Content with < 10 words cannot score above 15 in ANY category
+2. Empty ad_copy = Hook and CTA max 20
+3. Score step-by-step using rubrics above
+4. Be CRITICAL - most ads score 40-60, not 80+
+"""
+
+    def _build_prompt(self, data: Dict, ad_copy: str, video_script: str, country_profile: Dict, content_analysis: Dict) -> str:
+        """Build prompt with rubric instructions"""
         currency = country_profile['currency']
-
-        lines = [
-            f"You are an elite performance marketing strategist for {currency} markets.",
-            "",
-            "BEHAVIORAL PROFILE:",
-        ]
-
-        for trait in country_profile['behavioral_traits']:
-            lines.append(f"- {trait}")
-
-        lines.extend([
-            "",
-            "CRITICAL RULES:",
-            f"1. Use {currency} for ALL monetary amounts",
-            "2. NO specific brand names (banks, apps, companies)",
-            "3. Use generic terms: 'mobile payment', 'official registration'",
-            "4. Generate FULL production copy (100-200 words per variant)",
-            "5. Hook: 15-30 words, Body: 100-200 words, CTA: 5-10 words",
-            "6. Score ACTUAL content provided - if content is strong, score 70+",
-            "7. If content is weak/empty, score 10-40 honestly",
-            "8. Reference specific phrases from input in your analysis",
-            "9. improved_ad: 200+ words combining best elements",
-            "10. 5 variants targeting different psychological angles",
-            "",
-            "SCORING GUIDE:",
-            "- 80-100: Excellent, ready to run",
-            "- 60-79: Good, minor improvements needed",
-            "- 40-59: Fair, significant issues",
-            "- 20-39: Poor, major overhaul needed",
-            "- 0-19: Critical problems or empty",
-            "",
-            "The user will copy-paste your output into ad platforms. Make it complete and ready to use."
-        ])
-
-        return "\n".join(lines)
-
-    def _build_prompt(self, data: Dict, ad_copy: str, video_script: str, country_profile: Dict) -> str:
-        """Clean prompt builder"""
-        content = ad_copy + video_script
-        is_short = len(content) < 50
-        has_gibberish = len([w for w in content.split() if len(w) > 2 and w.isalpha()]) < 3
-
         country = data.get('country', 'united_states')
-        currency = country_profile['currency']
+        max_score = 15 if content_analysis["real_words"] < 10 else (35 if content_analysis["real_words"] < 20 else (50 if content_analysis["real_words"] < 30 else 100))
 
-        quality_note = ""
-        if not ad_copy:
-            quality_note = "⚠️ NO AD COPY PROVIDED"
-        elif has_gibberish:
-            quality_note = "⚠️ GIBBERISH CONTENT DETECTED"
-        elif is_short:
-            quality_note = "⚠️ SHORT CONTENT"
+        warnings = []
+        if not content_analysis["has_ad_copy"]:
+            warnings.append("⚠️ CRITICAL: Ad Copy field is EMPTY")
+        if content_analysis["is_short"]:
+            warnings.append(f"⚠️ CRITICAL: Content too short ({content_analysis['real_words']} words)")
+        warning_text = "\n".join(warnings) if warnings else "Content meets minimum requirements."
 
-        # Build variant instructions based on country
-        variant_instructions = self._get_variant_instructions(country)
+        return f"""STRICT ANALYSIS REQUEST - Use Detailed Rubrics
 
-        prompt_parts = [
-            f"TARGET MARKET: {country} ({currency})",
-            f"PLATFORM: {data.get('platform', 'unknown')}",
-            f"INDUSTRY: {data.get('industry', 'unknown')}",
-            "",
-            f"{quality_note}",
-            "",
-            "AD COPY TO ANALYZE:",
-            "```",
-            ad_copy if ad_copy else "[EMPTY - NO AD COPY PROVIDED]",
-            "```",
-            "",
-            "VIDEO SCRIPT:",
-            "```",
-            video_script if video_script else "[EMPTY - NO VIDEO SCRIPT]",
-            "```",
-            "",
-            variant_instructions,
-            "",
-            "OUTPUT REQUIREMENTS:",
-            "1. Score based on ACTUAL content quality (don't default to low scores)",
-            "2. If content is good, give high scores (70-90)",
-            "3. If content is bad, give low scores (10-40) and explain why",
-            "4. behavior_summary: Reference specific phrases from input",
-            "5. critical_weaknesses: Specific issues with fixes",
-            "6. Generate 5 complete variants (100-200 words each)",
-            "7. improved_ad: 200+ words, production-ready",
-            "8. video_execution_analysis: Full details if video provided",
-            "9. roi_comparison: Structured object with your_projection/industry_average/top_performer",
-            "10. competitor_advantage: Structured object with unique_angles/defensible_moat/vulnerability",
-            "",
-            "Return valid JSON matching the expected schema."
-        ]
+TARGET: {country} ({currency})
+PLATFORM: {data.get('platform', 'unknown')}
+INDUSTRY: {data.get('industry', 'unknown')}
 
-        return "\n".join(prompt_parts)
+CONTENT METRICS:
+- Ad Copy: {len(ad_copy.strip())} chars
+- Video Script: {len(video_script.strip())} chars
+- Real Words: {content_analysis['real_words']}
+- Maximum Score Allowed: {max_score}
 
-    def _get_variant_instructions(self, country: str) -> str:
-        """Get variant instructions by country"""
-        country_lower = country.lower().replace(" ", "_")
+WARNINGS:
+{warning_text}
 
-        if country_lower == "nigeria":
-            return """VARIANT ANGLES FOR NIGERIA:
-1. Trust Builder: Address scam fears directly ("I know you've been burned...")
-2. Hustle Culture: Appeal to entrepreneurial spirit
-3. Community: Social proof ("Join hundreds...")
-4. Values: Cultural alignment
-5. Accessibility: Local payment methods, no foreign accounts"""
+CONTENT TO ANALYZE:
+[AD COPY START]
+{ad_copy if ad_copy else "[EMPTY]"}
+[AD COPY END]
 
-        elif country_lower == "kenya":
-            return """VARIANT ANGLES FOR KENYA:
-1. Mobile Money: Emphasize mobile payment integration
-2. Community: Harambee/community effort angle
-3. Education: Family value and education focus
-4. Side Hustle: For employed professionals
-5. Youth: Opportunity for young people"""
+[VIDEO SCRIPT START]
+{video_script if video_script else "[EMPTY]"}
+[VIDEO SCRIPT END]
 
-        elif country_lower == "united_states":
-            return """VARIANT ANGLES FOR US:
-1. Individual Success: Personal achievement
-2. Side Hustle: Extra income stream
-3. Financial Independence: FIRE movement
-4. Recession Proof: Economic security
-5. Flexibility: Work from anywhere"""
+INSTRUCTIONS:
+1. Score each category using the DETAILED RUBRICS in system prompt
+2. For each score, briefly justify in your reasoning (one sentence)
+3. If content < 10 words, all scores max 15
+4. If ad_copy empty, Hook and CTA max 20
+5. Calculate Overall as weighted average
+6. critical_weaknesses: List specific issues with severity
+7. behavior_summary: Explain scores referencing actual content phrases
 
-        elif country_lower == "india":
-            return """VARIANT ANGLES FOR INDIA:
-1. Family: Decision consideration
-2. Value: Quality at good price
-3. Regional: Local language comfort
-4. Digital: Payment convenience
-5. Career: Educational advancement"""
+Return JSON."""
 
-        else:
-            return """VARIANT ANGLES:
-1. Problem/Solution: Direct pain point addressing
-2. Social Proof: Testimonials and results
-3. Urgency: Time-sensitive opportunity
-4. Educational: Teaching angle
-5. Community: Group belonging"""
-
-    def _verify_analysis(self, analysis: Dict, ad_copy: str, video_script: str, country_profile: Dict) -> None:
-        """Balanced verification - catches major issues without being too strict"""
+    def _enforce_score_limits(self, analysis: Dict, content_analysis: Dict) -> Dict:
+        """Enforce limits"""
         scores = analysis.get("scores", {})
-        content = (ad_copy + video_script).strip()
-        content_len = len(content)
-        currency = country_profile['currency']
+        max_score = 15 if content_analysis["real_words"] < 10 else (35 if content_analysis["real_words"] < 20 else (50 if content_analysis["real_words"] < 30 else 100))
 
-        # Only verify extreme cases
-        if content_len < 10 and scores.get("overall", 0) > 50:
-            raise ValueError(f"Empty content got high score: {scores.get('overall')}")
+        # Cap individual scores
+        for key in scores:
+            if scores[key] > max_score:
+                scores[key] = max_score
 
-        if content_len > 100 and scores.get("overall", 100) < 20:
-            logger.warning(f"Substantial content got very low score - may be correct if quality is poor")
+        # Force critical weaknesses
+        if content_analysis["is_short"] and not analysis.get("critical_weaknesses"):
+            analysis["critical_weaknesses"] = [{
+                "issue": "Content too short for effective advertising",
+                "severity": "High",
+                "impact": "Cannot convey value proposition or build trust",
+                "fix": "Expand to minimum 50 words with clear value proposition"
+            }]
 
-        # Check structure exists
-        if not analysis.get("improved_ad"):
-            raise ValueError("Missing improved_ad")
+        # Force behavior summary
+        if len(analysis.get("behavior_summary", "")) < 20:
+            analysis["behavior_summary"] = f"Content critically short ({content_analysis['real_words']} words). Insufficient for engagement or conversions. Requires substantial expansion with specific value propositions, proof, and clear CTA."
 
-        if not analysis.get("ad_variants"):
-            raise ValueError("Missing ad_variants")
+        analysis["scores"] = scores
+        return analysis
 
-        if len(analysis.get("ad_variants", [])) < 3:
-            raise ValueError(f"Only {len(analysis.get('ad_variants', []))} variants, need at least 3")
-
-        # Check for currency usage (warn but don't fail)
-        improved_body = analysis.get("improved_ad", {}).get("final_body", "").lower()
-        if currency != "$" and currency.lower() not in improved_body:
-            logger.warning(f"Currency {currency} not found in improved_ad - may need retry")
-
-        logger.info(f"✅ Verified: {len(analysis.get('ad_variants', []))} variants, score: {scores.get('overall', 'N/A')}")
-
-
-_engine_instance = None
 
 def get_ai_engine():
     global _engine_instance
     if _engine_instance is None:
         _engine_instance = AIEngineV5()
     return _engine_instance
+
+
+_engine_instance = None
 
 
 class AIValidationError(Exception):
