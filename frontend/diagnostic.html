@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ADLYTICS API Diagnostic</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .test { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <h1>🧪 ADLYTICS API Diagnostic Tool</h1>
+    <p>This tests your API endpoints directly to identify issues.</p>
+
+    <div class="test">
+        <h3>Test 1: Health Check (GET)</h3>
+        <button onclick="testHealth()">Test /health</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>Test 2: API Test Endpoint (GET)</h3>
+        <button onclick="testApiGet()">Test /api/test</button>
+        <div id="api-get-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>Test 3: Analyze Endpoint (POST)</h3>
+        <button onclick="testAnalyze()">Test /api/analyze (POST)</button>
+        <div id="analyze-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>Test 4: CORS Preflight (OPTIONS)</h3>
+        <button onclick="testOptions()">Test OPTIONS</button>
+        <div id="options-result"></div>
+    </div>
+
+    <h2>Results Log:</h2>
+    <pre id="log"></pre>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        function log(message) {
+            document.getElementById('log').innerHTML += message + "\n";
+        }
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ ${response.status}: ${JSON.stringify(data)}</div>`;
+                log(`Health: ${response.status} - OK`);
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                log(`Health: FAILED - ${e.message}`);
+            }
+        }
+
+        async function testApiGet() {
+            const resultDiv = document.getElementById('api-get-result');
+            try {
+                const response = await fetch(`${API_BASE}/api/test`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ ${response.status}: ${JSON.stringify(data)}</div>`;
+                log(`API GET: ${response.status} - OK`);
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                log(`API GET: FAILED - ${e.message}`);
+            }
+        }
+
+        async function testAnalyze() {
+            const resultDiv = document.getElementById('analyze-result');
+            try {
+                const formData = new FormData();
+                formData.append('ad_copy', 'Test ad copy');
+                formData.append('platform', 'tiktok');
+                formData.append('industry', 'saas');
+                formData.append('audience_country', 'nigeria');
+                formData.append('audience_age', '25-34');
+
+                const response = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const contentType = response.headers.get('content-type');
+
+                if (response.status === 405) {
+                    resultDiv.innerHTML = `<div class="error">❌ 405 Method Not Allowed<br>This means POST is blocked. Check if you're using a static site.</div>`;
+                    log(`Analyze POST: 405 - Method Not Allowed`);
+                } else if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<div class="success">✅ ${response.status}: ${JSON.stringify(data).slice(0, 200)}...</div>`;
+                    log(`Analyze POST: ${response.status} - OK`);
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `<div class="error">❌ ${response.status}: Received HTML instead of JSON (first 100 chars): ${text.slice(0, 100)}</div>`;
+                    log(`Analyze POST: ${response.status} - Wrong content type`);
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                log(`Analyze POST: FAILED - ${e.message}`);
+            }
+        }
+
+        async function testOptions() {
+            const resultDiv = document.getElementById('options-result');
+            try {
+                const response = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST'
+                    }
+                });
+                resultDiv.innerHTML = `<div class="success">✅ OPTIONS ${response.status}: CORS headers present</div>`;
+                log(`OPTIONS: ${response.status} - OK`);
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                log(`OPTIONS: FAILED - ${e.message}`);
+            }
+        }
+
+        // Run all tests on load
+        window.onload = () => {
+            log(`Testing API at: ${API_BASE}`);
+            log(`Timestamp: ${new Date().toISOString()}`);
+            log('---');
+        };
+    </script>
+</body>
+</html>
