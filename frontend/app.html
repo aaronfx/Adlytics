@@ -3,53 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADLYTICS v5.0 - AI Ad Pre-Validation</title>
+    <title>ADLYTICS v5.0</title>
     <style>
         :root {
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #111827;
             --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
             --gray-700: #374151;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: var(--gray-700);
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .badge {
-            background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-        }
-
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; color: white; margin-bottom: 30px; }
         .analyzer-form {
             background: white;
             border-radius: 16px;
@@ -57,63 +29,34 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             margin-bottom: 30px;
         }
-
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
-
         .form-group {
             display: flex;
             flex-direction: column;
         }
-
         .form-group label {
             font-weight: 600;
             margin-bottom: 8px;
             font-size: 0.9rem;
         }
-
-        .form-group label span.required {
-            color: var(--danger);
-        }
-
+        .form-group label span.required { color: var(--danger); }
         .form-group input,
         .form-group select,
         .form-group textarea {
             padding: 12px;
-            border: 2px solid var(--gray-200);
+            border: 2px solid var(--gray-100);
             border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.2s;
-            background: white;
         }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .form-group select:disabled {
-            background: var(--gray-100);
-            cursor: not-allowed;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .form-group textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-group.full-width { grid-column: 1 / -1; }
         .submit-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
             color: white;
             border: none;
             padding: 16px 32px;
@@ -121,25 +64,17 @@
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
             width: 100%;
         }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
+        .submit-btn:hover { opacity: 0.9; }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading, .error-display, .results { display: none; }
+        .loading.active, .error-display.active, .results.active { display: block; }
         .loading {
             text-align: center;
             padding: 40px;
             color: white;
         }
-
         .spinner {
             width: 50px;
             height: 50px;
@@ -149,365 +84,350 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-display {
+            background: var(--danger);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
         }
-
         .results {
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
-
         .tabs-nav {
             display: flex;
             background: var(--gray-100);
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 1px solid #e5e7eb;
             overflow-x: auto;
-            flex-wrap: wrap;
         }
-
         .tab-btn {
             padding: 16px 20px;
             border: none;
             background: none;
             cursor: pointer;
             font-weight: 600;
-            color: var(--gray-700);
-            transition: all 0.2s;
             white-space: nowrap;
         }
-
-        .tab-btn:hover {
-            background: var(--gray-200);
-        }
-
         .tab-btn.active {
             background: white;
             color: var(--primary);
             border-bottom: 3px solid var(--primary);
         }
-
         .tab-content {
             display: none;
             padding: 30px;
         }
-
-        .tab-content.active {
-            display: block;
-        }
-
+        .tab-content.active { display: block; }
         .scores-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-
         .score-card {
             background: var(--gray-100);
             border-radius: 12px;
             padding: 20px;
             text-align: center;
-            border-left: 4px solid var(--gray-200);
+            border-left: 4px solid #e5e7eb;
         }
-
         .score-card.excellent { border-left-color: var(--success); }
         .score-card.good { border-left-color: #3b82f6; }
         .score-card.average { border-left-color: var(--warning); }
-        .score-card.poor { border-left-color: #f97316; }
-        .score-card.critical { border-left-color: var(--danger); }
-
-        .score-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .score-label {
-            font-size: 0.9rem;
-            font-weight: 500;
-            text-transform: capitalize;
-        }
-
+        .score-value { font-size: 2.5rem; font-weight: 700; }
         .decision-card {
             padding: 30px;
             border-radius: 12px;
             text-align: center;
             margin-bottom: 20px;
         }
-
         .decision-card.success {
             background: #d1fae5;
             border: 2px solid var(--success);
         }
-
         .decision-card.danger {
             background: #fee2e2;
             border: 2px solid var(--danger);
         }
-
-        .budget-grid, .variants-grid, .neuro-bars, .phases-timeline {
-            display: grid;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .budget-grid {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        }
-
-        .budget-card, .variant-card, .platform-card, .persona-card, .weakness-card {
-            background: var(--gray-100);
-            padding: 20px;
-            border-radius: 12px;
-        }
-
-        .variant-card.winner {
-            border: 2px solid var(--warning);
-            background: #fffbeb;
-        }
-
-        .neuro-item {
-            margin-bottom: 15px;
-        }
-
-        .neuro-bar-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-        }
-
-        .neuro-bar {
-            flex: 1;
-            height: 20px;
-            background: var(--primary);
-            border-radius: 10px;
-        }
-
-        .fatigue-card, .objection-section, .improved-ad, .video-analysis, .behavior-card {
-            background: var(--gray-100);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-
-        .error-display {
-            background: var(--danger);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .scores-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .tab-btn {
-                padding: 12px 15px;
-                font-size: 0.85rem;
-            }
-        }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>ADLYTICS <span class="badge">v5.0</span></h1>
-            <p>AI-Powered Ad Pre-Validation & Optimization</p>
+            <h1>ADLYTICS <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem;">v5.0</span></h1>
+            <p>AI-Powered Ad Pre-Validation</p>
         </header>
-
+        
         <form id="analyzerForm" class="analyzer-form">
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label for="adCopy">Ad Copy / Headline</label>
-                    <textarea id="adCopy" placeholder="Enter your ad copy here..."></textarea>
+                    <label>Ad Copy / Headline</label>
+                    <textarea id="adCopy" placeholder="Enter your ad copy..."></textarea>
                 </div>
-
+                
                 <div class="form-group full-width">
-                    <label for="videoScript">Video Script (Optional)</label>
-                    <textarea id="videoScript" placeholder="Enter video script with timecodes [HOOK 0-3s], [BODY 3-15s], [CTA 15-30s]..."></textarea>
+                    <label>Video Script (Optional)</label>
+                    <textarea id="videoScript" placeholder="Enter video script with timecodes..."></textarea>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="platform">Platform <span class="required">*</span></label>
+                    <label>Platform <span class="required">*</span></label>
                     <select id="platform" required>
                         <option value="tiktok">TikTok</option>
                         <option value="facebook">Facebook</option>
                         <option value="instagram">Instagram</option>
                         <option value="youtube">YouTube</option>
-                        <option value="google">Google Ads</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="industry">Industry <span class="required">*</span></label>
+                    <label>Industry <span class="required">*</span></label>
                     <select id="industry" required>
                         <option value="saas">SaaS</option>
                         <option value="ecommerce">E-commerce</option>
                         <option value="finance">Finance</option>
                         <option value="health">Health</option>
-                        <option value="education">Education</option>
-                        <option value="technology">Technology</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="audienceCountry">Target Country <span class="required">*</span></label>
+                    <label>Target Country <span class="required">*</span></label>
                     <select id="audienceCountry" required>
                         <option value="nigeria">Nigeria</option>
+                        <option value="ghana">Ghana</option>
                         <option value="us">United States</option>
                         <option value="uk">United Kingdom</option>
                         <option value="canada">Canada</option>
-                        <option value="ghana">Ghana</option>
-                        <option value="kenya">Kenya</option>
-                        <option value="south_africa">South Africa</option>
-                        <option value="india">India</option>
-                        <option value="australia">Australia</option>
-                        <option value="germany">Germany</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="audienceRegion">Region/State</label>
+                    <label>Region/State</label>
                     <select id="audienceRegion">
                         <option value="">Select Region</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="audienceAge">Age Range <span class="required">*</span></label>
+                    <label>Age Range <span class="required">*</span></label>
                     <select id="audienceAge" required>
                         <option value="18-24">18-24</option>
                         <option value="25-34">25-34</option>
                         <option value="35-44">35-44</option>
                         <option value="45-54">45-54</option>
-                        <option value="55-64">55-64</option>
-                        <option value="65+">65+</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="audienceIncome">Income Level</label>
+                    <label>Income Level</label>
                     <select id="audienceIncome">
                         <option value="">Select Income</option>
                         <option value="low">Low Income</option>
-                        <option value="lower-middle">Lower Middle</option>
                         <option value="middle">Middle Income</option>
-                        <option value="upper-middle">Upper Middle</option>
                         <option value="high">High Income</option>
                     </select>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="audienceOccupation">Occupation</label>
+                    <label>Occupation</label>
                     <select id="audienceOccupation">
                         <option value="">Select Occupation</option>
                         <option value="professional">Professional</option>
                         <option value="entrepreneur">Entrepreneur</option>
                         <option value="student">Student</option>
-                        <option value="freelancer">Freelancer</option>
-                        <option value="trades">Trades/Blue Collar</option>
-                        <option value="retired">Retired</option>
                     </select>
                 </div>
             </div>
-
+            
             <button type="submit" id="analyzeBtn" class="submit-btn">
                 🚀 Analyze Ad Performance
             </button>
         </form>
-
-        <div id="errorDisplay" class="error-display hidden"></div>
-
-        <div id="loading" class="loading hidden">
+        
+        <div id="errorDisplay" class="error-display"></div>
+        
+        <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Analyzing your ad with AI...</p>
-            <small>This may take 10-30 seconds</small>
+            <p>Analyzing your ad...</p>
         </div>
-
-        <div id="results" class="results hidden">
+        
+        <div id="results" class="results">
             <nav class="tabs-nav">
-                <button class="tab-btn active" data-tab="overview">Overview</button>
-                <button class="tab-btn" data-tab="decision">🎯 Decision</button>
-                <button class="tab-btn" data-tab="budget">💰 Budget</button>
-                <button class="tab-btn" data-tab="neuro">🧠 Neuro</button>
-                <button class="tab-btn" data-tab="variants">🔄 Variants</button>
-                <button class="tab-btn" data-tab="behavior">Behavior</button>
-                <button class="tab-btn" data-tab="personas">Personas</button>
-                <button class="tab-btn" data-tab="objections">⚠️ Objections</button>
-                <button class="tab-btn" data-tab="fatigue">😴 Fatigue</button>
-                <button class="tab-btn" data-tab="crossplatform">🌐 Cross-Platform</button>
-                <button class="tab-btn" data-tab="video">Video</button>
-                <button class="tab-btn" data-tab="improvements">Improvements</button>
+                <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+                <button class="tab-btn" data-tab="decision" onclick="switchTab('decision')">🎯 Decision</button>
+                <button class="tab-btn" data-tab="budget" onclick="switchTab('budget')">💰 Budget</button>
+                <button class="tab-btn" data-tab="neuro" onclick="switchTab('neuro')">🧠 Neuro</button>
             </nav>
-
+            
             <div id="tab-overview" class="tab-content active">
                 <div id="scoresContainer" class="scores-grid"></div>
                 <div id="behaviorSummary"></div>
-                <div id="criticalWeaknesses"></div>
             </div>
-
+            
             <div id="tab-decision" class="tab-content">
                 <div id="decisionEngine"></div>
             </div>
-
+            
             <div id="tab-budget" class="tab-content">
                 <div id="budgetOptimization"></div>
             </div>
-
+            
             <div id="tab-neuro" class="tab-content">
                 <div id="neuroResponse"></div>
-            </div>
-
-            <div id="tab-variants" class="tab-content">
-                <div id="adVariants"></div>
-            </div>
-
-            <div id="tab-behavior" class="tab-content">
-                <div id="phaseBreakdown"></div>
-            </div>
-
-            <div id="tab-personas" class="tab-content">
-                <div id="personaReactions"></div>
-            </div>
-
-            <div id="tab-objections" class="tab-content">
-                <div id="objectionDetection"></div>
-            </div>
-
-            <div id="tab-fatigue" class="tab-content">
-                <div id="creativeFatigue"></div>
-            </div>
-
-            <div id="tab-crossplatform" class="tab-content">
-                <div id="crossPlatform"></div>
-            </div>
-
-            <div id="tab-video" class="tab-content">
-                <div id="videoExecution"></div>
-            </div>
-
-            <div id="tab-improvements" class="tab-content">
-                <div id="improvements"></div>
             </div>
         </div>
     </div>
 
-    <script src="js/analyzer.js"></script>
+    <script>
+        // REGION DATA - BUILT INTO THE PAGE
+        const regionData = {
+            nigeria: ["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt"],
+            ghana: ["Accra", "Kumasi", "Tamale"],
+            us: ["California", "Texas", "New York", "Florida"],
+            uk: ["London", "Manchester", "Birmingham"],
+            canada: ["Ontario", "Quebec", "British Columbia"]
+        };
+
+        // DOM Elements
+        const countrySelect = document.getElementById('audienceCountry');
+        const regionSelect = document.getElementById('audienceRegion');
+        const form = document.getElementById('analyzerForm');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorDisplay = document.getElementById('errorDisplay');
+
+        // Update regions when country changes
+        function updateRegions() {
+            const country = countrySelect.value;
+            const regions = regionData[country] || [];
+            
+            regionSelect.innerHTML = '<option value="">Select Region</option>';
+            
+            regions.forEach(region => {
+                const option = document.createElement('option');
+                option.value = region.toLowerCase().replace(/\s+/g, '-');
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            });
+            
+            console.log(`✅ Loaded ${regions.length} regions for ${country}`);
+        }
+
+        // Initialize
+        countrySelect.addEventListener('change', updateRegions);
+        updateRegions(); // Load initial regions
+
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            loading.classList.add('active');
+            results.classList.remove('active');
+            errorDisplay.classList.remove('active');
+            
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderResults(result.data);
+                } else {
+                    throw new Error(result.error?.message || 'Analysis failed');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                errorDisplay.textContent = error.message;
+                errorDisplay.classList.add('active');
+            } finally {
+                loading.classList.remove('active');
+            }
+        });
+
+        // Render results
+        function renderResults(data) {
+            results.classList.add('active');
+            
+            // Scores
+            const scoresContainer = document.getElementById('scoresContainer');
+            const scores = data.scores || {};
+            scoresContainer.innerHTML = `
+                <div class="score-card ${getScoreClass(scores.overall)}">
+                    <div class="score-value">${scores.overall || 0}</div>
+                    <div>Overall</div>
+                </div>
+                <div class="score-card ${getScoreClass(scores.hook_strength)}">
+                    <div class="score-value">${scores.hook_strength || 0}</div>
+                    <div>Hook</div>
+                </div>
+                <div class="score-card ${getScoreClass(scores.clarity)}">
+                    <div class="score-value">${scores.clarity || 0}</div>
+                    <div>Clarity</div>
+                </div>
+            `;
+            
+            // Decision
+            const decision = data.decision_engine || {};
+            document.getElementById('decisionEngine').innerHTML = `
+                <div class="decision-card ${decision.should_run ? 'success' : 'danger'}">
+                    <h3>${decision.should_run ? '✅ RECOMMENDED' : '❌ DO NOT RUN'}</h3>
+                    <p>Confidence: ${decision.confidence || 'N/A'}</p>
+                    <p>Expected Profit: $${decision.expected_profit || 0}</p>
+                </div>
+            `;
+            
+            // Budget
+            const budget = data.budget_optimization || {};
+            document.getElementById('budgetOptimization').innerHTML = `
+                <div style="background: #f9fafb; padding: 20px; border-radius: 12px;">
+                    <h4>Break-Even CPC: $${budget.break_even_cpc || 0}</h4>
+                    <h4>Safe Test Budget: $${budget.safe_test_budget || 0}</h4>
+                    <p>${budget.scaling_rule || 'N/A'}</p>
+                </div>
+            `;
+            
+            // Neuro
+            const neuro = data.neuro_response || {};
+            document.getElementById('neuroResponse').innerHTML = `
+                <div style="background: #faf5ff; padding: 20px; border-radius: 12px;">
+                    <h4>Primary Driver: ${neuro.primary_driver?.toUpperCase() || 'UNKNOWN'}</h4>
+                    <p>Dopamine: ${neuro.dopamine || 0}/100</p>
+                    <p>Fear: ${neuro.fear || 0}/100</p>
+                    <p>Curiosity: ${neuro.curiosity || 0}/100</p>
+                </div>
+            `;
+        }
+
+        function getScoreClass(score) {
+            if (score >= 81) return 'excellent';
+            if (score >= 61) return 'good';
+            if (score >= 41) return 'average';
+            return 'poor';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tabName}`);
+            });
+        }
+    </script>
 </body>
 </html>
