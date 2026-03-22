@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADLYTICS v4.0 — AI Ad Pre-Validation</title>
+    <title>ADLYTICS v4.1 — AI Ad Pre-Validation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -64,24 +64,25 @@
             display: flex;
             gap: 1rem;
             margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
         }
         .content-tab {
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             cursor: pointer;
             transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.05);
+            color: #9ca3af;
+            border: 1px solid transparent;
+        }
+        .content-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
         .content-tab.active {
             background: rgba(168, 85, 247, 0.2);
             color: #a855f7;
             border: 1px solid #a855f7;
-        }
-        .content-tab:not(.active) {
-            background: rgba(255, 255, 255, 0.05);
-            color: #9ca3af;
-        }
-        .content-tab:not(.active):hover {
-            background: rgba(255, 255, 255, 0.1);
         }
         .textarea-container {
             display: none;
@@ -102,20 +103,29 @@
         .line-analysis-item:hover {
             background: rgba(255, 255, 255, 0.02);
         }
+        .metric-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #374151;
+            overflow: hidden;
+        }
+        .metric-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <!-- Navigation -->
     <nav class="fixed w-full z-50 glass border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <a href="index.html" class="flex items-center space-x-2">
+                <a href="/" class="flex items-center space-x-2">
                     <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center font-bold">A</div>
-                    <span class="text-xl font-bold tracking-tight">ADLYTICS <span class="text-purple-400 text-sm">v4.0</span></span>
+                    <span class="text-xl font-bold tracking-tight">ADLYTICS <span class="text-purple-400 text-sm">v4.1</span></span>
                 </a>
-                <a href="index.html" class="text-gray-300 hover:text-white transition">← Back to Home</a>
+                <a href="/" class="text-gray-300 hover:text-white transition">← Back to Home</a>
             </div>
         </div>
     </nav>
@@ -133,15 +143,15 @@
                     <form id="analyzeForm" class="space-y-4">
                         <!-- Content Type Tabs -->
                         <div class="content-tabs">
-                            <div class="content-tab active" data-target="adCopyContainer">Ad Copy</div>
-                            <div class="content-tab" data-target="videoScriptContainer">Video Script</div>
-                            <div class="content-tab" data-target="bothContainer">Both</div>
+                            <div class="content-tab active" data-mode="adCopy" data-target="adCopyContainer">Ad Copy</div>
+                            <div class="content-tab" data-mode="videoScript" data-target="videoScriptContainer">Video Script</div>
+                            <div class="content-tab" data-mode="both" data-target="bothContainer">Both</div>
                         </div>
 
                         <!-- Ad Copy -->
                         <div id="adCopyContainer" class="textarea-container active">
                             <label class="field-label">Ad Copy</label>
-                            <textarea id="adCopy" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Paste your ad headline and body copy here..."></textarea>
+                            <textarea id="adCopy" name="ad_copy" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Paste your ad headline and body copy here..."></textarea>
                             <div class="flex justify-between mt-1">
                                 <span class="text-xs text-gray-500">Min 10 characters</span>
                                 <span id="adCopyCount" class="text-xs text-gray-500">0 chars</span>
@@ -151,7 +161,7 @@
                         <!-- Video Script -->
                         <div id="videoScriptContainer" class="textarea-container">
                             <label class="field-label">Video Script</label>
-                            <textarea id="videoScript" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="[HOOK 0-3s] Your opening line that stops the scroll...&#10;&#10;[BODY 3-15s] Main message with benefits...&#10;&#10;[CTA 15-30s] Call to action..."></textarea>
+                            <textarea id="videoScript" name="video_script" rows="5" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="[HOOK 0-3s] Your opening line that stops the scroll...&#10;&#10;[BODY 3-15s] Main message with benefits...&#10;&#10;[CTA 15-30s] Call to action..."></textarea>
                             <div class="flex justify-between mt-1">
                                 <span class="text-xs text-gray-500">Timecode format recommended</span>
                                 <span id="videoScriptCount" class="text-xs text-gray-500">0 words</span>
@@ -162,8 +172,8 @@
                         <div id="bothContainer" class="textarea-container">
                             <label class="field-label">Ad Copy + Video Script</label>
                             <div class="space-y-3">
-                                <textarea id="adCopyBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Ad copy text..."></textarea>
-                                <textarea id="videoScriptBoth" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Video script with timecodes..."></textarea>
+                                <textarea id="adCopyBoth" name="ad_copy_both" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Ad copy text..."></textarea>
+                                <textarea id="videoScriptBoth" name="video_script_both" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none resize-none" placeholder="Video script with timecodes..."></textarea>
                             </div>
                         </div>
 
@@ -171,14 +181,33 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="field-label">Platform <span class="text-red-400">*</span></label>
-                                <select id="platform" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <select id="platform" name="platform" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                     <option value="">Select Platform</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="google">Google Ads</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="twitter">Twitter/X</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="field-label">Industry <span class="text-red-400">*</span></label>
-                                <select id="industry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <select id="industry" name="industry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                     <option value="">Select Industry</option>
+                                    <option value="ecommerce">E-commerce</option>
+                                    <option value="saas">SaaS / Software</option>
+                                    <option value="finance">Finance / Crypto</option>
+                                    <option value="health">Health & Fitness</option>
+                                    <option value="education">Education</option>
+                                    <option value="realestate">Real Estate</option>
+                                    <option value="travel">Travel</option>
+                                    <option value="food">Food & Beverage</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="technology">Technology</option>
+                                    <option value="consulting">Consulting</option>
+                                    <option value="other">Other</option>
                                 </select>
                             </div>
                         </div>
@@ -186,7 +215,7 @@
                         <!-- Objective -->
                         <div>
                             <label class="field-label">Campaign Objective <span class="text-red-400">*</span></label>
-                            <select id="objective" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                            <select id="objective" name="objective" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                 <option value="conversions">Sales / Conversions</option>
                                 <option value="leads">Lead Generation</option>
                                 <option value="traffic">Website Traffic</option>
@@ -204,13 +233,23 @@
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="field-label">Country <span class="text-red-400">*</span></label>
-                                    <select id="audienceCountry" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="country" name="audience_country" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="">Select Country</option>
+                                        <option value="nigeria">Nigeria</option>
+                                        <option value="us">United States</option>
+                                        <option value="uk">United Kingdom</option>
+                                        <option value="canada">Canada</option>
+                                        <option value="australia">Australia</option>
+                                        <option value="ghana">Ghana</option>
+                                        <option value="kenya">Kenya</option>
+                                        <option value="south_africa">South Africa</option>
+                                        <option value="india">India</option>
+                                        <option value="germany">Germany</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="field-label">State/Region</label>
-                                    <select id="audienceRegion" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none" disabled>
+                                    <select id="region" name="audience_region" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none" disabled>
                                         <option value="">Select Region</option>
                                     </select>
                                 </div>
@@ -220,18 +259,23 @@
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="field-label">Age Bracket <span class="text-red-400">*</span></label>
-                                    <select id="audienceAge" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="age" name="audience_age" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="">Select Age</option>
+                                        <option value="18-24">18-24 (Gen Z)</option>
+                                        <option value="25-34">25-34 (Millennials)</option>
+                                        <option value="35-44">35-44</option>
+                                        <option value="45-54">45-54 (Gen X)</option>
+                                        <option value="55-64">55-64</option>
+                                        <option value="65+">65+ (Seniors)</option>
                                     </select>
                                     <p id="ageTraits" class="text-xs text-gray-500 mt-1 hidden"></p>
                                 </div>
                                 <div>
                                     <label class="field-label">Gender</label>
-                                    <select id="audienceGender" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
-                                        <option value="">Any</option>
+                                    <select id="gender" name="audience_gender" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                        <option value="all">Any</option>
                                         <option value="male">Male</option>
                                         <option value="female">Female</option>
-                                        <option value="all">All Genders</option>
                                     </select>
                                 </div>
                             </div>
@@ -240,14 +284,25 @@
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="field-label">Income Level <span class="info-tooltip" data-tooltip="Affects purchasing power and price sensitivity">ℹ️</span></label>
-                                    <select id="audienceIncome" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="income" name="audience_income" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="">Select Income</option>
+                                        <option value="low">Low (&lt; $30k/year)</option>
+                                        <option value="lower-middle">Lower Middle ($30k-$50k)</option>
+                                        <option value="middle">Middle ($50k-$75k)</option>
+                                        <option value="upper-middle">Upper Middle ($75k-$100k)</option>
+                                        <option value="high">High ($100k+)</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="field-label">Education Level</label>
-                                    <select id="audienceEducation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="education" name="audience_education" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="">Select Education</option>
+                                        <option value="high-school">High School</option>
+                                        <option value="some-college">Some College</option>
+                                        <option value="bachelors">Bachelor's Degree</option>
+                                        <option value="masters">Master's Degree</option>
+                                        <option value="doctorate">Doctorate</option>
+                                        <option value="professional">Professional Degree</option>
                                     </select>
                                 </div>
                             </div>
@@ -255,8 +310,16 @@
                             <!-- Occupation -->
                             <div class="mb-4">
                                 <label class="field-label">Occupation <span class="info-tooltip" data-tooltip="Determines daily pain points and availability">ℹ️</span></label>
-                                <select id="audienceOccupation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <select id="occupation" name="audience_occupation" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                     <option value="">Select Occupation</option>
+                                    <option value="professional">Professional/White Collar</option>
+                                    <option value="entrepreneur">Entrepreneur/Business Owner</option>
+                                    <option value="student">Student</option>
+                                    <option value="retired">Retired</option>
+                                    <option value="homemaker">Homemaker</option>
+                                    <option value="freelancer">Freelancer/Creator</option>
+                                    <option value="trades">Trades/Blue Collar</option>
+                                    <option value="unemployed">Unemployed/Looking for Work</option>
                                 </select>
                                 <p id="occupationPainPoints" class="text-xs text-gray-500 mt-1 hidden"></p>
                             </div>
@@ -264,16 +327,28 @@
                             <!-- Psychographic -->
                             <div class="mb-4">
                                 <label class="field-label">Psychographic Profile <span class="info-tooltip" data-tooltip="How they adopt new products">ℹ️</span></label>
-                                <select id="audiencePsychographic" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <select id="psychographic" name="audience_psychographic" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                     <option value="">Select Profile</option>
+                                    <option value="value-seeker">Value Seeker</option>
+                                    <option value="quality-focused">Quality Focused</option>
+                                    <option value="innovator">Innovator</option>
+                                    <option value="pragmatist">Pragmatist</option>
+                                    <option value="aspirational">Aspirational</option>
                                 </select>
                             </div>
 
                             <!-- Pain Point -->
                             <div class="mb-4">
                                 <label class="field-label">Primary Pain Point <span class="info-tooltip" data-tooltip="Main problem your ad addresses">ℹ️</span></label>
-                                <select id="audiencePainPoint" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                <select id="pain_point" name="audience_pain_point" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                     <option value="">Select Pain Point</option>
+                                    <option value="saving-time">Saving Time</option>
+                                    <option value="saving-money">Saving Money</option>
+                                    <option value="reducing-stress">Reducing Stress</option>
+                                    <option value="improving-health">Improving Health</option>
+                                    <option value="growing-income">Growing Income</option>
+                                    <option value="learning-skills">Learning New Skills</option>
+                                    <option value="social-status">Social Status</option>
                                 </select>
                             </div>
 
@@ -281,7 +356,7 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="field-label">Tech Savviness</label>
-                                    <select id="techSavviness" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="tech_savviness" name="tech_savviness" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="medium">Medium (Default)</option>
                                         <option value="low">Low - Prefers simple</option>
                                         <option value="high">High - Early adopter</option>
@@ -289,7 +364,7 @@
                                 </div>
                                 <div>
                                     <label class="field-label">Purchase Style</label>
-                                    <select id="purchaseBehavior" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <select id="purchase_behavior" name="purchase_behavior" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none">
                                         <option value="">Unknown</option>
                                         <option value="impulse">Impulse Buyer</option>
                                         <option value="research">Researcher</option>
@@ -305,14 +380,14 @@
                             <label class="field-label">Creative (Optional)</label>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                                    <input type="file" id="imageUpload" name="image" accept="image/*" class="hidden">
                                     <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
                                         <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                         <span class="text-xs text-gray-500">Add Image</span>
                                     </label>
                                 </div>
                                 <div>
-                                    <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                                    <input type="file" id="videoUpload" name="video" accept="video/*" class="hidden">
                                     <label for="videoUpload" class="flex flex-col items-center justify-center w-full h-24 bg-gray-900 border border-white/10 border-dashed rounded-xl cursor-pointer hover:border-purple-500/50 transition">
                                         <svg class="w-6 h-6 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                         <span class="text-xs text-gray-500">Add Video</span>
@@ -335,7 +410,7 @@
                 <div id="loadingState" class="hidden bg-gray-800 rounded-2xl p-12 border border-white/5 text-center">
                     <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
                     <h3 class="text-xl font-semibold mb-2">Simulating Real User Behavior...</h3>
-                    <p class="text-gray-400">Analyzing across 5 personas • Generating variants • Predicting winner • v4.0 AI Engine</p>
+                    <p class="text-gray-400">Analyzing across 5 personas • Generating variants • Predicting winner • v4.1 AI Engine</p>
                 </div>
 
                 <!-- Empty State -->
@@ -344,16 +419,13 @@
                         <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
                     <h3 class="text-xl font-semibold mb-2">Ready to Analyze</h3>
-                    <p class="text-gray-400">Fill in your ad details and detailed audience targeting to see the v4.0 simulation results.</p>
+                    <p class="text-gray-400">Fill in your ad details and detailed audience targeting to see the v4.1 simulation results.</p>
                 </div>
 
                 <!-- Results Content -->
                 <div id="resultsContent" class="hidden space-y-6">
-                    <!-- Run Decision Banner (v4.0) -->
+                    <!-- Run Decision Banner -->
                     <div id="runDecision" class="bg-gray-800 rounded-2xl p-6 border border-white/5"></div>
-
-                    <!-- PATCH: Decision Upgrade Comparison -->
-                    <div id="decisionUpgrade"></div>
 
                     <!-- Overall Score -->
                     <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
@@ -396,10 +468,10 @@
                     <!-- Detailed Scores -->
                     <div class="bg-gray-800 rounded-2xl p-6 border border-white/5">
                         <h3 class="text-lg font-semibold mb-4">Performance Breakdown</h3>
-                        <div class="space-y-3" id="scoresGrid"></div>
+                        <div class="space-y-4" id="scoresGrid"></div>
                     </div>
 
-                    <!-- Winner Prediction (v4.0) -->
+                    <!-- Winner Prediction -->
                     <div id="winnerPrediction" class="bg-gray-800 rounded-2xl p-6 border border-white/5"></div>
 
                     <!-- Tabs Navigation -->
@@ -424,7 +496,7 @@
                                 <div id="platformSpecific" class="mt-6 p-4 bg-gray-900/50 rounded-xl"></div>
                             </div>
 
-                            <!-- Line-by-Line Tab (v4.0) -->
+                            <!-- Line-by-Line Tab -->
                             <div id="tab-lines" class="tab-content hidden space-y-4">
                                 <h4 class="font-semibold mb-4 text-purple-400">🔍 Line-by-Line Analysis</h4>
                                 <div id="lineByLineAnalysis" class="space-y-3 max-h-96 overflow-y-auto"></div>
@@ -439,10 +511,8 @@
                             <!-- Rewrite Tab -->
                             <div id="tab-rewrite" class="tab-content hidden space-y-6">
                                 <div id="improvedAd" class="bg-gray-900/50 p-4 rounded-xl border border-green-500/20">
-                                    <h4 class="text-green-400 font-semibold mb-3">AI-Optimized Version (Re-tested)</h4>
+                                    <h4 class="text-green-400 font-semibold mb-3">AI-Optimized Version</h4>
                                     <div id="improvedContent" class="space-y-2"></div>
-                                    <!-- PATCH: Improved ad analysis moved here for visibility -->
-                                    <div id="improvedAnalysis"></div>
                                 </div>
                                 <div>
                                     <h4 class="font-semibold mb-3">Power Hooks</h4>
@@ -452,13 +522,9 @@
                                     <h4 class="font-semibold mb-3">High-Converting CTAs</h4>
                                     <div id="conversionCTAs" class="flex flex-wrap gap-2"></div>
                                 </div>
-                                <div>
-                                    <h4 class="font-semibold mb-3">Strongest Angles</h4>
-                                    <div id="strongestAngles" class="space-y-2"></div>
-                                </div>
                             </div>
 
-                            <!-- Variants Tab (v4.0) -->
+                            <!-- Variants Tab -->
                             <div id="tab-variants" class="tab-content hidden space-y-4">
                                 <div class="flex items-center justify-between mb-4">
                                     <h4 class="font-semibold text-purple-400">🚀 Generated Ad Variants</h4>
@@ -486,7 +552,7 @@
                                 <div id="videoAnalysis" class="space-y-4"></div>
                             </div>
 
-                            <!-- Competitor Tab (v4.0) -->
+                            <!-- Competitor Tab -->
                             <div id="tab-competitor" class="tab-content hidden space-y-4">
                                 <h4 class="font-semibold mb-4 text-red-400">⚔️ Competitor Analysis</h4>
                                 <div id="competitorAdvantage" class="space-y-4"></div>
@@ -498,6 +564,6 @@
         </div>
     </div>
 
-    <script src="js/analyzer.js"></script>
+    <script src="/js/analyzer.js"></script>
 </body>
 </html>
