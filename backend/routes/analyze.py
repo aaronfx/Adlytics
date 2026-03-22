@@ -17,7 +17,7 @@ router = APIRouter()
 
 # Import V5 AI Engine
 try:
-    from backend.services.ai_engine_v5 import get_ai_engine, AIValidationError
+    from backend.services.ai_engine import get_ai_engine, AIValidationError
     ai_engine = get_ai_engine()
     logger.info("✅ AI Engine V5 loaded successfully")
 except Exception as e:
