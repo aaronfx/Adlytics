@@ -1,6 +1,5 @@
 """
-ADLYTICS v5.4 - AI Engine with Generalized Country Behavioral Intelligence
-Removes specific payment methods, regulations, and brand names while keeping psychological patterns
+ADLYTICS v5.4.1 - AI Engine with Generalized Country Behavioral Intelligence (BUG FIXES)
 """
 
 import os
@@ -12,7 +11,7 @@ import httpx
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Country-specific behavioral profiles - GENERALIZED (no specific brands/regulations)
+# Country-specific behavioral profiles - GENERALIZED
 COUNTRY_PROFILES = {
     "nigeria": {
         "currency": "₦",
@@ -34,7 +33,7 @@ COUNTRY_PROFILES = {
             "Vague income claims without proof",
             "No verifiable contact information",
             "International money transfer requests",
-            "Urgency without transparency ('limited slots' with no reason)"
+            "Urgency without transparency"
         ],
         "trust_builders": [
             "Local testimonials with real faces and names",
@@ -50,18 +49,6 @@ COUNTRY_PROFILES = {
             "fear": "Missing out on legitimate opportunity combined with scam fear",
             "trust": "Community validation and cultural alignment",
             "urgency": "Seasonal opportunities and economic pressures"
-        },
-        "language_tics": [
-            "Local conversational expressions for relatability",
-            "Values-based references",
-            "Economic struggle context understanding",
-            "Migration/relocations mentality awareness"
-        ],
-        "platform_behavior": {
-            "facebook": "High trust for long-form stories and community engagement",
-            "instagram": "Visual proof of results essential",
-            "whatsapp": "Status updates and direct messaging effective",
-            "tiktok": "Growing platform with preference for local faces"
         }
     },
     "kenya": {
@@ -98,7 +85,11 @@ COUNTRY_PROFILES = {
             "Official registration mentions",
             "Compliance certifications",
             "Local case studies by region"
-        ]
+        ],
+        "neuro_triggers": {
+            "trust": "Formal structure and accreditation",
+            "fear": "Economic instability"
+        }
     },
     "united_states": {
         "currency": "$",
@@ -108,6 +99,11 @@ COUNTRY_PROFILES = {
             "Privacy protection awareness",
             "Credit card protection familiarity",
             "Influencer skepticism"
+        ],
+        "trust_builders": [
+            "Money-back guarantees",
+            "Third-party reviews",
+            "Privacy policy transparency"
         ],
         "neuro_triggers": {
             "dopamine": "Side hustle and entrepreneurship culture",
@@ -123,7 +119,16 @@ COUNTRY_PROFILES = {
             "Understated communication preference",
             "Financial regulation awareness",
             "Subtle humor appreciation"
-        ]
+        ],
+        "trust_builders": [
+            "Official business registration",
+            "Transparent terms and conditions",
+            "Professional accreditation"
+        ],
+        "neuro_triggers": {
+            "trust": "Official verification",
+            "fear": "Brexit/economic uncertainty"
+        }
     },
     "india": {
         "currency": "₹",
@@ -140,7 +145,11 @@ COUNTRY_PROFILES = {
             "Regional language support",
             "Flexible payment options",
             "Local testimonial validation"
-        ]
+        ],
+        "neuro_triggers": {
+            "trust": "Family approval and social validation",
+            "dopamine": "Career advancement and status"
+        }
     },
     "ghana": {
         "currency": "GH₵",
@@ -150,7 +159,16 @@ COUNTRY_PROFILES = {
             "Similar behavioral patterns to Nigeria with lower scam sensitivity",
             "Local transport and culture references",
             "Strong educational value emphasis"
-        ]
+        ],
+        "trust_builders": [
+            "Mobile payment options",
+            "Community validation",
+            "Educational credentials"
+        ],
+        "neuro_triggers": {
+            "trust": "Community endorsement",
+            "dopamine": "Educational achievement"
+        }
     }
 }
 
@@ -160,14 +178,12 @@ DEFAULT_PROFILE = {
     "behavioral_traits": ["General international best practices"],
     "scam_triggers": ["Unrealistic promises", "No contact info"],
     "trust_builders": ["Testimonials", "Money-back guarantee"],
-    "neuro_triggers": {"dopamine": "Success", "trust": "Social proof"},
-    "language_tics": [],
-    "platform_behavior": {}
+    "neuro_triggers": {"dopamine": "Success", "trust": "Social proof"}
 }
 
 
 class AIEngineV5:
-    """V5.4 AI Engine - Generalized behavioral intelligence without specific brands/regulations"""
+    """V5.4.1 AI Engine - Fixed syntax issues"""
 
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -243,13 +259,14 @@ class AIEngineV5:
         raise ValueError("Analysis failed")
 
     def _get_system_prompt(self, country_profile: Dict) -> str:
-        """Generate system prompt with country-specific instructions - NO SPECIFIC BRANDS/REGULATIONS"""
+        """Generate system prompt - FIXED"""
         currency = country_profile['currency']
         currency_name = country_profile['currency_name']
 
         behavioral_text = "\n".join([f"- {trait}" for trait in country_profile['behavioral_traits']])
         scam_text = "\n".join([f"- {trigger}" for trigger in country_profile['scam_triggers']])
         trust_text = "\n".join([f"- {builder}" for builder in country_profile['trust_builders']])
+        neuro_keys = ", ".join(country_profile['neuro_triggers'].keys())
 
         return f"""You are an elite performance marketing strategist specializing in {currency_name} ({currency}) markets.
 
@@ -269,11 +286,11 @@ CRITICAL RULES:
 2. Adapt hook/body/CTA to local behavioral patterns above
 3. DO NOT mention specific banks, telecom companies, or regulatory bodies by name
 4. DO NOT mention specific payment apps or platforms by name
-5. Use general terms like "mobile payment," "official registration," "local currency," "domestic banks"
+5. Use general terms like 'mobile payment,' 'official registration,' 'local currency,' 'domestic banks'
 6. Generate COMPLETE, READY-TO-RUN ad copy (100-200 words per variant)
 7. Hook: 15-30 words adapted to local attention spans
 8. Body: Full persuasion structure with LOCAL pain points (economic struggles, trust issues)
-9. Each variant targets different neuro triggers: {', '.join(country_profile['neuro_triggers'].keys())}
+9. Each variant targets different neuro triggers: {neuro_keys}
 10. improved_ad must be 200+ words with local trust signals (generic, not specific brands)
 11. Persona reactions must reflect local demographic behaviors
 12. Objection detection must include country-specific concerns (generic references to past scams, not specific names)
@@ -282,7 +299,7 @@ CRITICAL RULES:
 The user will COPY-PASTE your output directly into advertising platforms. Make it complete and culturally resonant WITHOUT mentioning specific companies, banks, or regulatory codes."""
 
     def _build_prompt(self, data: Dict, ad_copy: str, video_script: str, country_profile: Dict) -> str:
-        """Build prompt with country context - GENERALIZED"""
+        """Build prompt with country context - FIXED"""
         content = ad_copy + video_script
         is_short = len(content) < 50
         is_gibberish = len([w for w in content.split() if len(w) > 2 and w.isalpha()]) < 2
@@ -291,54 +308,50 @@ The user will COPY-PASTE your output directly into advertising platforms. Make i
 
         quality_note = ""
         if not ad_copy:
-            quality_note = f"⚠️ NO AD COPY - All scores should be 10-25"
+            quality_note = "⚠️ NO AD COPY - All scores should be 10-25"
         elif is_gibberish:
             quality_note = "⚠️ GIBBERISH CONTENT - Clarity/Credibility 5-20"
         elif is_short:
             quality_note = "⚠️ SHORT CONTENT - Scores 20-40"
 
-        # Generalized country-specific instructions (NO SPECIFIC BRANDS)
-        country_specific_instructions = {
-            "nigeria": """
-NIGERIA-SPECIFIC INSTRUCTIONS (Generalized):
+        # Build instructions
+        if country.lower().replace(" ", "_") == "nigeria":
+            country_instructions = """NIGERIA-SPECIFIC INSTRUCTIONS (Generalized):
 - Variant 1 (Trust Builder): Address scam fear directly WITHOUT naming specific schemes. Use "I know you've been burned before..."
 - Variant 2 (Hustle Culture): Appeal to entrepreneurial spirit and local work ethic
 - Variant 3 (Community): Use "Join hundreds already earning" social proof (specific numbers, not brands)
 - Variant 4 (Values): Align with cultural values and community mindset
 - Variant 5 (Accessibility): Emphasize "local payment methods" and "domestic support"
 - improved_ad: MUST use ₦, mention "official registration" (not specific codes), "local customer service"
-- NEVER mention: specific banks, specific regulatory bodies, specific telecom companies
-""",
-            "kenya": """
-KENYA-SPECIFIC INSTRUCTIONS (Generalized):
+- NEVER mention: specific banks, specific regulatory bodies, specific telecom companies"""
+        elif country.lower().replace(" ", "_") == "kenya":
+            country_instructions = """KENYA-SPECIFIC INSTRUCTIONS (Generalized):
 - Variant 1: Emphasize mobile money integration (generic term)
 - Variant 2: Community/harambee (community effort) angle
 - Variant 3: Educational value for family
 - Variant 4: Side hustle for employed professionals
 - Variant 5: Youth opportunity focus
-- Use KSh exclusively, emphasize community validation
-""",
-            "united_states": """
-US-SPECIFIC INSTRUCTIONS:
+- Use KSh exclusively, emphasize community validation"""
+        elif country.lower().replace(" ", "_") == "united_states":
+            country_instructions = """US-SPECIFIC INSTRUCTIONS:
 - Variant 1: Individual achievement/entrepreneurship
 - Variant 2: Side hustle culture
 - Variant 3: Financial independence
 - Variant 4: Recession-proof income
 - Variant 5: Work flexibility
-- Use $, focus on individual success
-""",
-            "india": """
-INDIA-SPECIFIC INSTRUCTIONS (Generalized):
+- Use $, focus on individual success"""
+        elif country.lower().replace(" ", "_") == "india":
+            country_instructions = """INDIA-SPECIFIC INSTRUCTIONS (Generalized):
 - Variant 1: Family decision consideration
 - Variant 2: Value-conscious with quality emphasis
 - Variant 3: Regional language comfort
 - Variant 4: Digital payment convenience
 - Variant 5: Educational career advancement
-- Use ₹, emphasize "official tax registration" (not GST specifically), family approval
-"""
-        }.get(country.lower().replace(" ", "_"), "Create 5 diverse angles targeting different psychological triggers appropriate for this market.")
+- Use ₹, emphasize "official tax registration" (not GST specifically), family approval"""
+        else:
+            country_instructions = "Create 5 diverse angles targeting different psychological triggers appropriate for this market."
 
-        return f"""Analyze this ad content for {country} market ({currency}):
+        prompt_text = f"""Analyze this ad content for {country} market ({currency}):
 
 {quality_note}
 
@@ -357,9 +370,9 @@ INDUSTRY: {data.get('industry', 'unknown')}
 TARGET COUNTRY: {country}
 CURRENCY: {currency}
 
-{country_specific_instructions}
+{country_instructions}
 
-Return JSON:
+Return JSON with this structure:
 {{
   "scores": {{
     "overall": 0-100,
@@ -491,9 +504,10 @@ CRITICAL:
 - Use {currency} exclusively
 - Address local trust barriers using GENERAL terms ("officially registered", "local support", "mobile payment")
 - NO specific brand names (banks, telecoms, apps)
-- NO specific regulatory codes (CAC, GST, FCA, etc.)
+- NO specific regulatory codes
 - Focus on BEHAVIORAL PSYCHOLOGY and cultural patterns
 """
+        return prompt_text
 
     def _verify_analysis(self, analysis: Dict, ad_copy: str, video_script: str, country_profile: Dict) -> None:
         """Verify analysis includes country-specific elements"""
@@ -502,47 +516,39 @@ CRITICAL:
         content_len = len(content)
         currency = country_profile['currency']
 
-        # Check empty content
         if content_len < 10 and scores.get("overall", 100) > 30:
             raise ValueError(f"Empty content got high score: {scores.get('overall')}")
 
-        # Check gibberish
         real_words = len([w for w in content.split() if len(w) > 2 and w.isalpha()])
         if real_words < 2 and content_len > 5:
             if scores.get("clarity", 100) > 30:
                 raise ValueError("Gibberish got good clarity score")
 
-        # Check short content
         if content_len < 50 and scores.get("overall", 100) > 50:
             raise ValueError(f"Short content got high score: {scores.get('overall')}")
 
-        # Verify improved_ad exists and has required fields with length
         improved = analysis.get("improved_ad", {})
         if not improved.get("final_hook") or not improved.get("final_body"):
             raise ValueError("Missing improved_ad production fields")
 
-        # Verify body length
         body_words = len(improved.get("final_body", "").split())
         if body_words < 50:
             raise ValueError(f"improved_ad.body too short: {body_words} words")
 
-        # Verify 5 variants
         variants = analysis.get("ad_variants", [])
         if len(variants) < 5:
             raise ValueError(f"Expected 5 variants, got {len(variants)}")
 
-        # Check variant body lengths
         for i, variant in enumerate(variants):
             var_body_words = len(variant.get("body", "").split())
             if var_body_words < 30:
                 raise ValueError(f"Variant {i+1} body too short: {var_body_words} words")
 
-        # Check for country-specific content (currency)
         improved_body = improved.get("final_body", "").lower()
         if currency != "$" and currency.lower() not in improved_body and country_profile['currency_name'].lower() not in improved_body:
             logger.warning(f"Currency {currency} not found in improved_ad body")
 
-        logger.info(f"✅ Verified: {country_profile.get('currency_name', 'Unknown')} market, {len(variants)} variants, {body_words} words, NO BRANDS")
+        logger.info(f"✅ Verified: {country_profile.get('currency_name', 'Unknown')} market, {len(variants)} variants, {body_words} words")
 
 
 _engine_instance = None
