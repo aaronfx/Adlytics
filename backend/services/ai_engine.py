@@ -1,6 +1,6 @@
 """
-ADLYTICS AI Engine v4.3 - SHORT-FORM VIDEO ENFORCEMENT
-Strict 20-60 second scripts, complete schema enforcement
+ADLYTICS AI Engine v4.4 - PRODUCTION GRADE
+Complete data guarantee, short-form scripts, zero empty states
 """
 
 import os
@@ -85,6 +85,20 @@ REQUIRED_SCHEMA = {
         "why_user_might_choose_competitor": "Established brand trust",
         "what_competitor_is_doing_better": "Market presence and recognition",
         "how_to_outperform": "Differentiate with unique value proposition"
+    },
+    "improved_ad": {
+        "headline": "Optimized Headline",
+        "body_copy": "Improved body copy with better conversion focus.",
+        "cta": "Get Started Now",
+        "predicted_score": 65,
+        "roi_potential": "Medium (2-3x ROAS)"
+    },
+    "ad_variants": [],
+    "winner_prediction": {
+        "best_variant_id": 1,
+        "score": 65,
+        "confidence": "medium",
+        "reason": "Best performing variant selected"
     }
 }
 
@@ -123,24 +137,21 @@ FALLBACK_IMPROVEMENT = "Refine messaging to better resonate with target audience
 # ============================================
 
 MAX_SCRIPT_WORDS = 150
-MAX_SCRIPT_DURATION = 60  # seconds
-TARGET_SCRIPT_DURATION = (20, 60)  # min, max
+MAX_SCRIPT_DURATION = 60
+TARGET_SCRIPT_DURATION = (20, 60)
 
 def count_words(text: str) -> int:
-    """Count words in text"""
     if not text:
         return 0
     return len(text.split())
 
 def estimate_duration(text: str) -> int:
-    """Estimate duration in seconds (avg 3 words/sec for video)"""
     words = count_words(text)
-    return max(5, words // 3)  # Minimum 5 seconds
+    return max(5, words // 3)
 
 def enforce_script_length(script: str) -> str:
     """
     HARD ENFORCEMENT: Script must be ≤ 150 words, 20-60 seconds
-    If too long: intelligently trim while preserving structure
     """
     if not script:
         return script
@@ -148,69 +159,41 @@ def enforce_script_length(script: str) -> str:
     words = script.split()
     word_count = len(words)
     
-    # If already within limits, return as-is
     if word_count <= MAX_SCRIPT_WORDS:
         return script
     
-    # EXTRACT SECTIONS using regex
     sections = extract_script_sections(script)
-    
-    # PRIORITY ORDER (what to keep if trimming needed)
-    # 1. HOOK (always keep)
-    # 2. CTA (always keep)
-    # 3. PROBLEM (keep essence)
-    # 4. SOLUTION (keep essence)
-    # 5. PROOF (trim heavily or remove)
-    
     trimmed_sections = {}
     
     # HOOK: Keep as-is but limit to 15 words max
     hook_text = sections.get("hook", "")
     hook_words = hook_text.split()
-    if len(hook_words) > 15:
-        trimmed_sections["hook"] = " ".join(hook_words[:15]) + "."
-    else:
-        trimmed_sections["hook"] = hook_text
+    trimmed_sections["hook"] = " ".join(hook_words[:15]) + "." if len(hook_words) > 15 else hook_text
     
     # CTA: Keep as-is but limit to 12 words max
     cta_text = sections.get("cta", "")
     cta_words = cta_text.split()
-    if len(cta_words) > 12:
-        trimmed_sections["cta"] = " ".join(cta_words[:12])
-    else:
-        trimmed_sections["cta"] = cta_text
+    trimmed_sections["cta"] = " ".join(cta_words[:12]) if len(cta_words) > 12 else cta_text
     
     # PROBLEM: Keep essence, max 20 words
     problem_text = sections.get("problem", "")
     problem_words = problem_text.split()
-    if len(problem_words) > 20:
-        trimmed_sections["problem"] = " ".join(problem_words[:20]) + "."
-    else:
-        trimmed_sections["problem"] = problem_text
+    trimmed_sections["problem"] = " ".join(problem_words[:20]) + "." if len(problem_words) > 20 else problem_text
     
     # SOLUTION: Keep essence, max 25 words
     solution_text = sections.get("solution", "")
     solution_words = solution_text.split()
-    if len(solution_words) > 25:
-        trimmed_sections["solution"] = " ".join(solution_words[:25]) + "."
-    else:
-        trimmed_sections["solution"] = solution_text
+    trimmed_sections["solution"] = " ".join(solution_words[:25]) + "." if len(solution_words) > 25 else solution_text
     
-    # PROOF: Heavy trim, max 20 words or remove if still too long
+    # PROOF: Heavy trim, max 20 words
     proof_text = sections.get("proof", "")
     proof_words = proof_text.split()
-    if len(proof_words) > 20:
-        trimmed_sections["proof"] = " ".join(proof_words[:20]) + "."
-    else:
-        trimmed_sections["proof"] = proof_text
+    trimmed_sections["proof"] = " ".join(proof_words[:20]) + "." if len(proof_words) > 20 else proof_text
     
-    # Reconstruct script
     reconstructed = reconstruct_script(trimmed_sections)
     
-    # Final safety check
     final_words = reconstructed.split()
     if len(final_words) > MAX_SCRIPT_WORDS:
-        # Hard cut with preservation of hook and CTA
         hook = trimmed_sections.get("hook", "Stop scrolling!")
         cta = trimmed_sections.get("cta", "Click now!")
         middle = " ".join(final_words[15:-12]) if len(final_words) > 27 else "Get results fast."
@@ -219,16 +202,7 @@ def enforce_script_length(script: str) -> str:
     return reconstructed.strip()
 
 def extract_script_sections(script: str) -> dict:
-    """Extract sections from script using markers"""
-    sections = {
-        "hook": "",
-        "problem": "",
-        "solution": "",
-        "proof": "",
-        "cta": ""
-    }
-    
-    # Try to find sections by markers
+    sections = {"hook": "", "problem": "", "solution": "", "proof": "", "cta": ""}
     lines = script.split('\n')
     current_section = None
     
@@ -251,18 +225,15 @@ def extract_script_sections(script: str) -> dict:
             current_section = "cta"
             continue
         
-        # Skip visual cues
         if '🎥' in line or '🗣️' in line or 'visual:' in line_lower or 'audio:' in line_lower:
             continue
         
-        # Add to current section
         if current_section and line.strip():
             if sections[current_section]:
                 sections[current_section] += " " + line.strip()
             else:
                 sections[current_section] = line.strip()
     
-    # If no sections found, try to split by sentences
     if not any(sections.values()):
         sentences = re.split(r'[.!?]+', script)
         sentences = [s.strip() for s in sentences if s.strip()]
@@ -277,28 +248,46 @@ def extract_script_sections(script: str) -> dict:
     return sections
 
 def reconstruct_script(sections: dict) -> str:
-    """Reconstruct script from sections with proper formatting"""
     parts = []
     
     if sections.get("hook"):
         parts.append(f"[HOOK 0-3s]\n{sections['hook']}")
-    
     if sections.get("problem"):
         parts.append(f"[PROBLEM 3-10s]\n{sections['problem']}")
-    
     if sections.get("solution"):
         parts.append(f"[SOLUTION 10-25s]\n{sections['solution']}")
-    
     if sections.get("proof"):
         parts.append(f"[PROOF 25-40s]\n{sections['proof']}")
-    
     if sections.get("cta"):
         parts.append(f"[CTA 40-60s]\n{sections['cta']}")
     
     return "\n\n".join(parts)
 
+def generate_multi_scripts(base_script: str) -> dict:
+    """
+    PRO FEATURE: Generate 15s, 30s, 60s versions
+    """
+    if not base_script:
+        return {"15s": "", "30s": "", "60s": ""}
+    
+    words = base_script.split()
+    
+    # 15s version (~40 words)
+    script_15s = " ".join(words[:40]) if len(words) >= 40 else base_script
+    
+    # 30s version (~80 words)
+    script_30s = " ".join(words[:80]) if len(words) >= 80 else base_script
+    
+    # 60s version (~150 words)
+    script_60s = " ".join(words[:150]) if len(words) >= 150 else base_script
+    
+    return {
+        "15s": script_15s,
+        "30s": script_30s,
+        "60s": script_60s
+    }
+
 def validate_script(script: str) -> dict:
-    """Validate script meets requirements"""
     words = count_words(script)
     duration = estimate_duration(script)
     
@@ -306,8 +295,7 @@ def validate_script(script: str) -> dict:
         "valid": words <= MAX_SCRIPT_WORDS and TARGET_SCRIPT_DURATION[0] <= duration <= TARGET_SCRIPT_DURATION[1],
         "word_count": words,
         "duration": duration,
-        "issues": []
-        if words <= MAX_SCRIPT_WORDS and TARGET_SCRIPT_DURATION[0] <= duration <= TARGET_SCRIPT_DURATION[1]
+        "issues": [] if words <= MAX_SCRIPT_WORDS and TARGET_SCRIPT_DURATION[0] <= duration <= TARGET_SCRIPT_DURATION[1]
         else [f"Script is {words} words, {duration}s. Target: ≤{MAX_SCRIPT_WORDS} words, {TARGET_SCRIPT_DURATION[0]}-{TARGET_SCRIPT_DURATION[1]}s"]
     }
 
@@ -324,7 +312,6 @@ def enforce_complete_structure(data: dict) -> dict:
     
     result = {}
     
-    # Enforce all required keys with defaults
     for key, default in REQUIRED_SCHEMA.items():
         value = data.get(key)
         if value is None or value == "" or value == [] or value == {}:
@@ -332,7 +319,6 @@ def enforce_complete_structure(data: dict) -> dict:
         else:
             result[key] = value
     
-    # Ensure nested structures are complete
     result["scores"] = enforce_scores(result.get("scores", {}))
     result["behavior_summary"] = enforce_behavior_summary(result.get("behavior_summary", {}))
     result["phase_breakdown"] = enforce_phase_breakdown(result.get("phase_breakdown", {}))
@@ -345,6 +331,9 @@ def enforce_complete_structure(data: dict) -> dict:
     result["run_decision"] = enforce_run_decision(result.get("run_decision", {}))
     result["platform_specific"] = enforce_platform(result.get("platform_specific", {}))
     result["competitor_advantage"] = enforce_competitor(result.get("competitor_advantage", {}))
+    result["improved_ad"] = enforce_improved_ad(result.get("improved_ad", {}))
+    result["ad_variants"] = enforce_variants(result.get("ad_variants", []))
+    result["winner_prediction"] = enforce_winner_prediction(result.get("winner_prediction", {}), result.get("ad_variants", []))
     
     return result
 
@@ -441,7 +430,7 @@ def enforce_roi(roi: dict) -> dict:
     if not isinstance(roi, dict):
         return defaults.copy()
     
-    result = {
+    return {
         "roi_potential": roi.get("roi_potential") or defaults["roi_potential"],
         "break_even_probability": roi.get("break_even_probability") or defaults["break_even_probability"],
         "risk_classification": roi.get("risk_classification") or defaults["risk_classification"],
@@ -450,7 +439,6 @@ def enforce_roi(roi: dict) -> dict:
         "key_metrics": enforce_roi_metrics(roi.get("key_metrics", {})),
         "roi_scenarios": enforce_roi_scenarios(roi.get("roi_scenarios", {}))
     }
-    return result
 
 def enforce_roi_metrics(metrics: dict) -> dict:
     defaults = REQUIRED_SCHEMA["roi_analysis"]["key_metrics"]
@@ -542,6 +530,64 @@ def enforce_competitor(competitor: dict) -> dict:
         "why_user_might_choose_competitor": competitor.get("why_user_might_choose_competitor") or defaults["why_user_might_choose_competitor"],
         "what_competitor_is_doing_better": competitor.get("what_competitor_is_doing_better") or defaults["what_competitor_is_doing_better"],
         "how_to_outperform": competitor.get("how_to_outperform") or defaults["how_to_outperform"]
+    }
+
+def enforce_improved_ad(improved_ad: dict) -> dict:
+    defaults = REQUIRED_SCHEMA["improved_ad"]
+    if not isinstance(improved_ad, dict):
+        return defaults.copy()
+    
+    return {
+        "headline": improved_ad.get("headline") or defaults["headline"],
+        "body_copy": improved_ad.get("body_copy") or improved_ad.get("copy") or defaults["body_copy"],
+        "cta": improved_ad.get("cta") or defaults["cta"],
+        "predicted_score": improved_ad.get("predicted_score") or defaults["predicted_score"],
+        "roi_potential": improved_ad.get("roi_potential") or defaults["roi_potential"],
+        "angle": improved_ad.get("angle") or "Optimized",
+        "source_variant_id": improved_ad.get("source_variant_id") or 1
+    }
+
+def enforce_variants(variants: list) -> list:
+    if not isinstance(variants, list) or len(variants) == 0:
+        return [FALLBACK_VARIANT.copy(), FALLBACK_VARIANT.copy(), FALLBACK_VARIANT.copy()]
+    
+    result = []
+    for i, v in enumerate(variants):
+        if isinstance(v, dict):
+            result.append({
+                "id": v.get("id") or i + 1,
+                "angle": v.get("angle") or f"Variant {i+1}",
+                "hook": v.get("hook") or v.get("headline") or "Optimized hook",
+                "copy": v.get("copy") or v.get("body_copy") or "Optimized copy",
+                "predicted_score": v.get("predicted_score") or v.get("score") or 55,
+                "roi_potential": v.get("roi_potential") or "Medium (2-3x ROAS)",
+                "reason": v.get("reason") or "Optimized for target audience",
+                "component_scores": v.get("component_scores", {})
+            })
+    
+    return result if result else [FALLBACK_VARIANT.copy(), FALLBACK_VARIANT.copy(), FALLBACK_VARIANT.copy()]
+
+def enforce_winner_prediction(prediction: dict, variants: list) -> dict:
+    if not isinstance(prediction, dict) or not prediction.get("best_variant_id"):
+        # Generate from variants if available
+        if variants and len(variants) > 0:
+            best = max(variants, key=lambda x: x.get("predicted_score", 0))
+            score = best.get("predicted_score", 0)
+            return {
+                "best_variant_id": best.get("id", 1),
+                "score": score,
+                "confidence": "high" if score > 70 else "medium" if score > 55 else "low",
+                "reason": f"Variant #{best.get('id', 1)} ({best.get('angle', 'Default')}) scores highest with {score}/100",
+                "expected_lift": f"+{score - 50} points"
+            }
+        return REQUIRED_SCHEMA["winner_prediction"].copy()
+    
+    return {
+        "best_variant_id": prediction.get("best_variant_id") or 1,
+        "score": prediction.get("score") or prediction.get("predicted_score") or 65,
+        "confidence": prediction.get("confidence") or "medium",
+        "reason": prediction.get("reason") or "Best performing variant selected",
+        "expected_lift": prediction.get("expected_lift") or "+15 points"
     }
 
 # ============================================
@@ -715,10 +761,13 @@ def evaluate_audience_alignment(content: str, audience: dict) -> int:
 
 
 # ============================================
-# VARIANT GENERATION
+# VARIANT GENERATION - FORCE GENERATION
 # ============================================
 
 def generate_ad_variants(analysis_data: dict, platform: str, audience: dict, industry: str) -> list:
+    """
+    FORCE GENERATE: Always return 3 variants
+    """
     variants = []
 
     angles = [
@@ -846,58 +895,113 @@ def generate_cta_for_platform(platform: str, audience: dict, analysis_data: dict
 
 
 # ============================================
-# IMPROVED AD SELECTION
+# IMPROVED AD GENERATION - FORCE CREATION
 # ============================================
 
-def select_improved_ad_from_variants(variants: list) -> dict:
-    if not variants:
+def generate_improved_ad(variants: list, original_copy: str) -> dict:
+    """
+    FORCE: Always generate improved_ad from best variant
+    """
+    if not variants or len(variants) == 0:
         return {
-            "headline": "Default Headline",
-            "body_copy": "Default body copy with compelling value proposition that resonates with target audience.",
-            "cta": "Get Started Now",
-            "angle": "Default",
-            "predicted_score": 50,
+            "headline": "Struggling with results? Here's a better approach",
+            "body_copy": original_copy or "Optimized ad copy with improved conversion elements.",
+            "cta": "Start with a smarter strategy today",
+            "predicted_score": 65,
             "roi_potential": "Medium (2-3x ROAS)",
-            "source_variant_id": 0
+            "angle": "Optimized",
+            "source_variant_id": 1
         }
-
-    best_variant = variants[0]
-
+    
+    best = variants[0]
+    
     return {
-        "headline": best_variant["hook"],
-        "body_copy": best_variant["copy"],
-        "cta": best_variant["copy"].split("\n")[-1] if "\n" in best_variant["copy"] else "Get Started Now",
-        "angle": best_variant["angle"],
-        "predicted_score": best_variant["predicted_score"],
-        "roi_potential": best_variant["roi_potential"],
-        "source_variant_id": best_variant["id"]
+        "headline": best.get("hook", "Optimized Headline"),
+        "body_copy": best.get("copy", original_copy or "Optimized body copy"),
+        "cta": best.get("copy", "").split("\n")[-1] if best.get("copy") and "\n" in best.get("copy") else "Get Started Now",
+        "predicted_score": best.get("predicted_score", 65),
+        "roi_potential": best.get("roi_potential", "Medium (2-3x ROAS)"),
+        "angle": best.get("angle", "Optimized"),
+        "source_variant_id": best.get("id", 1)
     }
 
 
-def re_score_improved_ad(improved_ad: dict, audience: dict, platform: str) -> dict:
-    content = f"{improved_ad.get('headline', '')} {improved_ad.get('body_copy', '')} {improved_ad.get('cta', '')}"
+# ============================================
+# ROI ANALYSIS GENERATION - FORCE CREATION
+# ============================================
 
-    hook_score = evaluate_hook_strength(improved_ad.get("headline", ""), audience)
-    clarity_score = evaluate_clarity(improved_ad.get("body_copy", ""))
-    trust_score = evaluate_trust_building(improved_ad.get("body_copy", ""), audience)
-    cta_score = evaluate_cta_power(improved_ad.get("cta", ""), platform)
-    audience_score = evaluate_audience_alignment(content, audience)
-
-    new_overall = calculate_weighted_score(
-        hook=hook_score,
-        clarity=clarity_score,
-        trust=trust_score,
-        cta=cta_score,
-        audience=audience_score
-    )
-
+def generate_roi_analysis(scores: dict) -> dict:
+    """
+    FORCE: Always generate complete ROI analysis
+    """
+    overall = scores.get("overall", 50) if isinstance(scores, dict) else 50
+    
+    if overall >= 80:
+        roi_potential = "Very High (5x+ ROAS)"
+        risk_classification = "Very Low"
+        break_even = "95%"
+    elif overall >= 70:
+        roi_potential = "High (3-5x ROAS)"
+        risk_classification = "Low"
+        break_even = "85%"
+    elif overall >= 60:
+        roi_potential = "Medium (2-3x ROAS)"
+        risk_classification = "Medium"
+        break_even = "70%"
+    elif overall >= 50:
+        roi_potential = "Low-Medium (1-2x ROAS)"
+        risk_classification = "Medium-High"
+        break_even = "55%"
+    else:
+        roi_potential = "Poor (<1x ROAS)"
+        risk_classification = "High"
+        break_even = "30%"
+    
     return {
-        "overall": new_overall,
-        "hook_strength": hook_score,
-        "clarity": clarity_score,
-        "trust_building": trust_score,
-        "cta_power": cta_score,
-        "audience_alignment": audience_score
+        "roi_potential": roi_potential,
+        "break_even_probability": break_even,
+        "risk_classification": risk_classification,
+        "primary_roi_lever": "Hook strength drives CTR" if (scores.get("hook_strength", 50) if isinstance(scores, dict) else 50) > (scores.get("trust_building", 50) if isinstance(scores, dict) else 50) else "Trust building drives conversion",
+        "biggest_financial_risk": "Low CTR wastes budget" if (scores.get("hook_strength", 50) if isinstance(scores, dict) else 50) < 60 else "Conversion friction reduces ROAS",
+        "key_metrics": {
+            "expected_ctr_range": f"{max(1, overall//20)}-{max(3, overall//15)}%",
+            "realistic_cpc_range": f"${max(0.5, 3-(overall/50)):.2f}-${max(1, 5-(overall/40)):.2f}",
+            "conversion_rate_range": f"{max(1, overall//25)}-{max(5, overall//15)}%"
+        },
+        "roi_scenarios": {
+            "worst_case": f"{max(0.5, (overall/100)*2):.1f}x ROAS",
+            "expected_case": f"{max(1, overall//20)}x ROAS",
+            "best_case": f"{max(2, overall//15)}x ROAS"
+        }
+    }
+
+
+# ============================================
+# WINNER PREDICTION - FORCE GENERATION
+# ============================================
+
+def generate_winner_prediction(variants: list) -> dict:
+    """
+    FORCE: Always generate winner prediction from variants
+    """
+    if not variants or len(variants) == 0:
+        return {
+            "best_variant_id": 1,
+            "score": 65,
+            "confidence": "medium",
+            "reason": "Default variant selected as baseline",
+            "expected_lift": "+15 points"
+        }
+    
+    best = max(variants, key=lambda x: x.get("predicted_score", 0))
+    score = best.get("predicted_score", 0)
+    
+    return {
+        "best_variant_id": best.get("id", 1),
+        "score": score,
+        "confidence": "high" if score > 70 else "medium" if score > 55 else "low",
+        "reason": f"Variant #{best.get('id', 1)} ({best.get('angle', 'Default')}) scores highest with {score}/100",
+        "expected_lift": f"+{score - 50} points"
     }
 
 
@@ -922,21 +1026,14 @@ def detect_content_mode(request_data: dict) -> str:
 def generate_short_form_video_script(analysis_data: dict, audience: dict, platform: str, objective: str) -> str:
     """
     Generate SHORT-FORM video script (20-60 seconds, ≤150 words)
-    STRICT ENFORCEMENT of length limits
     """
     pain_point = audience.get("pain_point") or "this problem"
     industry = analysis_data.get("industry") or "this industry"
     
-    # Generate base script
     script = _generate_script_content(pain_point, industry, audience, platform, objective)
-    
-    # HARD ENFORCEMENT: Trim if too long
     script = enforce_script_length(script)
     
-    # VALIDATION: Ensure it meets requirements
     validation = validate_script(script)
-    
-    # If still invalid, regenerate with stricter limits
     if not validation["valid"]:
         script = _generate_ultra_short_script(pain_point, industry, audience, platform)
     
@@ -944,9 +1041,6 @@ def generate_short_form_video_script(analysis_data: dict, audience: dict, platfo
 
 
 def _generate_script_content(pain_point: str, industry: str, audience: dict, platform: str, objective: str) -> str:
-    """Generate script content with strict section limits"""
-    
-    # HOOK: 0-3s (max 10 words)
     hooks = [
         f"Stop! Your {pain_point} is costing you money.",
         f"Still struggling with {pain_point}? Watch this.",
@@ -956,7 +1050,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
     ]
     hook = hooks[hash(pain_point) % len(hooks)]
     
-    # PROBLEM: 3-10s (max 15 words)
     problems = [
         f"Every day with {pain_point} wastes time and money.",
         f"{pain_point} keeps you stuck while others win.",
@@ -965,7 +1058,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
     ]
     problem = problems[hash(industry) % len(problems)]
     
-    # SOLUTION: 10-25s (max 25 words)
     solutions = [
         f"This {industry} system eliminates {pain_point} fast. No fluff. Just results. Three steps. Five minutes. Done.",
         f"Our method fixes {pain_point} instantly. Proven framework. Real results. No complicated setup required.",
@@ -973,7 +1065,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
     ]
     solution = solutions[hash(platform) % len(solutions)]
     
-    # PROOF: 25-40s (max 20 words)
     proofs = [
         f"10,000+ people fixed {pain_point} last month. Join them.",
         f"Rated #1 for solving {pain_point}. Verified results.",
@@ -981,7 +1072,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
     ]
     proof = proofs[hash(objective) % len(proofs)]
     
-    # CTA: 40-60s (max 10 words)
     ctas = {
         "facebook": "Click link. Fix it now.",
         "instagram": "Link in bio. Start today.",
@@ -991,7 +1081,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
     }
     cta = ctas.get(platform, "Click now. Change everything.")
     
-    # Assemble with timing markers
     script = f"""[HOOK 0-3s]
 {hook}
 
@@ -1011,8 +1100,6 @@ def _generate_script_content(pain_point: str, industry: str, audience: dict, pla
 
 
 def _generate_ultra_short_script(pain_point: str, industry: str, audience: dict, platform: str) -> str:
-    """Emergency ultra-short script when normal generation is too long"""
-    
     script = f"""[HOOK 0-3s]
 Stop! {pain_point} ends today.
 
@@ -1101,46 +1188,62 @@ async def call_openrouter(prompt: str, system_prompt: str = "", temperature: flo
 
 
 # ============================================
-# MAIN ANALYSIS FLOW
+# MAIN ANALYSIS FLOW - COMPLETE DATA GUARANTEE
 # ============================================
 
 async def analyze_ad(request_data: dict, files: list = None) -> dict:
-    """MAIN ANALYSIS FUNCTION - v4.3 SHORT-FORM ENFORCED"""
-
+    """
+    MAIN ANALYSIS - v4.4 PRODUCTION GRADE
+    Guarantees: variants, improved_ad, winner_prediction, roi_analysis
+    """
+    
     # 1. Detect content mode
     content_mode = detect_content_mode(request_data)
 
     # 2. Get base analysis from AI
     base_analysis = await run_ai_analysis(request_data, content_mode)
-
-    # 3. ENFORCE: Ensure complete structure immediately after AI call
+    
+    # 3. FORCE: Ensure complete structure
     base_analysis = enforce_complete_structure(base_analysis)
 
-    # Extract audience data
+    # 4. Extract audience data
     audience = extract_audience(request_data)
     platform = request_data.get("platform") or "facebook"
     industry = request_data.get("industry") or "general"
+    original_copy = request_data.get("ad_copy", "")
 
-    # 4. Generate variants with REAL scores
+    # 5. FORCE: Generate variants (ALWAYS)
     variants = generate_ad_variants(
         analysis_data=base_analysis,
         platform=platform,
         audience=audience,
         industry=industry
     )
+    
+    # FORCE: Ensure variants are in result
+    base_analysis["ad_variants"] = variants
 
-    # 5. Select best variant as improved ad
-    improved_ad = select_improved_ad_from_variants(variants)
+    # 6. FORCE: Generate improved_ad (ALWAYS)
+    improved_ad = generate_improved_ad(variants, original_copy)
+    base_analysis["improved_ad"] = improved_ad
 
-    # 6. Re-score the improved ad
+    # 7. Re-score the improved ad
     improved_scores = re_score_improved_ad(improved_ad, audience, platform)
+    base_analysis["scores"] = improved_scores
 
-    # 7. Generate SHORT-FORM video script if needed
-    video_script = None
+    # 8. FORCE: Generate ROI analysis (ALWAYS)
+    roi_analysis = generate_roi_analysis(improved_scores)
+    base_analysis["roi_analysis"] = roi_analysis
+
+    # 9. FORCE: Generate winner prediction (ALWAYS)
+    winner_prediction = generate_winner_prediction(variants)
+    base_analysis["winner_prediction"] = winner_prediction
+
+    # 10. Generate video script if needed
+    video_scripts = None
     video_analysis = base_analysis.get("video_execution_analysis", REQUIRED_SCHEMA["video_execution_analysis"].copy())
     
     if content_mode in ["videoScript", "both"]:
-        # GENERATE SHORT-FORM SCRIPT
         video_script = generate_short_form_video_script(
             analysis_data=base_analysis,
             audience=audience,
@@ -1151,7 +1254,6 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
         # ENFORCE: Must pass length validation
         validation = validate_script(video_script)
         if not validation["valid"]:
-            # Emergency regeneration
             video_script = _generate_ultra_short_script(
                 audience.get("pain_point") or "this problem",
                 industry,
@@ -1159,8 +1261,12 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
                 platform
             )
         
+        # PRO FEATURE: Generate multi-length scripts
+        video_scripts = generate_multi_scripts(video_script)
+        
         # Update improved ad with script
         improved_ad["video_script_version"] = video_script
+        base_analysis["improved_ad"] = improved_ad
         
         # Update video analysis
         video_analysis["is_video_script"] = "Yes"
@@ -1170,55 +1276,44 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
         video_analysis["delivery_risk"] = "Low"
         video_analysis["recommended_format"] = "short_form_video"
         video_analysis["script_validation"] = validate_script(video_script)
+        
+        base_analysis["video_execution_analysis"] = video_analysis
 
-    # 8. Build complete response with ALL fields guaranteed
-    final_analysis = {
-        "scores": improved_scores,
-        "behavior_summary": base_analysis.get("behavior_summary", REQUIRED_SCHEMA["behavior_summary"].copy()),
-        "phase_breakdown": base_analysis.get("phase_breakdown", REQUIRED_SCHEMA["phase_breakdown"].copy()),
-        "critical_weaknesses": base_analysis.get("critical_weaknesses", [FALLBACK_WEAKNESS.copy()]),
-        "improvements": base_analysis.get("improvements", [FALLBACK_IMPROVEMENT]),
-        "persona_reactions": base_analysis.get("persona_reactions", [FALLBACK_PERSONA.copy()]),
-        "roi_analysis": base_analysis.get("roi_analysis", REQUIRED_SCHEMA["roi_analysis"].copy()),
-        "line_by_line_analysis": base_analysis.get("line_by_line_analysis", [FALLBACK_LINE.copy()]),
-        "video_execution_analysis": video_analysis,
-        "run_decision": calculate_run_decision(improved_scores),
-        "platform_specific": base_analysis.get("platform_specific", REQUIRED_SCHEMA["platform_specific"].copy()),
-        "improved_ad": improved_ad,
-        "ad_variants": variants if variants else [FALLBACK_VARIANT.copy()],
-        "winner_prediction": {
-            "confidence": "High" if variants and variants[0]["predicted_score"] > 70 else "Medium" if variants and variants[0]["predicted_score"] > 55 else "Low",
-            "reason": f"Variant #{variants[0]['id'] if variants else 1} ({variants[0]['angle'] if variants else 'Default'}) scores highest with {variants[0]['predicted_score'] if variants else 50}/100",
-            "best_variant_id": variants[0]["id"] if variants else 1,
-            "expected_lift": f"+{variants[0]['predicted_score'] - base_analysis.get('scores', {}).get('overall', 50) if variants else 0} points"
-        },
-        "roi_comparison": [
-            {
-                "variant_id": v["id"],
-                "roi_potential": v["roi_potential"],
-                "risk": "Low" if v["predicted_score"] > 70 else "Medium" if v["predicted_score"] > 50 else "High",
-                "summary": f"Variant {v['id']} ({v['angle']}): Score {v['predicted_score']}, {v['roi_potential']}"
-            } for v in (variants if variants else [FALLBACK_VARIANT.copy()])
-        ],
-        "competitor_advantage": base_analysis.get("competitor_advantage", REQUIRED_SCHEMA["competitor_advantage"].copy())
-    }
+    # 11. FORCE: Ensure ALL arrays have content
+    if not base_analysis.get("critical_weaknesses") or len(base_analysis.get("critical_weaknesses", [])) == 0:
+        base_analysis["critical_weaknesses"] = [FALLBACK_WEAKNESS.copy()]
+    
+    if not base_analysis.get("improvements") or len(base_analysis.get("improvements", [])) == 0:
+        base_analysis["improvements"] = [FALLBACK_IMPROVEMENT]
+    
+    if not base_analysis.get("persona_reactions") or len(base_analysis.get("persona_reactions", [])) == 0:
+        base_analysis["persona_reactions"] = [FALLBACK_PERSONA.copy()]
+    
+    if not base_analysis.get("line_by_line_analysis") or len(base_analysis.get("line_by_line_analysis", [])) == 0:
+        base_analysis["line_by_line_analysis"] = [FALLBACK_LINE.copy()]
 
-    # 9. FINAL ENFORCEMENT: Ensure absolutely no missing fields
-    final_analysis = enforce_complete_structure(final_analysis)
+    # 12. FINAL ENFORCEMENT: Ensure absolutely no missing fields
+    final_analysis = enforce_complete_structure(base_analysis)
 
     # ASSEMBLE FINAL RESPONSE
-    return {
+    response = {
         "success": True,
         "analysis": final_analysis,
         "audience_parsed": format_audience_summary(audience),
-        "content_mode": content_mode,
-        "script_info": {
-            "word_count": count_words(video_script) if video_script else 0,
-            "duration_estimate": estimate_duration(video_script) if video_script else 0,
+        "content_mode": content_mode
+    }
+    
+    # Add script info if video
+    if video_scripts:
+        response["video_scripts"] = video_scripts
+        response["script_info"] = {
+            "word_count": count_words(video_scripts["60s"]),
+            "duration_estimate": estimate_duration(video_scripts["60s"]),
             "max_words": MAX_SCRIPT_WORDS,
             "target_duration": f"{TARGET_SCRIPT_DURATION[0]}-{TARGET_SCRIPT_DURATION[1]}s"
-        } if video_script else None
-    }
+        }
+
+    return response
 
 
 # ============================================
@@ -1280,7 +1375,6 @@ async def run_ai_analysis(request_data: dict, content_mode: str) -> dict:
         content = ad_copy[:2000]
         content_type = "ad copy"
 
-    # STRICT JSON schema prompt
     prompt = f"""Analyze this {content_type} for a {request_data.get('platform') or 'facebook'} ad targeting {request_data.get('audience_age') or '25-34'} year olds in {request_data.get('audience_country') or 'US'}.
 
 CONTENT:
@@ -1384,11 +1478,9 @@ Return ONLY the JSON object, no other text."""
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
             parsed = json.loads(json_match.group())
-            # Immediately enforce complete structure
             return enforce_complete_structure(parsed)
         return enforce_complete_structure({})
     except Exception as e:
-        # Return fully populated fallback on any error
         return enforce_complete_structure({
             "behavior_summary": {
                 "primary_reason": f"AI analysis error: {str(e)}"
@@ -1424,4 +1516,12 @@ def get_ai_engine() -> AIEngine:
     return _ai_engine_instance
 
 
-__all__ = ['get_ai_engine', 'analyze_ad', 'detect_content_mode', 'extract_audience', 'enforce_complete_structure', 'enforce_script_length']
+__all__ = [
+    'get_ai_engine', 
+    'analyze_ad', 
+    'detect_content_mode', 
+    'extract_audience', 
+    'enforce_complete_structure',
+    'enforce_script_length',
+    'generate_multi_scripts'
+]
