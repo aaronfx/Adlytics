@@ -1,6 +1,6 @@
 """
-ADLYTICS Analysis Route v4.5 - RESPONSE FORMAT FIX
-Ensures consistent {success: true, data: {...}} format
+ADLYTICS Analysis Route v5.0 - PRODUCTION GRADE
+Strict validation, real AI calls, proper error handling
 """
 
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
@@ -15,24 +15,22 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Try to import AI engine with error handling
+# Import V5 AI Engine
 try:
-    from backend.services.ai_engine import get_ai_engine, enforce_complete_structure
+    from backend.services.ai_engine_v5 import get_ai_engine, AIValidationError
     ai_engine = get_ai_engine()
-    logger.info("✅ AI Engine loaded successfully")
+    logger.info("✅ AI Engine V5 loaded successfully")
 except Exception as e:
     logger.error(f"❌ Failed to load AI Engine: {e}")
     logger.error(traceback.format_exc())
     ai_engine = None
 
-# Try to import media processor with error handling
+# Import media processor
 try:
     from backend.services.media_processor import process_media
     logger.info("✅ Media processor loaded successfully")
 except Exception as e:
     logger.error(f"❌ Failed to load media processor: {e}")
-    logger.error(traceback.format_exc())
-    
     async def process_media(file: UploadFile, media_type: str = "image"):
         return {"type": media_type, "filename": file.filename if file else "unknown", "note": "Processing not available"}
 
@@ -41,14 +39,14 @@ async def analyze_endpoint(
     # Content fields
     ad_copy: Optional[str] = Form(None),
     video_script: Optional[str] = Form(None),
-    
+
     # Platform & Industry (required)
     platform: str = Form(...),
     industry: str = Form(...),
-    
+
     # Campaign objective
     objective: str = Form("conversions"),
-    
+
     # Audience targeting fields
     audience_country: str = Form(...),
     audience_region: Optional[str] = Form(None),
@@ -61,29 +59,25 @@ async def analyze_endpoint(
     audience_pain_point: Optional[str] = Form(None),
     tech_savviness: Optional[str] = Form("medium"),
     purchase_behavior: Optional[str] = Form(None),
-    
+
     # Media files
     image: Optional[UploadFile] = File(None),
     video: Optional[UploadFile] = File(None)
 ):
     """
-    Main analysis endpoint - CONSISTENT RESPONSE FORMAT
-    Always returns: {success: bool, data: {...}} or {success: false, error: str}
+    Main analysis endpoint - V5 Production Grade
+    Strict validation, real AI calls, no silent fallbacks
     """
-    
+
     try:
         logger.info("📥 Received analyze request")
-        
-        # Check if AI engine loaded
+
+        # Check AI engine availability
         if ai_engine is None:
             logger.error("❌ AI Engine not available")
-            return {
-                "success": False,
-                "error": "AI Engine failed to load",
-                "detail": "Check server logs for import errors"
-            }
-        
-        # Build request data with CORRECT field names
+            raise HTTPException(status_code=503, detail="AI Engine not initialized. Check OPENROUTER_API_KEY.")
+
+        # Build request data
         request_data = {
             "ad_copy": ad_copy or "",
             "video_script": video_script or "",
@@ -102,35 +96,14 @@ async def analyze_endpoint(
             "tech_savviness": tech_savviness or "medium",
             "purchase_behavior": purchase_behavior or ""
         }
-        
-        logger.info(f"📊 Request data prepared")
-        
-        # Detect content mode
-        try:
-            content_mode = ai_engine.detect_content_mode(request_data)
-            logger.info(f"📋 Content mode: {content_mode}")
-        except Exception as e:
-            logger.error(f"❌ Error detecting content mode: {e}")
-            content_mode = "adCopy"
-        
-        # Validate at least one content type is provided
-        if content_mode == "adCopy" and not ad_copy:
-            return {
-                "success": False,
-                "error": "Ad copy is required for ad copy mode"
-            }
-        if content_mode == "videoScript" and not video_script:
-            return {
-                "success": False,
-                "error": "Video script is required for video script mode"
-            }
-        if content_mode == "both" and not ad_copy and not video_script:
-            return {
-                "success": False,
-                "error": "At least one of ad copy or video script is required"
-            }
-        
-        # Process media files if provided
+
+        # Validate content exists
+        has_content = bool(ad_copy and ad_copy.strip()) or bool(video_script and video_script.strip())
+        if not has_content:
+            logger.error("❌ No content provided")
+            raise HTTPException(status_code=400, detail="Either ad_copy or video_script must be provided")
+
+        # Process media files
         files = []
         if image:
             try:
@@ -139,7 +112,7 @@ async def analyze_endpoint(
                 logger.info("✅ Image processed")
             except Exception as e:
                 logger.error(f"❌ Error processing image: {e}")
-        
+
         if video:
             try:
                 video_data = await process_media(video, "video")
@@ -147,44 +120,33 @@ async def analyze_endpoint(
                 logger.info("✅ Video processed")
             except Exception as e:
                 logger.error(f"❌ Error processing video: {e}")
-        
-        # Run analysis
+
+        # Run AI analysis
         logger.info("🤖 Running AI analysis...")
         try:
-            result = await ai_engine.analyze(request_data, files)
+            result = await ai_engine.analyze_ad(request_data, files)
             logger.info("✅ Analysis complete")
-            
-            # CRITICAL FIX: Ensure proper response format
-            # If result already has success/data structure, use it
-            if isinstance(result, dict) and "success" in result:
-                # Result is already wrapped, return as-is
-                return result
-            
-            # Otherwise, wrap the result
+
+            # Return strict format
             return {
                 "success": True,
                 "data": result
             }
-            
+
+        except AIValidationError as e:
+            logger.error(f"❌ AI Validation Error: {e}")
+            raise HTTPException(status_code=502, detail=f"AI Analysis failed: {str(e)}")
         except Exception as e:
-            logger.error(f"❌ Error during analysis: {e}")
+            logger.error(f"❌ Analysis error: {e}")
             logger.error(traceback.format_exc())
-            return {
-                "success": False,
-                "error": "Analysis failed",
-                "detail": str(e),
-                "traceback": traceback.format_exc()
-            }
-    
+            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"💥 Unexpected error in analyze_endpoint: {e}")
         logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": "Unexpected server error",
-            "detail": str(e),
-            "traceback": traceback.format_exc()
-        }
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @router.get("/audience-config")
 async def get_audience_config():
