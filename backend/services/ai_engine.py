@@ -18,7 +18,7 @@ class AIEngineStrictV5:
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         self.base_url = "https://openrouter.ai/api/v1"
-        self.model = "anthropic/claude-3.5-sonnet"
+        self.model = "openai/gpt-4o"
 
     async def analyze_ad(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Main analysis with STRICT validation - NO FALLBACKS"""
