@@ -1,550 +1,568 @@
-/**
- * ADLYTICS - Complete Analyzer JavaScript v4.1
- * Full implementation with working renderResults
- */
+// ============================================
+// ADLYTICS v4.1 - COMPLETE FIXED VERSION
+// All tabs working, all data rendering
+// ============================================
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000/api' 
-    : '/api';
-
-let audienceConfig = null;
+// Global variables
 let currentContentMode = 'adCopy';
+let analysisResults = null;
+let currentTab = 'behavior';
 
 // DOM Elements
-let form, analyzeBtn, loadingState, emptyState, resultsContent, filePreview;
+let form, analyzeBtn, resultsSection, loadingIndicator;
+let tabButtons, tabContents;
 
-// Initialize
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 ADLYTICS v4.1 Initializing...');
 
+    // Assign DOM elements
     form = document.getElementById('analyzeForm');
     analyzeBtn = document.getElementById('analyzeBtn');
-    loadingState = document.getElementById('loadingState');
-    emptyState = document.getElementById('emptyState');
-    resultsContent = document.getElementById('resultsContent');
-    filePreview = document.getElementById('filePreview');
+    resultsSection = document.getElementById('resultsSection');
+    loadingIndicator = document.getElementById('loadingIndicator');
 
-    await loadAudienceConfig();
-    await loadPlatforms();
-    await loadIndustries();
+    console.log('DOM Elements assigned:', { 
+        form: !!form, 
+        analyzeBtn: !!analyzeBtn, 
+        resultsSection: !!resultsSection 
+    });
+
+    // Setup event listeners
     setupEventListeners();
-    setupContentTabs();
-    setupTextareaCounters();
+    setupTabs();
 
     console.log('✅ ADLYTICS v4.1 Initialized');
 });
 
-function setupContentTabs() {
-    const tabs = document.querySelectorAll('.content-tab');
-    tabs.forEach(tab => {
+// ============================================
+// TAB SYSTEM (FIXED)
+// ============================================
+function setupTabs() {
+    console.log('Setting up tabs...');
+
+    // Get all tab buttons
+    tabButtons = document.querySelectorAll('.tab-btn');
+    tabContents = document.querySelectorAll('.tab-content');
+
+    console.log(`Found ${tabButtons.length} tab buttons and ${tabContents.length} tab contents`);
+
+    // Add click handlers to tab buttons
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tabId = btn.dataset.tab;
+            console.log('Tab clicked:', tabId);
+            switchTab(tabId);
+        });
+    });
+
+    // Show first tab by default
+    if (tabButtons.length > 0) {
+        switchTab(tabButtons[0].dataset.tab);
+    }
+}
+
+function switchTab(tabId) {
+    console.log('Switching to tab:', tabId);
+    currentTab = tabId;
+
+    // Update button states
+    tabButtons.forEach(btn => {
+        if (btn.dataset.tab === tabId) {
+            btn.classList.add('active');
+            btn.style.background = '#3b82f6';
+            btn.style.color = 'white';
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = '';
+            btn.style.color = '';
+        }
+    });
+
+    // Show/hide content
+    tabContents.forEach(content => {
+        if (content.id === `tab-${tabId}`) {
+            content.style.display = 'block';
+            content.classList.add('active');
+        } else {
+            content.style.display = 'none';
+            content.classList.remove('active');
+        }
+    });
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
+
+    // Form submission
+    if (form) {
+        form.addEventListener('submit', handleSubmit);
+    }
+
+    // Content mode tabs
+    document.querySelectorAll('.content-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
+            const mode = tab.dataset.mode;
+            console.log('Content mode changed to:', mode);
+            currentContentMode = mode;
+
+            // Update active state
+            document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            const target = tab.dataset.target;
-            document.querySelectorAll('.textarea-container').forEach(container => {
-                container.classList.remove('active');
-            });
-            const targetContainer = document.getElementById(target);
-            if (targetContainer) {
-                targetContainer.classList.add('active');
-                currentContentMode = target.replace('Container', '');
-            }
+
+            // Show/hide textareas
+            document.getElementById('adCopyContainer').style.display = mode === 'adCopy' ? 'block' : 'none';
+            document.getElementById('videoScriptContainer').style.display = mode === 'videoScript' ? 'block' : 'none';
         });
     });
 }
 
-function setupTextareaCounters() {
-    const adCopy = document.getElementById('adCopy');
-    const videoScript = document.getElementById('videoScript');
+// ============================================
+// FORM SUBMISSION
+// ============================================
+async function handleSubmit(e) {
+    e.preventDefault();
+    console.log('📝 Form submitted');
 
-    if (adCopy) {
-        adCopy.addEventListener('input', (e) => {
-            const countEl = document.getElementById('adCopyCount');
-            if (countEl) countEl.textContent = `${e.target.value.length} chars`;
-        });
-    }
+    // Show loading
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (analyzeBtn) analyzeBtn.disabled = true;
 
-    if (videoScript) {
-        videoScript.addEventListener('input', (e) => {
-            const countEl = document.getElementById('videoScriptCount');
-            if (countEl) {
-                const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-                const readTime = Math.ceil(words / 3);
-                countEl.textContent = `${words} words (~${readTime}s read)`;
-            }
-        });
-    }
-}
-
-async function loadAudienceConfig() {
     try {
-        const response = await fetch(`${API_BASE_URL}/audience-config`);
-        if (!response.ok) throw new Error('Failed to load audience config');
-        audienceConfig = await response.json();
-        populateAudienceFields();
-    } catch (error) {
-        console.error('Error loading audience config:', error);
-        populateBasicAudienceOptions();
-    }
-}
+        const formData = new FormData(form);
 
-function populateAudienceFields() {
-    if (!audienceConfig) return;
+        // Add content based on mode
+        const adCopy = document.getElementById('adCopy')?.value?.trim() || '';
+        const videoScript = document.getElementById('videoScript')?.value?.trim() || '';
 
-    const countrySelect = document.getElementById('audienceCountry');
-    if (countrySelect && audienceConfig.countries) {
-        countrySelect.innerHTML = '<option value="">Select Country</option>';
-        audienceConfig.countries.forEach(country => {
-            const option = document.createElement('option');
-            option.value = country.code;
-            option.textContent = `${country.name} (${country.currency})`;
-            option.dataset.regions = JSON.stringify(country.regions || []);
-            countrySelect.appendChild(option);
-        });
-    }
+        console.log('Content mode:', currentContentMode);
+        console.log('Ad Copy length:', adCopy.length);
+        console.log('Video Script length:', videoScript.length);
 
-    const ageSelect = document.getElementById('audienceAge');
-    if (ageSelect && audienceConfig.age_brackets) {
-        ageSelect.innerHTML = '<option value="">Select Age</option>';
-        audienceConfig.age_brackets.forEach(age => {
-            const option = document.createElement('option');
-            option.value = age.value;
-            option.textContent = age.label;
-            ageSelect.appendChild(option);
-        });
-    }
-}
-
-function populateBasicAudienceOptions() {
-    const countrySelect = document.getElementById('audienceCountry');
-    if (countrySelect) {
-        countrySelect.innerHTML = '<option value="">Select Country</option>';
-        ['nigeria', 'us', 'uk'].forEach(code => {
-            const option = document.createElement('option');
-            option.value = code;
-            option.textContent = code.toUpperCase();
-            countrySelect.appendChild(option);
-        });
-    }
-}
-
-async function loadPlatforms() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/platforms`);
-        if (!response.ok) return;
-        const data = await response.json();
-        const select = document.getElementById('platform');
-        if (select) {
-            select.innerHTML = '<option value="">Select Platform</option>';
-            data.platforms.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = p.name;
-                select.appendChild(option);
-            });
+        if (currentContentMode === 'adCopy' && adCopy) {
+            formData.set('ad_copy', adCopy);
+        } else if (currentContentMode === 'videoScript' && videoScript) {
+            formData.set('video_script', videoScript);
         }
-    } catch (error) {
-        console.error('Error loading platforms:', error);
-    }
-}
 
-async function loadIndustries() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/industries`);
-        if (!response.ok) return;
-        const data = await response.json();
-        const select = document.getElementById('industry');
-        if (select) {
-            select.innerHTML = '<option value="">Select Industry</option>';
-            data.industries.forEach(i => {
-                const option = document.createElement('option');
-                option.value = i.id;
-                option.textContent = i.name;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading industries:', error);
-    }
-}
-
-function setupEventListeners() {
-    const countrySelect = document.getElementById('audienceCountry');
-    const regionSelect = document.getElementById('audienceRegion');
-
-    if (countrySelect && regionSelect) {
-        countrySelect.addEventListener('change', (e) => {
-            const selected = e.target.selectedOptions[0];
-            if (!selected) return;
-
-            const regions = JSON.parse(selected.dataset.regions || '[]');
-            regionSelect.innerHTML = '<option value="">Select Region</option>';
-
-            if (regions.length > 0) {
-                regionSelect.disabled = false;
-                regions.forEach(region => {
-                    const option = document.createElement('option');
-                    option.value = region.toLowerCase().replace(/\s+/g, '_');
-                    option.textContent = region;
-                    regionSelect.appendChild(option);
-                });
-            } else {
-                regionSelect.disabled = true;
-            }
-        });
-    }
-
-    const imageUpload = document.getElementById('imageUpload');
-    const videoUpload = document.getElementById('videoUpload');
-    let selectedImage = null;
-    let selectedVideo = null;
-
-    if (imageUpload) {
-        imageUpload.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedImage = e.target.files[0];
-                selectedVideo = null;
-                updateFilePreview(selectedImage, 'image');
-            }
-        });
-    }
-
-    if (videoUpload) {
-        videoUpload.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedVideo = e.target.files[0];
-                selectedImage = null;
-                updateFilePreview(selectedVideo, 'video');
-            }
-        });
-    }
-
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleSubmit(selectedImage, selectedVideo);
-        });
-    }
-}
-
-function updateFilePreview(file, type) {
-    if (!filePreview) return;
-    const icon = type === 'image' ? '📷' : '🎥';
-    filePreview.textContent = `${icon} ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`;
-    filePreview.classList.remove('hidden');
-}
-
-function getContentValues() {
-    let adCopy = '';
-    let videoScript = '';
-
-    if (currentContentMode === 'adCopy') {
-        const adCopyEl = document.getElementById('adCopy');
-        adCopy = adCopyEl?.value?.trim() || '';
-    } else if (currentContentMode === 'videoScript') {
-        const videoScriptEl = document.getElementById('videoScript');
-        videoScript = videoScriptEl?.value?.trim() || '';
-    } else if (currentContentMode === 'both') {
-        const adCopyBothEl = document.getElementById('adCopyBoth');
-        const videoScriptBothEl = document.getElementById('videoScriptBoth');
-        adCopy = adCopyBothEl?.value?.trim() || '';
-        videoScript = videoScriptBothEl?.value?.trim() || '';
-    }
-
-    return { adCopy, videoScript };
-}
-
-async function handleSubmit(selectedImage, selectedVideo) {
-    const { adCopy, videoScript } = getContentValues();
-    const platform = document.getElementById('platform')?.value;
-    const country = document.getElementById('audienceCountry')?.value;
-    const age = document.getElementById('audienceAge')?.value;
-    const industry = document.getElementById('industry')?.value;
-
-    if (!adCopy && !videoScript) { 
-        alert('Please enter ad copy or video script'); 
-        return; 
-    }
-    if (!platform) { 
-        alert('Please select platform'); 
-        return; 
-    }
-    if (!country) { 
-        alert('Please select country'); 
-        return; 
-    }
-    if (!age) { 
-        alert('Please select age bracket'); 
-        return; 
-    }
-    if (!industry) { 
-        alert('Please select industry'); 
-        return; 
-    }
-
-    if (emptyState) emptyState.classList.add('hidden');
-    if (resultsContent) resultsContent.classList.add('hidden');
-    if (loadingState) loadingState.classList.remove('hidden');
-    if (analyzeBtn) {
-        analyzeBtn.disabled = true;
-        analyzeBtn.textContent = 'Analyzing...';
-    }
-
-    try {
-        const formData = new FormData();
-
-        if (adCopy) formData.append('ad_copy', adCopy);
-        if (videoScript) formData.append('video_script', videoScript);
-        formData.append('platform', platform);
-        formData.append('audience_country', country);
-        formData.append('audience_age', age);
-        formData.append('industry', industry);
-        formData.append('objective', document.getElementById('objective')?.value || 'conversions');
-
-        const region = document.getElementById('audienceRegion')?.value;
-        if (region) formData.append('audience_region', region);
-
-        if (selectedImage) formData.append('image', selectedImage);
-        if (selectedVideo) formData.append('video', selectedVideo);
-
-        const response = await fetch(`${API_BASE_URL}/analyze`, {
+        // Send request
+        console.log('📤 Sending request to:', '/api/analyze');
+        const response = await fetch('/api/analyze', {
             method: 'POST',
             body: formData
         });
 
+        console.log('📥 Response status:', response.status);
         const data = await response.json();
+        console.log('📥 Response data:', data);
 
-        if (data.success && data.analysis) {
-            renderResults(data);
+        if (data.success) {
+            analysisResults = data.analysis;
+            renderResults(analysisResults);
+            if (resultsSection) resultsSection.style.display = 'block';
         } else {
-            throw new Error(data.error || 'Analysis returned unsuccessful');
+            alert('Analysis failed: ' + (data.error || 'Unknown error'));
         }
+
     } catch (error) {
-        console.error('Analysis error:', error);
-        alert(`Error: ${error.message}`);
-        if (emptyState) emptyState.classList.remove('hidden');
+        console.error('❌ Error:', error);
+        alert('Error: ' + error.message);
     } finally {
-        if (loadingState) loadingState.classList.add('hidden');
-        if (analyzeBtn) {
-            analyzeBtn.disabled = false;
-            analyzeBtn.textContent = 'Analyze Ad →';
-        }
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (analyzeBtn) analyzeBtn.disabled = false;
     }
 }
 
 // ============================================
-// COMPLETE RENDER RESULTS FUNCTION
+// RENDER RESULTS (COMPLETE)
 // ============================================
+function renderResults(analysis) {
+    console.log('🎨 Rendering results:', analysis);
 
-function renderResults(data) {
-    console.log('=== RENDER RESULTS ===', data);
-
-    const analysis = data.analysis;
     if (!analysis) {
-        console.error('No analysis data');
+        console.error('No analysis data to render');
         return;
     }
 
-    // Use improved analysis if available
-    const primary = analysis.improved_ad_analysis || analysis;
+    // Get scores
+    const scores = analysis.scores || {};
+    const overallScore = scores.overall || 0;
 
-    if (resultsContent) {
-        resultsContent.classList.remove('hidden');
+    // Update Overall Score
+    const overallScoreEl = document.getElementById('overallScore');
+    if (overallScoreEl) {
+        overallScoreEl.textContent = overallScore;
+        overallScoreEl.style.color = overallScore >= 70 ? '#22c55e' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
     }
 
-    // 1. OVERALL SCORE
-    const overallScore = primary.scores?.overall || 0;
-    const scoreEl = document.getElementById('overallScore');
-    if (scoreEl) {
-        scoreEl.textContent = overallScore;
-        console.log('Score updated to:', overallScore);
+    // Update Score Circle
+    const scoreCircle = document.getElementById('scoreCircle');
+    if (scoreCircle) {
+        scoreCircle.textContent = overallScore;
+        scoreCircle.style.background = overallScore >= 70 ? '#22c55e' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
     }
 
-    // Score circle animation
-    const circle = document.getElementById('scoreCircle');
-    if (circle) {
-        const circumference = 251.2;
-        const offset = circumference - (overallScore / 100) * circumference;
-        setTimeout(() => {
-            circle.style.strokeDashoffset = offset;
-            circle.style.stroke = overallScore >= 70 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
-        }, 100);
+    // Update Verdict
+    const verdictEl = document.getElementById('verdictBadge');
+    if (verdictEl) {
+        const verdict = analysis.run_decision?.verdict || 'REVIEW';
+        verdictEl.textContent = verdict;
+        verdictEl.className = `verdict-badge ${verdict.toLowerCase()}`;
     }
 
-    // 2. VERDICT BADGE
-    const verdict = primary.behavior_summary?.verdict || 'Unknown';
-    const badge = document.getElementById('verdictBadge');
-    if (badge) {
-        badge.textContent = verdict;
-        badge.className = overallScore >= 70 
-            ? 'px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400'
-            : overallScore >= 50 
-                ? 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400'
-                : 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
+    // Update Launch Readiness
+    const readinessEl = document.getElementById('launchReadiness');
+    if (readinessEl) {
+        const readiness = analysis.run_decision?.readiness || 0;
+        readinessEl.textContent = readiness + '%';
+        readinessEl.style.width = readiness + '%';
     }
 
-    // 3. LAUNCH READINESS & FAILURE RISK
-    const launchReadinessEl = document.getElementById('launchReadiness');
-    if (launchReadinessEl) {
-        launchReadinessEl.textContent = primary.behavior_summary?.launch_readiness || '0%';
+    // Update Failure Risk
+    const riskEl = document.getElementById('failureRisk');
+    if (riskEl) {
+        const risk = analysis.run_decision?.risk || 0;
+        riskEl.textContent = risk + '%';
+        riskEl.style.width = risk + '%';
     }
 
-    const failureRiskEl = document.getElementById('failureRisk');
-    if (failureRiskEl) {
-        failureRiskEl.textContent = primary.behavior_summary?.failure_risk || '0%';
-    }
+    // Update Performance Breakdown
+    renderPerformanceBreakdown(scores);
 
-    // 4. PRIMARY REASON
-    const primaryReasonEl = document.getElementById('primaryReason');
-    if (primaryReasonEl) {
-        primaryReasonEl.textContent = primary.behavior_summary?.primary_reason || '';
-    }
+    // Update Phase Breakdown
+    renderPhaseBreakdown(analysis.phase_breakdown);
 
-    // 5. DETAILED SCORES
-    const scoresGrid = document.getElementById('scoresGrid');
-    if (scoresGrid) {
-        const scores = primary.scores || {};
-        const scoreItems = [
-            { key: 'hook_strength', label: 'Hook Strength' },
-            { key: 'clarity', label: 'Clarity' },
-            { key: 'trust_building', label: 'Trust Building' },
-            { key: 'cta_power', label: 'CTA Power' },
-            { key: 'audience_alignment', label: 'Audience Alignment' }
-        ];
+    // Update Behavior Summary
+    renderBehaviorSummary(analysis.behavior_summary);
 
-        scoresGrid.innerHTML = scoreItems.map(item => {
-            const value = scores[item.key] || 0;
-            const color = value >= 70 ? 'bg-green-500' : value >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-            return `
-                <div class="flex items-center space-x-3 mb-2">
-                    <span class="text-sm text-gray-400 w-32">${item.label}</span>
-                    <div class="flex-1 bg-gray-700 rounded-full h-2">
-                        <div class="${color} h-2 rounded-full transition-all duration-500" style="width: ${value}%"></div>
-                    </div>
-                    <span class="text-sm font-medium w-8">${value}</span>
-                </div>
-            `;
-        }).join('');
-    }
+    // Update Line by Line Analysis
+    renderLineByLine(analysis.line_by_line_analysis);
 
-    // 6. PHASE BREAKDOWN
-    const phaseDiv = document.getElementById('phaseBreakdown');
-    if (phaseDiv) {
-        const phases = primary.phase_breakdown || {};
-        phaseDiv.innerHTML = `
-            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
-                <span class="text-xs text-purple-400 font-medium">0-1s MICRO-STOP</span>
-                <p class="text-sm mt-1">${phases.micro_stop_0_1s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
-                <span class="text-xs text-pink-400 font-medium">1-2s SCROLL STOP</span>
-                <p class="text-sm mt-1">${phases.scroll_stop_1_2s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
-                <span class="text-xs text-blue-400 font-medium">2-5s ATTENTION</span>
-                <p class="text-sm mt-1">${phases.attention_2_5s || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
-                <span class="text-xs text-yellow-400 font-medium">5-15s TRUST EVAL</span>
-                <p class="text-sm mt-1">${phases.trust_evaluation || 'N/A'}</p>
-            </div>
-            <div class="p-3 bg-gray-900/50 rounded-lg">
-                <span class="text-xs text-green-400 font-medium">CLICK + POST-CLICK</span>
-                <p class="text-sm mt-1">${phases.click_and_post_click || 'N/A'}</p>
-            </div>
-        `;
-    }
+    // Update Critical Weaknesses
+    renderWeaknesses(analysis.critical_weaknesses);
 
-    // 7. IMPROVED AD CONTENT
-    const improvedAdData = analysis.improved_ad || {};
-    const improvedContent = document.getElementById('improvedContent');
-    if (improvedContent) {
-        improvedContent.innerHTML = `
-            <div class="space-y-3">
-                <div>
-                    <span class="text-xs text-gray-500">HEADLINE</span>
-                    <p class="font-medium text-white">${improvedAdData.headline || 'N/A'}</p>
-                </div>
-                <div>
-                    <span class="text-xs text-gray-500">BODY COPY</span>
-                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.body_copy || 'N/A'}</p>
-                </div>
-                <div>
-                    <span class="text-xs text-gray-500">CTA</span>
-                    <p class="font-medium text-purple-400">${improvedAdData.cta || 'N/A'}</p>
-                </div>
-                ${improvedAdData.video_script_version ? `
-                <div>
-                    <span class="text-xs text-gray-500">VIDEO SCRIPT</span>
-                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.video_script_version}</p>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
+    // Update Improvements
+    renderImprovements(analysis.improvements);
 
-    // 8. AD VARIANTS
-    const variantsDiv = document.getElementById('adVariants');
-    if (variantsDiv) {
-        const variants = analysis.ad_variants || [];
-        const winnerId = analysis.winner_prediction?.best_variant_id;
+    // Update Improved Ad
+    renderImprovedAd(analysis.improved_ad);
 
-        if (variants.length > 0) {
-            variantsDiv.innerHTML = variants.map(v => `
-                <div class="p-4 bg-gray-900/50 rounded-xl border ${v.id === winnerId ? 'border-green-500/50' : 'border-white/5'} mb-3">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="font-semibold ${v.id === winnerId ? 'text-green-400' : 'text-white'}">${v.angle}</span>
-                        <span class="text-lg font-bold ${v.predicted_score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${v.predicted_score}</span>
-                    </div>
-                    <p class="text-sm text-gray-400 mb-2">${v.hook}</p>
-                    <p class="text-xs text-gray-500">${v.roi_potential}</p>
-                    ${v.id === winnerId ? '<span class="text-xs text-green-400">🏆 Winner</span>' : ''}
-                </div>
-            `).join('');
-        } else {
-            variantsDiv.innerHTML = '<p class="text-gray-500">No variants generated</p>';
-        }
-    }
+    // Update Ad Variants
+    renderAdVariants(analysis.ad_variants);
 
-    // 9. WINNER PREDICTION
-    const winnerDiv = document.getElementById('winnerPrediction');
-    if (winnerDiv) {
-        const winner = analysis.winner_prediction || {};
-        winnerDiv.innerHTML = `
-            <div class="p-4 bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl border border-green-500/20">
-                <div class="flex items-center space-x-2 mb-2">
-                    <span class="text-2xl">🏆</span>
-                    <h4 class="font-semibold text-green-400">Winner Prediction</h4>
-                </div>
-                <p class="text-sm text-gray-300 mb-2">${winner.reason || 'No prediction available'}</p>
-                <p class="text-xs text-gray-400">Best Variant: #${winner.best_variant_id || 'N/A'}</p>
-            </div>
-        `;
-    }
+    // Update Winner Prediction
+    renderWinnerPrediction(analysis.winner_prediction);
 
-    // 10. ROI ANALYSIS
-    const roiDiv = document.getElementById('roiAnalysis');
-    if (roiDiv) {
-        const roi = primary.roi_analysis || {};
-        roiDiv.innerHTML = `
-            <div class="grid grid-cols-3 gap-4 mb-4">
-                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">ROI Potential</span>
-                    <p class="text-lg font-bold ${(roi.roi_potential || '').includes('High') ? 'text-green-400' : 'text-yellow-400'}">${roi.roi_potential || 'Unknown'}</p>
-                </div>
-                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">Break-Even</span>
-                    <p class="text-lg font-bold text-blue-400">${roi.break_even_probability || '0%'}</p>
-                </div>
-                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
-                    <span class="text-xs text-gray-500">Risk</span>
-                    <p class="text-lg font-bold ${(roi.risk_classification || '') === 'High' ? 'text-red-400' : 'text-green-400'}">${roi.risk_classification || 'Unknown'}</p>
-                </div>
-            </div>
-        `;
-    }
+    // Update Persona Reactions
+    renderPersonaReactions(analysis.persona_reactions);
 
-    console.log('=== RENDER COMPLETE ===');
+    // Update ROI Analysis
+    renderROIAnalysis(analysis.roi_analysis);
+
+    // Update Video Execution
+    renderVideoExecution(analysis.video_execution_analysis);
+
+    console.log('✅ Results rendered');
 }
 
-console.log('ADLYTICS v4.1 Complete Analyzer loaded');
+// ============================================
+// RENDER HELPERS
+// ============================================
+function renderPerformanceBreakdown(scores) {
+    const container = document.getElementById('performanceBreakdown');
+    if (!container) return;
+
+    const metrics = [
+        { key: 'hook_strength', label: 'Hook Strength', weight: '25%' },
+        { key: 'clarity', label: 'Clarity', weight: '20%' },
+        { key: 'trust_building', label: 'Trust Building', weight: '20%' },
+        { key: 'cta_power', label: 'CTA Power', weight: '15%' },
+        { key: 'audience_alignment', label: 'Audience Alignment', weight: '20%' }
+    ];
+
+    container.innerHTML = metrics.map(m => {
+        const score = scores[m.key] || 0;
+        const color = score >= 70 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
+        return `
+            <div class="metric-row">
+                <div class="metric-label">${m.label} <span class="weight">(${m.weight})</span></div>
+                <div class="metric-bar-container">
+                    <div class="metric-bar" style="width: ${score}%; background: ${color};"></div>
+                </div>
+                <div class="metric-score" style="color: ${color};">${score}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPhaseBreakdown(phases) {
+    const container = document.getElementById('phaseBreakdown');
+    if (!container || !phases) return;
+
+    const phaseData = phases.phases || [];
+    container.innerHTML = phaseData.map((phase, idx) => `
+        <div class="phase-item">
+            <div class="phase-number">${idx + 1}</div>
+            <div class="phase-content">
+                <div class="phase-name">${phase.name}</div>
+                <div class="phase-score">${phase.score}/100</div>
+                <div class="phase-bar">
+                    <div class="phase-fill" style="width: ${phase.score}%"></div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderBehaviorSummary(summary) {
+    const container = document.getElementById('behaviorSummary');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="summary-section">
+            <h4>Attention Capture</h4>
+            <p>${summary?.attention_capture || 'N/A'}</p>
+        </div>
+        <div class="summary-section">
+            <h4>Interest Maintenance</h4>
+            <p>${summary?.interest_maintenance || 'N/A'}</p>
+        </div>
+        <div class="summary-section">
+            <h4>Desire Generation</h4>
+            <p>${summary?.desire_generation || 'N/A'}</p>
+        </div>
+        <div class="summary-section">
+            <h4>Action Motivation</h4>
+            <p>${summary?.action_motivation || 'N/A'}</p>
+        </div>
+    `;
+}
+
+function renderLineByLine(lines) {
+    const container = document.getElementById('lineByLineAnalysis');
+    if (!container || !lines) {
+        if (container) container.innerHTML = '<p>No line-by-line analysis available.</p>';
+        return;
+    }
+
+    container.innerHTML = lines.map(line => `
+        <div class="line-item">
+            <div class="line-text">"${line.text}"</div>
+            <div class="line-analysis">
+                <span class="line-score">Score: ${line.score}/100</span>
+                <span class="line-issue">${line.issue || 'No issues'}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderWeaknesses(weaknesses) {
+    const container = document.getElementById('criticalWeaknesses');
+    if (!container) return;
+
+    if (!weaknesses || weaknesses.length === 0) {
+        container.innerHTML = '<p class="no-issues">✅ No critical weaknesses found!</p>';
+        return;
+    }
+
+    container.innerHTML = weaknesses.map(w => `
+        <div class="weakness-item">
+            <div class="weakness-severity severity-${w.severity}">${w.severity}</div>
+            <div class="weakness-content">
+                <div class="weakness-title">${w.title}</div>
+                <div class="weakness-description">${w.description}</div>
+                <div class="weakness-fix">💡 Fix: ${w.fix}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderImprovements(improvements) {
+    const container = document.getElementById('improvementsList');
+    if (!container) return;
+
+    if (!improvements || improvements.length === 0) {
+        container.innerHTML = '<p>No specific improvements suggested.</p>';
+        return;
+    }
+
+    container.innerHTML = improvements.map((imp, idx) => `
+        <div class="improvement-item">
+            <div class="improvement-number">${idx + 1}</div>
+            <div class="improvement-text">${imp}</div>
+        </div>
+    `).join('');
+}
+
+function renderImprovedAd(improvedAd) {
+    const container = document.getElementById('improvedAdContent');
+    if (!container || !improvedAd) {
+        if (container) container.innerHTML = '<p>No improved ad available.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="improved-section">
+            <label>Headline/Hook:</label>
+            <div class="improved-text">${improvedAd.headline || 'N/A'}</div>
+        </div>
+        <div class="improved-section">
+            <label>Body Copy:</label>
+            <div class="improved-text">${improvedAd.body_copy || 'N/A'}</div>
+        </div>
+        <div class="improved-section">
+            <label>CTA:</label>
+            <div class="improved-text">${improvedAd.cta || 'N/A'}</div>
+        </div>
+        <div class="improved-meta">
+            <span class="improved-score">Predicted Score: ${improvedAd.predicted_score || 0}/100</span>
+            <span class="improved-roi">ROI: ${improvedAd.roi_potential || 'N/A'}</span>
+        </div>
+        <button class="copy-btn" onclick="copyImprovedAd()">📋 Copy Full Ad</button>
+    `;
+}
+
+function renderAdVariants(variants) {
+    const container = document.getElementById('adVariantsList');
+    if (!container || !variants) {
+        if (container) container.innerHTML = '<p>No variants generated.</p>';
+        return;
+    }
+
+    container.innerHTML = variants.map((v, idx) => `
+        <div class="variant-card ${idx === 0 ? 'best' : ''}">
+            <div class="variant-header">
+                <span class="variant-number">Variant #${v.id}</span>
+                <span class="variant-angle">${v.angle}</span>
+                <span class="variant-score">${v.predicted_score}/100</span>
+            </div>
+            <div class="variant-hook">${v.hook}</div>
+            <div class="variant-copy">${v.copy}</div>
+            <div class="variant-roi">ROI Potential: ${v.roi_potential}</div>
+            <div class="variant-reason">${v.reason}</div>
+            ${idx === 0 ? '<div class="variant-badge">🏆 BEST</div>' : ''}
+        </div>
+    `).join('');
+}
+
+function renderWinnerPrediction(prediction) {
+    const container = document.getElementById('winnerPrediction');
+    if (!container || !prediction) {
+        if (container) container.innerHTML = '<p>No winner prediction available.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="winner-card">
+            <div class="winner-confidence">${prediction.confidence} Confidence</div>
+            <div class="winner-reason">${prediction.reason}</div>
+            <div class="winner-expected">Expected Lift: ${prediction.expected_lift || 'N/A'}</div>
+        </div>
+    `;
+}
+
+function renderPersonaReactions(personas) {
+    const container = document.getElementById('personaReactions');
+    if (!container || !personas) {
+        if (container) container.innerHTML = '<p>No persona data available.</p>';
+        return;
+    }
+
+    container.innerHTML = personas.map(p => `
+        <div class="persona-card">
+            <div class="persona-name">${p.name}</div>
+            <div class="persona-reaction ${p.reaction.toLowerCase()}">${p.reaction}</div>
+            <div class="persona-thought">"${p.thought}"</div>
+        </div>
+    `).join('');
+}
+
+function renderROIAnalysis(roi) {
+    const container = document.getElementById('roiAnalysis');
+    if (!container || !roi) {
+        if (container) container.innerHTML = '<p>No ROI analysis available.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="roi-grid">
+            <div class="roi-item">
+                <label>Expected ROAS:</label>
+                <value>${roi.roas || 'N/A'}</value>
+            </div>
+            <div class="roi-item">
+                <label>Break-even:</label>
+                <value>${roi.break_even || 'N/A'}</value>
+            </div>
+            <div class="roi-item">
+                <label>Risk Level:</label>
+                <value class="risk-${(roi.risk || '').toLowerCase()}">${roi.risk || 'N/A'}</value>
+            </div>
+            <div class="roi-item">
+                <label>Confidence:</label>
+                <value>${roi.confidence || 'N/A'}</value>
+            </div>
+        </div>
+    `;
+}
+
+function renderVideoExecution(videoAnalysis) {
+    const container = document.getElementById('videoExecution');
+    if (!container) return;
+
+    if (!videoAnalysis) {
+        container.innerHTML = '<p>No video execution analysis available.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="video-analysis">
+            <div class="video-section">
+                <h4>Hook Delivery</h4>
+                <p>${videoAnalysis.hook_delivery || 'N/A'}</p>
+            </div>
+            <div class="video-section">
+                <h4>Speech Flow</h4>
+                <p>${videoAnalysis.speech_flow || 'N/A'}</p>
+            </div>
+            <div class="video-section">
+                <h4>Visual Dependency</h4>
+                <p>${videoAnalysis.visual_dependency || 'N/A'}</p>
+            </div>
+            <div class="video-section">
+                <h4>Delivery Risk</h4>
+                <p>${videoAnalysis.delivery_risk || 'N/A'}</p>
+            </div>
+            <div class="video-section">
+                <h4>Format Recommendation</h4>
+                <p>${videoAnalysis.format_recommendation || 'N/A'}</p>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function copyImprovedAd() {
+    if (!analysisResults?.improved_ad) return;
+
+    const ad = analysisResults.improved_ad;
+    const text = `${ad.headline}\n\n${ad.body_copy}\n\n${ad.cta}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Ad copied to clipboard!');
+    });
+}
+
+function copyVariant(variantId) {
+    const variant = analysisResults?.ad_variants?.find(v => v.id === variantId);
+    if (!variant) return;
+
+    navigator.clipboard.writeText(variant.copy).then(() => {
+        alert(`✅ Variant ${variantId} copied!`);
+    });
+}
