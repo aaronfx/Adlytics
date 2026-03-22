@@ -1,13 +1,12 @@
 /**
- * ADLYTICS - Analyzer JavaScript v4.1 FIXED VIDEO SCRIPT
- * Properly captures content from all tabs
+ * ADLYTICS - Complete Analyzer JavaScript v4.1
+ * Full implementation with working renderResults
  */
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:8000/api' 
     : '/api';
 
-// Global audience config
 let audienceConfig = null;
 let currentContentMode = 'adCopy';
 
@@ -18,7 +17,6 @@ let form, analyzeBtn, loadingState, emptyState, resultsContent, filePreview;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 ADLYTICS v4.1 Initializing...');
 
-    // Assign DOM elements
     form = document.getElementById('analyzeForm');
     analyzeBtn = document.getElementById('analyzeBtn');
     loadingState = document.getElementById('loadingState');
@@ -36,41 +34,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ ADLYTICS v4.1 Initialized');
 });
 
-// Setup content type tabs - FIXED
 function setupContentTabs() {
     const tabs = document.querySelectorAll('.content-tab');
-    console.log('Setting up content tabs:', tabs.length, 'tabs found');
-
     tabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            console.log('Content tab clicked:', tab.dataset.target);
-
-            // Remove active from all tabs
+        tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-
-            // Show corresponding content
             const target = tab.dataset.target;
             document.querySelectorAll('.textarea-container').forEach(container => {
                 container.classList.remove('active');
             });
-
             const targetContainer = document.getElementById(target);
             if (targetContainer) {
                 targetContainer.classList.add('active');
                 currentContentMode = target.replace('Container', '');
-                console.log('Content mode changed to:', currentContentMode);
             }
         });
     });
 }
 
-// Setup textarea counters
 function setupTextareaCounters() {
     const adCopy = document.getElementById('adCopy');
     const videoScript = document.getElementById('videoScript');
-    const adCopyBoth = document.getElementById('adCopyBoth');
-    const videoScriptBoth = document.getElementById('videoScriptBoth');
 
     if (adCopy) {
         adCopy.addEventListener('input', (e) => {
@@ -89,55 +74,8 @@ function setupTextareaCounters() {
             }
         });
     }
-
-    if (adCopyBoth) {
-        adCopyBoth.addEventListener('input', (e) => {
-            const countEl = document.getElementById('adCopyBothCount');
-            if (countEl) countEl.textContent = `${e.target.value.length} chars`;
-        });
-    }
-
-    if (videoScriptBoth) {
-        videoScriptBoth.addEventListener('input', (e) => {
-            const countEl = document.getElementById('videoScriptBothCount');
-            if (countEl) {
-                const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-                const readTime = Math.ceil(words / 3);
-                countEl.textContent = `${words} words (~${readTime}s read)`;
-            }
-        });
-    }
 }
 
-// FIXED: Get content values based on current mode
-function getContentValues() {
-    let adCopy = '';
-    let videoScript = '';
-
-    console.log('Getting content values for mode:', currentContentMode);
-
-    if (currentContentMode === 'adCopy') {
-        const adCopyEl = document.getElementById('adCopy');
-        adCopy = adCopyEl?.value?.trim() || '';
-        console.log('Ad Copy mode - value:', adCopy.substring(0, 50));
-    } 
-    else if (currentContentMode === 'videoScript') {
-        const videoScriptEl = document.getElementById('videoScript');
-        videoScript = videoScriptEl?.value?.trim() || '';
-        console.log('Video Script mode - value:', videoScript.substring(0, 50));
-    } 
-    else if (currentContentMode === 'both') {
-        const adCopyBothEl = document.getElementById('adCopyBoth');
-        const videoScriptBothEl = document.getElementById('videoScriptBoth');
-        adCopy = adCopyBothEl?.value?.trim() || '';
-        videoScript = videoScriptBothEl?.value?.trim() || '';
-        console.log('Both mode - adCopy:', adCopy.substring(0, 50), 'videoScript:', videoScript.substring(0, 50));
-    }
-
-    return { adCopy, videoScript };
-}
-
-// Load audience config
 async function loadAudienceConfig() {
     try {
         const response = await fetch(`${API_BASE_URL}/audience-config`);
@@ -150,7 +88,6 @@ async function loadAudienceConfig() {
     }
 }
 
-// Populate audience fields
 function populateAudienceFields() {
     if (!audienceConfig) return;
 
@@ -178,7 +115,6 @@ function populateAudienceFields() {
     }
 }
 
-// Fallback audience options
 function populateBasicAudienceOptions() {
     const countrySelect = document.getElementById('audienceCountry');
     if (countrySelect) {
@@ -192,7 +128,6 @@ function populateBasicAudienceOptions() {
     }
 }
 
-// Load platforms
 async function loadPlatforms() {
     try {
         const response = await fetch(`${API_BASE_URL}/platforms`);
@@ -213,7 +148,6 @@ async function loadPlatforms() {
     }
 }
 
-// Load industries
 async function loadIndustries() {
     try {
         const response = await fetch(`${API_BASE_URL}/industries`);
@@ -234,7 +168,6 @@ async function loadIndustries() {
     }
 }
 
-// Setup event listeners
 function setupEventListeners() {
     const countrySelect = document.getElementById('audienceCountry');
     const regionSelect = document.getElementById('audienceRegion');
@@ -261,7 +194,6 @@ function setupEventListeners() {
         });
     }
 
-    // File uploads
     const imageUpload = document.getElementById('imageUpload');
     const videoUpload = document.getElementById('videoUpload');
     let selectedImage = null;
@@ -287,7 +219,6 @@ function setupEventListeners() {
         });
     }
 
-    // Form submission
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -303,7 +234,26 @@ function updateFilePreview(file, type) {
     filePreview.classList.remove('hidden');
 }
 
-// FIXED handleSubmit with better validation
+function getContentValues() {
+    let adCopy = '';
+    let videoScript = '';
+
+    if (currentContentMode === 'adCopy') {
+        const adCopyEl = document.getElementById('adCopy');
+        adCopy = adCopyEl?.value?.trim() || '';
+    } else if (currentContentMode === 'videoScript') {
+        const videoScriptEl = document.getElementById('videoScript');
+        videoScript = videoScriptEl?.value?.trim() || '';
+    } else if (currentContentMode === 'both') {
+        const adCopyBothEl = document.getElementById('adCopyBoth');
+        const videoScriptBothEl = document.getElementById('videoScriptBoth');
+        adCopy = adCopyBothEl?.value?.trim() || '';
+        videoScript = videoScriptBothEl?.value?.trim() || '';
+    }
+
+    return { adCopy, videoScript };
+}
+
 async function handleSubmit(selectedImage, selectedVideo) {
     const { adCopy, videoScript } = getContentValues();
     const platform = document.getElementById('platform')?.value;
@@ -311,14 +261,6 @@ async function handleSubmit(selectedImage, selectedVideo) {
     const age = document.getElementById('audienceAge')?.value;
     const industry = document.getElementById('industry')?.value;
 
-    console.log('Submitting:', { 
-        currentContentMode, 
-        adCopy: adCopy.substring(0, 50), 
-        videoScript: videoScript.substring(0, 50),
-        platform, country, age, industry 
-    });
-
-    // Validation
     if (!adCopy && !videoScript) { 
         alert('Please enter ad copy or video script'); 
         return; 
@@ -340,7 +282,6 @@ async function handleSubmit(selectedImage, selectedVideo) {
         return; 
     }
 
-    // Show loading
     if (emptyState) emptyState.classList.add('hidden');
     if (resultsContent) resultsContent.classList.add('hidden');
     if (loadingState) loadingState.classList.remove('hidden');
@@ -352,44 +293,34 @@ async function handleSubmit(selectedImage, selectedVideo) {
     try {
         const formData = new FormData();
 
-        // FIXED: Only append if has value
         if (adCopy) formData.append('ad_copy', adCopy);
         if (videoScript) formData.append('video_script', videoScript);
-
         formData.append('platform', platform);
         formData.append('audience_country', country);
         formData.append('audience_age', age);
         formData.append('industry', industry);
         formData.append('objective', document.getElementById('objective')?.value || 'conversions');
 
-        // Optional fields
         const region = document.getElementById('audienceRegion')?.value;
         if (region) formData.append('audience_region', region);
 
         if (selectedImage) formData.append('image', selectedImage);
         if (selectedVideo) formData.append('video', selectedVideo);
 
-        console.log('📤 Sending request with FormData...');
-
         const response = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             body: formData
         });
 
-        console.log('📥 Response status:', response.status);
-
         const data = await response.json();
-        console.log('📥 Response data:', data);
 
         if (data.success && data.analysis) {
-            console.log('✅ Analysis successful');
             renderResults(data);
         } else {
-            console.error('❌ Analysis failed:', data.error, data.detail);
-            throw new Error(data.error || data.detail || 'Analysis returned unsuccessful');
+            throw new Error(data.error || 'Analysis returned unsuccessful');
         }
     } catch (error) {
-        console.error('💥 Analysis error:', error);
+        console.error('Analysis error:', error);
         alert(`Error: ${error.message}`);
         if (emptyState) emptyState.classList.remove('hidden');
     } finally {
@@ -401,11 +332,219 @@ async function handleSubmit(selectedImage, selectedVideo) {
     }
 }
 
+// ============================================
+// COMPLETE RENDER RESULTS FUNCTION
+// ============================================
+
 function renderResults(data) {
-    console.log('Rendering results:', data);
+    console.log('=== RENDER RESULTS ===', data);
+
+    const analysis = data.analysis;
+    if (!analysis) {
+        console.error('No analysis data');
+        return;
+    }
+
+    // Use improved analysis if available
+    const primary = analysis.improved_ad_analysis || analysis;
+
     if (resultsContent) {
         resultsContent.classList.remove('hidden');
     }
+
+    // 1. OVERALL SCORE
+    const overallScore = primary.scores?.overall || 0;
+    const scoreEl = document.getElementById('overallScore');
+    if (scoreEl) {
+        scoreEl.textContent = overallScore;
+        console.log('Score updated to:', overallScore);
+    }
+
+    // Score circle animation
+    const circle = document.getElementById('scoreCircle');
+    if (circle) {
+        const circumference = 251.2;
+        const offset = circumference - (overallScore / 100) * circumference;
+        setTimeout(() => {
+            circle.style.strokeDashoffset = offset;
+            circle.style.stroke = overallScore >= 70 ? '#10b981' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
+        }, 100);
+    }
+
+    // 2. VERDICT BADGE
+    const verdict = primary.behavior_summary?.verdict || 'Unknown';
+    const badge = document.getElementById('verdictBadge');
+    if (badge) {
+        badge.textContent = verdict;
+        badge.className = overallScore >= 70 
+            ? 'px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400'
+            : overallScore >= 50 
+                ? 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400'
+                : 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
+    }
+
+    // 3. LAUNCH READINESS & FAILURE RISK
+    const launchReadinessEl = document.getElementById('launchReadiness');
+    if (launchReadinessEl) {
+        launchReadinessEl.textContent = primary.behavior_summary?.launch_readiness || '0%';
+    }
+
+    const failureRiskEl = document.getElementById('failureRisk');
+    if (failureRiskEl) {
+        failureRiskEl.textContent = primary.behavior_summary?.failure_risk || '0%';
+    }
+
+    // 4. PRIMARY REASON
+    const primaryReasonEl = document.getElementById('primaryReason');
+    if (primaryReasonEl) {
+        primaryReasonEl.textContent = primary.behavior_summary?.primary_reason || '';
+    }
+
+    // 5. DETAILED SCORES
+    const scoresGrid = document.getElementById('scoresGrid');
+    if (scoresGrid) {
+        const scores = primary.scores || {};
+        const scoreItems = [
+            { key: 'hook_strength', label: 'Hook Strength' },
+            { key: 'clarity', label: 'Clarity' },
+            { key: 'trust_building', label: 'Trust Building' },
+            { key: 'cta_power', label: 'CTA Power' },
+            { key: 'audience_alignment', label: 'Audience Alignment' }
+        ];
+
+        scoresGrid.innerHTML = scoreItems.map(item => {
+            const value = scores[item.key] || 0;
+            const color = value >= 70 ? 'bg-green-500' : value >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+            return `
+                <div class="flex items-center space-x-3 mb-2">
+                    <span class="text-sm text-gray-400 w-32">${item.label}</span>
+                    <div class="flex-1 bg-gray-700 rounded-full h-2">
+                        <div class="${color} h-2 rounded-full transition-all duration-500" style="width: ${value}%"></div>
+                    </div>
+                    <span class="text-sm font-medium w-8">${value}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 6. PHASE BREAKDOWN
+    const phaseDiv = document.getElementById('phaseBreakdown');
+    if (phaseDiv) {
+        const phases = primary.phase_breakdown || {};
+        phaseDiv.innerHTML = `
+            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
+                <span class="text-xs text-purple-400 font-medium">0-1s MICRO-STOP</span>
+                <p class="text-sm mt-1">${phases.micro_stop_0_1s || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
+                <span class="text-xs text-pink-400 font-medium">1-2s SCROLL STOP</span>
+                <p class="text-sm mt-1">${phases.scroll_stop_1_2s || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
+                <span class="text-xs text-blue-400 font-medium">2-5s ATTENTION</span>
+                <p class="text-sm mt-1">${phases.attention_2_5s || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-900/50 rounded-lg mb-2">
+                <span class="text-xs text-yellow-400 font-medium">5-15s TRUST EVAL</span>
+                <p class="text-sm mt-1">${phases.trust_evaluation || 'N/A'}</p>
+            </div>
+            <div class="p-3 bg-gray-900/50 rounded-lg">
+                <span class="text-xs text-green-400 font-medium">CLICK + POST-CLICK</span>
+                <p class="text-sm mt-1">${phases.click_and_post_click || 'N/A'}</p>
+            </div>
+        `;
+    }
+
+    // 7. IMPROVED AD CONTENT
+    const improvedAdData = analysis.improved_ad || {};
+    const improvedContent = document.getElementById('improvedContent');
+    if (improvedContent) {
+        improvedContent.innerHTML = `
+            <div class="space-y-3">
+                <div>
+                    <span class="text-xs text-gray-500">HEADLINE</span>
+                    <p class="font-medium text-white">${improvedAdData.headline || 'N/A'}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500">BODY COPY</span>
+                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.body_copy || 'N/A'}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500">CTA</span>
+                    <p class="font-medium text-purple-400">${improvedAdData.cta || 'N/A'}</p>
+                </div>
+                ${improvedAdData.video_script_version ? `
+                <div>
+                    <span class="text-xs text-gray-500">VIDEO SCRIPT</span>
+                    <p class="text-sm text-gray-300 whitespace-pre-wrap">${improvedAdData.video_script_version}</p>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // 8. AD VARIANTS
+    const variantsDiv = document.getElementById('adVariants');
+    if (variantsDiv) {
+        const variants = analysis.ad_variants || [];
+        const winnerId = analysis.winner_prediction?.best_variant_id;
+
+        if (variants.length > 0) {
+            variantsDiv.innerHTML = variants.map(v => `
+                <div class="p-4 bg-gray-900/50 rounded-xl border ${v.id === winnerId ? 'border-green-500/50' : 'border-white/5'} mb-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold ${v.id === winnerId ? 'text-green-400' : 'text-white'}">${v.angle}</span>
+                        <span class="text-lg font-bold ${v.predicted_score >= 70 ? 'text-green-400' : 'text-yellow-400'}">${v.predicted_score}</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mb-2">${v.hook}</p>
+                    <p class="text-xs text-gray-500">${v.roi_potential}</p>
+                    ${v.id === winnerId ? '<span class="text-xs text-green-400">🏆 Winner</span>' : ''}
+                </div>
+            `).join('');
+        } else {
+            variantsDiv.innerHTML = '<p class="text-gray-500">No variants generated</p>';
+        }
+    }
+
+    // 9. WINNER PREDICTION
+    const winnerDiv = document.getElementById('winnerPrediction');
+    if (winnerDiv) {
+        const winner = analysis.winner_prediction || {};
+        winnerDiv.innerHTML = `
+            <div class="p-4 bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl border border-green-500/20">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-2xl">🏆</span>
+                    <h4 class="font-semibold text-green-400">Winner Prediction</h4>
+                </div>
+                <p class="text-sm text-gray-300 mb-2">${winner.reason || 'No prediction available'}</p>
+                <p class="text-xs text-gray-400">Best Variant: #${winner.best_variant_id || 'N/A'}</p>
+            </div>
+        `;
+    }
+
+    // 10. ROI ANALYSIS
+    const roiDiv = document.getElementById('roiAnalysis');
+    if (roiDiv) {
+        const roi = primary.roi_analysis || {};
+        roiDiv.innerHTML = `
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
+                    <span class="text-xs text-gray-500">ROI Potential</span>
+                    <p class="text-lg font-bold ${(roi.roi_potential || '').includes('High') ? 'text-green-400' : 'text-yellow-400'}">${roi.roi_potential || 'Unknown'}</p>
+                </div>
+                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
+                    <span class="text-xs text-gray-500">Break-Even</span>
+                    <p class="text-lg font-bold text-blue-400">${roi.break_even_probability || '0%'}</p>
+                </div>
+                <div class="p-3 bg-gray-900/50 rounded-xl text-center">
+                    <span class="text-xs text-gray-500">Risk</span>
+                    <p class="text-lg font-bold ${(roi.risk_classification || '') === 'High' ? 'text-red-400' : 'text-green-400'}">${roi.risk_classification || 'Unknown'}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    console.log('=== RENDER COMPLETE ===');
 }
 
-console.log('ADLYTICS v4.1 FIXED VIDEO SCRIPT loaded');
+console.log('ADLYTICS v4.1 Complete Analyzer loaded');
