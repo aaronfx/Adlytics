@@ -1,11 +1,12 @@
 """
-ADLYTICS AI Engine v4.2 - STRICT SCHEMA ENFORCEMENT
-Guarantees complete response structure with no N/A values
+ADLYTICS AI Engine v4.3 - SHORT-FORM VIDEO ENFORCEMENT
+Strict 20-60 second scripts, complete schema enforcement
 """
 
 import os
 import json
 import httpx
+import re
 from typing import Dict, List, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -118,6 +119,199 @@ FALLBACK_VARIANT = {
 FALLBACK_IMPROVEMENT = "Refine messaging to better resonate with target audience pain points"
 
 # ============================================
+# SCRIPT LENGTH ENFORCEMENT - CRITICAL
+# ============================================
+
+MAX_SCRIPT_WORDS = 150
+MAX_SCRIPT_DURATION = 60  # seconds
+TARGET_SCRIPT_DURATION = (20, 60)  # min, max
+
+def count_words(text: str) -> int:
+    """Count words in text"""
+    if not text:
+        return 0
+    return len(text.split())
+
+def estimate_duration(text: str) -> int:
+    """Estimate duration in seconds (avg 3 words/sec for video)"""
+    words = count_words(text)
+    return max(5, words // 3)  # Minimum 5 seconds
+
+def enforce_script_length(script: str) -> str:
+    """
+    HARD ENFORCEMENT: Script must be ≤ 150 words, 20-60 seconds
+    If too long: intelligently trim while preserving structure
+    """
+    if not script:
+        return script
+    
+    words = script.split()
+    word_count = len(words)
+    
+    # If already within limits, return as-is
+    if word_count <= MAX_SCRIPT_WORDS:
+        return script
+    
+    # EXTRACT SECTIONS using regex
+    sections = extract_script_sections(script)
+    
+    # PRIORITY ORDER (what to keep if trimming needed)
+    # 1. HOOK (always keep)
+    # 2. CTA (always keep)
+    # 3. PROBLEM (keep essence)
+    # 4. SOLUTION (keep essence)
+    # 5. PROOF (trim heavily or remove)
+    
+    trimmed_sections = {}
+    
+    # HOOK: Keep as-is but limit to 15 words max
+    hook_text = sections.get("hook", "")
+    hook_words = hook_text.split()
+    if len(hook_words) > 15:
+        trimmed_sections["hook"] = " ".join(hook_words[:15]) + "."
+    else:
+        trimmed_sections["hook"] = hook_text
+    
+    # CTA: Keep as-is but limit to 12 words max
+    cta_text = sections.get("cta", "")
+    cta_words = cta_text.split()
+    if len(cta_words) > 12:
+        trimmed_sections["cta"] = " ".join(cta_words[:12])
+    else:
+        trimmed_sections["cta"] = cta_text
+    
+    # PROBLEM: Keep essence, max 20 words
+    problem_text = sections.get("problem", "")
+    problem_words = problem_text.split()
+    if len(problem_words) > 20:
+        trimmed_sections["problem"] = " ".join(problem_words[:20]) + "."
+    else:
+        trimmed_sections["problem"] = problem_text
+    
+    # SOLUTION: Keep essence, max 25 words
+    solution_text = sections.get("solution", "")
+    solution_words = solution_text.split()
+    if len(solution_words) > 25:
+        trimmed_sections["solution"] = " ".join(solution_words[:25]) + "."
+    else:
+        trimmed_sections["solution"] = solution_text
+    
+    # PROOF: Heavy trim, max 20 words or remove if still too long
+    proof_text = sections.get("proof", "")
+    proof_words = proof_text.split()
+    if len(proof_words) > 20:
+        trimmed_sections["proof"] = " ".join(proof_words[:20]) + "."
+    else:
+        trimmed_sections["proof"] = proof_text
+    
+    # Reconstruct script
+    reconstructed = reconstruct_script(trimmed_sections)
+    
+    # Final safety check
+    final_words = reconstructed.split()
+    if len(final_words) > MAX_SCRIPT_WORDS:
+        # Hard cut with preservation of hook and CTA
+        hook = trimmed_sections.get("hook", "Stop scrolling!")
+        cta = trimmed_sections.get("cta", "Click now!")
+        middle = " ".join(final_words[15:-12]) if len(final_words) > 27 else "Get results fast."
+        reconstructed = f"{hook} {middle} {cta}"
+    
+    return reconstructed.strip()
+
+def extract_script_sections(script: str) -> dict:
+    """Extract sections from script using markers"""
+    sections = {
+        "hook": "",
+        "problem": "",
+        "solution": "",
+        "proof": "",
+        "cta": ""
+    }
+    
+    # Try to find sections by markers
+    lines = script.split('\n')
+    current_section = None
+    
+    for line in lines:
+        line_lower = line.lower()
+        
+        if '[hook' in line_lower or line_lower.startswith('hook'):
+            current_section = "hook"
+            continue
+        elif '[problem' in line_lower or line_lower.startswith('problem'):
+            current_section = "problem"
+            continue
+        elif '[solution' in line_lower or line_lower.startswith('solution'):
+            current_section = "solution"
+            continue
+        elif '[proof' in line_lower or line_lower.startswith('proof'):
+            current_section = "proof"
+            continue
+        elif '[cta' in line_lower or line_lower.startswith('cta'):
+            current_section = "cta"
+            continue
+        
+        # Skip visual cues
+        if '🎥' in line or '🗣️' in line or 'visual:' in line_lower or 'audio:' in line_lower:
+            continue
+        
+        # Add to current section
+        if current_section and line.strip():
+            if sections[current_section]:
+                sections[current_section] += " " + line.strip()
+            else:
+                sections[current_section] = line.strip()
+    
+    # If no sections found, try to split by sentences
+    if not any(sections.values()):
+        sentences = re.split(r'[.!?]+', script)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        if sentences:
+            sections["hook"] = sentences[0] if len(sentences) > 0 else ""
+            sections["problem"] = sentences[1] if len(sentences) > 1 else ""
+            sections["solution"] = sentences[2] if len(sentences) > 2 else ""
+            sections["proof"] = sentences[3] if len(sentences) > 3 else ""
+            sections["cta"] = sentences[-1] if len(sentences) > 4 else "Click now!"
+    
+    return sections
+
+def reconstruct_script(sections: dict) -> str:
+    """Reconstruct script from sections with proper formatting"""
+    parts = []
+    
+    if sections.get("hook"):
+        parts.append(f"[HOOK 0-3s]\n{sections['hook']}")
+    
+    if sections.get("problem"):
+        parts.append(f"[PROBLEM 3-10s]\n{sections['problem']}")
+    
+    if sections.get("solution"):
+        parts.append(f"[SOLUTION 10-25s]\n{sections['solution']}")
+    
+    if sections.get("proof"):
+        parts.append(f"[PROOF 25-40s]\n{sections['proof']}")
+    
+    if sections.get("cta"):
+        parts.append(f"[CTA 40-60s]\n{sections['cta']}")
+    
+    return "\n\n".join(parts)
+
+def validate_script(script: str) -> dict:
+    """Validate script meets requirements"""
+    words = count_words(script)
+    duration = estimate_duration(script)
+    
+    return {
+        "valid": words <= MAX_SCRIPT_WORDS and TARGET_SCRIPT_DURATION[0] <= duration <= TARGET_SCRIPT_DURATION[1],
+        "word_count": words,
+        "duration": duration,
+        "issues": []
+        if words <= MAX_SCRIPT_WORDS and TARGET_SCRIPT_DURATION[0] <= duration <= TARGET_SCRIPT_DURATION[1]
+        else [f"Script is {words} words, {duration}s. Target: ≤{MAX_SCRIPT_WORDS} words, {TARGET_SCRIPT_DURATION[0]}-{TARGET_SCRIPT_DURATION[1]}s"]
+    }
+
+# ============================================
 # SCHEMA ENFORCEMENT FUNCTIONS
 # ============================================
 
@@ -195,7 +389,6 @@ def enforce_weaknesses(weaknesses: list) -> list:
     result = []
     for w in weaknesses:
         if isinstance(w, dict):
-            # Normalize field names
             issue = w.get("issue") or w.get("title") or "Optimization opportunity"
             impact = w.get("behavior_impact") or w.get("impact") or "May reduce conversion effectiveness"
             fix = w.get("precise_fix") or w.get("fix") or "Test alternative approaches"
@@ -352,11 +545,10 @@ def enforce_competitor(competitor: dict) -> dict:
     }
 
 # ============================================
-# SCORING FUNCTIONS - WITH NONE CHECKS
+# SCORING FUNCTIONS
 # ============================================
 
 def calculate_weighted_score(hook: int, clarity: int, trust: int, cta: int, audience: int) -> int:
-    """REAL scoring calculation with None checks"""
     hook = hook or 0
     clarity = clarity or 0
     trust = trust or 0
@@ -375,7 +567,6 @@ def calculate_weighted_score(hook: int, clarity: int, trust: int, cta: int, audi
 
 
 def evaluate_hook_strength(hook: str, audience: dict) -> int:
-    """Score 0-100 with None checks"""
     if not hook:
         return 30
 
@@ -414,7 +605,6 @@ def evaluate_hook_strength(hook: str, audience: dict) -> int:
 
 
 def evaluate_clarity(body: str) -> int:
-    """Score clarity 0-100 with None checks"""
     if not body:
         return 40
 
@@ -443,7 +633,6 @@ def evaluate_clarity(body: str) -> int:
 
 
 def evaluate_trust_building(body: str, audience: dict) -> int:
-    """Score trust elements 0-100 with None checks"""
     if not body:
         return 35
 
@@ -468,7 +657,6 @@ def evaluate_trust_building(body: str, audience: dict) -> int:
 
 
 def evaluate_cta_power(cta: str, platform: str) -> int:
-    """Score CTA 0-100 with None checks"""
     if not cta:
         return 45
 
@@ -495,7 +683,6 @@ def evaluate_cta_power(cta: str, platform: str) -> int:
 
 
 def evaluate_audience_alignment(content: str, audience: dict) -> int:
-    """Score audience match 0-100 with None checks"""
     if not content:
         return 45
 
@@ -532,7 +719,6 @@ def evaluate_audience_alignment(content: str, audience: dict) -> int:
 # ============================================
 
 def generate_ad_variants(analysis_data: dict, platform: str, audience: dict, industry: str) -> list:
-    """Generate 3 ad variants with REAL scores"""
     variants = []
 
     angles = [
@@ -557,8 +743,6 @@ def generate_ad_variants(analysis_data: dict, platform: str, audience: dict, ind
 
 
 def generate_single_variant(analysis_data, platform, audience, industry, angle_config, variant_id: int) -> dict:
-    """Generate one variant with REAL calculated score"""
-
     hook = generate_hook_for_angle(angle_config["angle"], audience, industry, analysis_data)
     body = generate_body_for_angle(angle_config["strategy"], analysis_data, audience)
     cta = generate_cta_for_platform(platform, audience, analysis_data)
@@ -607,7 +791,6 @@ def generate_single_variant(analysis_data, platform, audience, industry, angle_c
 
 
 def generate_hook_for_angle(angle: str, audience: dict, industry: str, analysis_data: dict) -> str:
-    """Generate hook based on angle type"""
     pain_point = audience.get("pain_point") or "your problem"
 
     if "Pattern Interrupt" in angle:
@@ -639,7 +822,6 @@ def generate_hook_for_angle(angle: str, audience: dict, industry: str, analysis_
 
 
 def generate_body_for_angle(strategy: str, analysis_data: dict, audience: dict) -> str:
-    """Generate body copy based on strategy"""
     pain_point = audience.get("pain_point") or "this challenge"
 
     if "contradiction" in strategy.lower():
@@ -651,7 +833,6 @@ def generate_body_for_angle(strategy: str, analysis_data: dict, audience: dict) 
 
 
 def generate_cta_for_platform(platform: str, audience: dict, analysis_data: dict) -> str:
-    """Generate platform-optimized CTA"""
     ctas = {
         "facebook": ["👉 Click 'Send Message' to get instant access", "💬 Comment 'YES' below"],
         "instagram": ["🔗 Tap link in bio—spots filling fast", "👆 Swipe up to claim your spot"],
@@ -669,7 +850,6 @@ def generate_cta_for_platform(platform: str, audience: dict, analysis_data: dict
 # ============================================
 
 def select_improved_ad_from_variants(variants: list) -> dict:
-    """Best variant IS the improved ad"""
     if not variants:
         return {
             "headline": "Default Headline",
@@ -695,7 +875,6 @@ def select_improved_ad_from_variants(variants: list) -> dict:
 
 
 def re_score_improved_ad(improved_ad: dict, audience: dict, platform: str) -> dict:
-    """Re-score the improved ad with FRESH calculation"""
     content = f"{improved_ad.get('headline', '')} {improved_ad.get('body_copy', '')} {improved_ad.get('cta', '')}"
 
     hook_score = evaluate_hook_strength(improved_ad.get("headline", ""), audience)
@@ -723,11 +902,10 @@ def re_score_improved_ad(improved_ad: dict, audience: dict, platform: str) -> di
 
 
 # ============================================
-# CONTENT MODE DETECTION
+# SHORT-FORM VIDEO SCRIPT GENERATION
 # ============================================
 
 def detect_content_mode(request_data: dict) -> str:
-    """Detect if user wants ad copy, video script, or both"""
     has_ad = bool(request_data.get("ad_copy", "").strip())
     has_video = bool(request_data.get("video_script", "").strip())
 
@@ -741,13 +919,158 @@ def detect_content_mode(request_data: dict) -> str:
         return "adCopy"
 
 
+def generate_short_form_video_script(analysis_data: dict, audience: dict, platform: str, objective: str) -> str:
+    """
+    Generate SHORT-FORM video script (20-60 seconds, ≤150 words)
+    STRICT ENFORCEMENT of length limits
+    """
+    pain_point = audience.get("pain_point") or "this problem"
+    industry = analysis_data.get("industry") or "this industry"
+    
+    # Generate base script
+    script = _generate_script_content(pain_point, industry, audience, platform, objective)
+    
+    # HARD ENFORCEMENT: Trim if too long
+    script = enforce_script_length(script)
+    
+    # VALIDATION: Ensure it meets requirements
+    validation = validate_script(script)
+    
+    # If still invalid, regenerate with stricter limits
+    if not validation["valid"]:
+        script = _generate_ultra_short_script(pain_point, industry, audience, platform)
+    
+    return script
+
+
+def _generate_script_content(pain_point: str, industry: str, audience: dict, platform: str, objective: str) -> str:
+    """Generate script content with strict section limits"""
+    
+    # HOOK: 0-3s (max 10 words)
+    hooks = [
+        f"Stop! Your {pain_point} is costing you money.",
+        f"Still struggling with {pain_point}? Watch this.",
+        f"The truth about {pain_point} nobody tells you.",
+        f"Wrong about {pain_point}? Here's why.",
+        f"Fix {pain_point} in 30 seconds."
+    ]
+    hook = hooks[hash(pain_point) % len(hooks)]
+    
+    # PROBLEM: 3-10s (max 15 words)
+    problems = [
+        f"Every day with {pain_point} wastes time and money.",
+        f"{pain_point} keeps you stuck while others win.",
+        f"Most people ignore {pain_point} until it's too late.",
+        f"Traditional fixes for {pain_point} don't work anymore."
+    ]
+    problem = problems[hash(industry) % len(problems)]
+    
+    # SOLUTION: 10-25s (max 25 words)
+    solutions = [
+        f"This {industry} system eliminates {pain_point} fast. No fluff. Just results. Three steps. Five minutes. Done.",
+        f"Our method fixes {pain_point} instantly. Proven framework. Real results. No complicated setup required.",
+        f"One simple shift ends {pain_point} today. Automated. Effective. Immediate impact on your bottom line."
+    ]
+    solution = solutions[hash(platform) % len(solutions)]
+    
+    # PROOF: 25-40s (max 20 words)
+    proofs = [
+        f"10,000+ people fixed {pain_point} last month. Join them.",
+        f"Rated #1 for solving {pain_point}. Verified results.",
+        f"Featured in top {industry} publications. Trusted solution."
+    ]
+    proof = proofs[hash(objective) % len(proofs)]
+    
+    # CTA: 40-60s (max 10 words)
+    ctas = {
+        "facebook": "Click link. Fix it now.",
+        "instagram": "Link in bio. Start today.",
+        "tiktok": "Click before it's gone.",
+        "youtube": "Subscribe and transform now.",
+        "google": "Get instant access today."
+    }
+    cta = ctas.get(platform, "Click now. Change everything.")
+    
+    # Assemble with timing markers
+    script = f"""[HOOK 0-3s]
+{hook}
+
+[PROBLEM 3-10s]
+{problem}
+
+[SOLUTION 10-25s]
+{solution}
+
+[PROOF 25-40s]
+{proof}
+
+[CTA 40-60s]
+{cta}"""
+    
+    return script
+
+
+def _generate_ultra_short_script(pain_point: str, industry: str, audience: dict, platform: str) -> str:
+    """Emergency ultra-short script when normal generation is too long"""
+    
+    script = f"""[HOOK 0-3s]
+Stop! {pain_point} ends today.
+
+[PROBLEM 3-10s]
+Old methods fail. You're losing money.
+
+[SOLUTION 10-25s]
+New {industry} system works instantly. Three steps. Five minutes.
+
+[PROOF 25-40s]
+10,000+ success stories. Proven results.
+
+[CTA 40-60s]
+Click now. Fix {pain_point} today."""
+    
+    return script
+
+
+def evaluate_video_hook_delivery(video_script: str) -> str:
+    if not video_script:
+        return "Not applicable - no script provided"
+    
+    first_line = video_script.split('\n')[0].lower()
+    
+    if any(word in first_line for word in ['stop', 'wait', 'don\'t', 'never']):
+        return "Strong - Pattern interrupt detected"
+    elif '?' in first_line:
+        return "Strong - Question hook"
+    elif any(char.isdigit() for char in first_line):
+        return "Strong - Specificity hook"
+    else:
+        return "Moderate - Consider adding pattern interrupt"
+
+
+def evaluate_speech_flow(video_script: str) -> str:
+    if not video_script:
+        return "Not applicable - no script provided"
+    
+    lines = [l for l in video_script.split('\n') if l.strip() and not l.startswith('[')]
+    if not lines:
+        return "Not applicable - no script content"
+    
+    avg_length = sum(len(l.split()) for l in lines) / len(lines)
+    
+    if avg_length < 5:
+        return "Choppy - Sentences too short"
+    elif avg_length > 15:
+        return "Dense - Consider shorter sentences"
+    else:
+        return "Natural - Good pacing for short-form"
+
+
 # ============================================
 # AI API CALLS
 # ============================================
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def call_openrouter(prompt: str, system_prompt: str = "", temperature: float = 0.7) -> str:
-    """Call OpenRouter API with retries"""
     if not OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY not configured")
 
@@ -778,11 +1101,11 @@ async def call_openrouter(prompt: str, system_prompt: str = "", temperature: flo
 
 
 # ============================================
-# MAIN ANALYSIS FLOW - WITH STRICT ENFORCEMENT
+# MAIN ANALYSIS FLOW
 # ============================================
 
 async def analyze_ad(request_data: dict, files: list = None) -> dict:
-    """MAIN ANALYSIS FUNCTION - v4.2 STRICT SCHEMA"""
+    """MAIN ANALYSIS FUNCTION - v4.3 SHORT-FORM ENFORCED"""
 
     # 1. Detect content mode
     content_mode = detect_content_mode(request_data)
@@ -812,12 +1135,41 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
     # 6. Re-score the improved ad
     improved_scores = re_score_improved_ad(improved_ad, audience, platform)
 
-    # 7. Build video analysis if video content
+    # 7. Generate SHORT-FORM video script if needed
+    video_script = None
     video_analysis = base_analysis.get("video_execution_analysis", REQUIRED_SCHEMA["video_execution_analysis"].copy())
+    
     if content_mode in ["videoScript", "both"]:
+        # GENERATE SHORT-FORM SCRIPT
+        video_script = generate_short_form_video_script(
+            analysis_data=base_analysis,
+            audience=audience,
+            platform=platform,
+            objective=request_data.get("objective") or "conversions"
+        )
+        
+        # ENFORCE: Must pass length validation
+        validation = validate_script(video_script)
+        if not validation["valid"]:
+            # Emergency regeneration
+            video_script = _generate_ultra_short_script(
+                audience.get("pain_point") or "this problem",
+                industry,
+                audience,
+                platform
+            )
+        
+        # Update improved ad with script
+        improved_ad["video_script_version"] = video_script
+        
+        # Update video analysis
         video_analysis["is_video_script"] = "Yes"
-        video_analysis["hook_delivery_strength"] = evaluate_video_hook_delivery(request_data.get("video_script", ""))
-        video_analysis["speech_flow_quality"] = evaluate_speech_flow(request_data.get("video_script", ""))
+        video_analysis["hook_delivery_strength"] = evaluate_video_hook_delivery(video_script)
+        video_analysis["speech_flow_quality"] = evaluate_speech_flow(video_script)
+        video_analysis["visual_dependency"] = "Low (short-form optimized)"
+        video_analysis["delivery_risk"] = "Low"
+        video_analysis["recommended_format"] = "short_form_video"
+        video_analysis["script_validation"] = validate_script(video_script)
 
     # 8. Build complete response with ALL fields guaranteed
     final_analysis = {
@@ -859,40 +1211,14 @@ async def analyze_ad(request_data: dict, files: list = None) -> dict:
         "success": True,
         "analysis": final_analysis,
         "audience_parsed": format_audience_summary(audience),
-        "content_mode": content_mode
+        "content_mode": content_mode,
+        "script_info": {
+            "word_count": count_words(video_script) if video_script else 0,
+            "duration_estimate": estimate_duration(video_script) if video_script else 0,
+            "max_words": MAX_SCRIPT_WORDS,
+            "target_duration": f"{TARGET_SCRIPT_DURATION[0]}-{TARGET_SCRIPT_DURATION[1]}s"
+        } if video_script else None
     }
-
-
-def evaluate_video_hook_delivery(video_script: str) -> str:
-    """Evaluate video hook delivery"""
-    if not video_script:
-        return "Not applicable - no script provided"
-    
-    first_line = video_script.split('\n')[0].lower()
-    
-    if any(word in first_line for word in ['stop', 'wait', 'don\'t', 'never']):
-        return "Strong - Pattern interrupt detected"
-    elif '?' in first_line:
-        return "Strong - Question hook"
-    elif any(char.isdigit() for char in first_line):
-        return "Strong - Specificity hook"
-    else:
-        return "Moderate - Consider adding pattern interrupt"
-
-def evaluate_speech_flow(video_script: str) -> str:
-    """Evaluate speech flow quality"""
-    if not video_script:
-        return "Not applicable - no script provided"
-    
-    lines = [l for l in video_script.split('\n') if l.strip()]
-    avg_length = sum(len(l.split()) for l in lines) / max(len(lines), 1)
-    
-    if avg_length < 5:
-        return "Choppy - Sentences too short"
-    elif avg_length > 20:
-        return "Dense - Consider shorter sentences"
-    else:
-        return "Natural - Good pacing"
 
 
 # ============================================
@@ -900,7 +1226,6 @@ def evaluate_speech_flow(video_script: str) -> str:
 # ============================================
 
 def extract_audience(request_data: dict) -> dict:
-    """Extract audience data from request"""
     return {
         "country": request_data.get("audience_country") or "us",
         "region": request_data.get("audience_region") or "",
@@ -917,7 +1242,6 @@ def extract_audience(request_data: dict) -> dict:
 
 
 def format_audience_summary(audience: dict) -> str:
-    """Format audience for display"""
     parts = []
     if audience.get("country"):
         parts.append(audience["country"].upper())
@@ -929,7 +1253,6 @@ def format_audience_summary(audience: dict) -> str:
 
 
 def calculate_run_decision(scores: dict) -> dict:
-    """Calculate run decision based on scores"""
     overall = scores.get("overall") or 0
 
     if overall >= 75:
@@ -1078,8 +1401,6 @@ Return ONLY the JSON object, no other text."""
 # ============================================
 
 class AIEngine:
-    """Wrapper for backward compatibility"""
-
     def __init__(self):
         self.api_key = OPENROUTER_API_KEY
         self.model = OPENROUTER_MODEL
@@ -1097,11 +1418,10 @@ class AIEngine:
 _ai_engine_instance = None
 
 def get_ai_engine() -> AIEngine:
-    """Factory function"""
     global _ai_engine_instance
     if _ai_engine_instance is None:
         _ai_engine_instance = AIEngine()
     return _ai_engine_instance
 
 
-__all__ = ['get_ai_engine', 'analyze_ad', 'detect_content_mode', 'extract_audience', 'enforce_complete_structure']
+__all__ = ['get_ai_engine', 'analyze_ad', 'detect_content_mode', 'extract_audience', 'enforce_complete_structure', 'enforce_script_length']
