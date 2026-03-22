@@ -1,6 +1,6 @@
 // ============================================
-// ADLYTICS v4.1 - FULLY FIXED VERSION
-// All bugs fixed, production-ready
+// ADLYTICS v4.5 - RESPONSE FORMAT FIX
+// Handles both {success, data} and raw response formats
 // ============================================
 
 // Global state
@@ -16,27 +16,17 @@ function init() {
     if (isInitialized) return;
     isInitialized = true;
 
-    console.log('🚀 ADLYTICS v4.1 Initializing...');
+    console.log('🚀 ADLYTICS v4.5 Initializing...');
 
-    // Setup content tabs first
     setupContentTabs();
-
-    // Setup form handler
     setupFormHandler();
-
-    // Setup results tabs
     setupResultsTabs();
-
-    // Setup region dependency
     setupRegionDependency();
-
-    // Setup character counters
     setupCharCounters();
 
-    console.log('✅ ADLYTICS v4.1 Ready');
+    console.log('✅ ADLYTICS v4.5 Ready');
 }
 
-// Run init when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
@@ -44,13 +34,20 @@ if (document.readyState === 'loading') {
 }
 
 // ============================================
-// CONTENT TABS - FIXED
+// SAFE FORM DATA HELPER
+// ============================================
+function safeAppend(formData, key, value) {
+    if (value !== undefined && value !== null && value !== "") {
+        formData.append(key, value);
+    }
+}
+
+// ============================================
+// CONTENT TABS
 // ============================================
 function setupContentTabs() {
     const tabs = document.querySelectorAll('.content-tab');
     const containers = document.querySelectorAll('.textarea-container');
-
-    console.log(`Found ${tabs.length} tabs, ${containers.length} containers`);
 
     tabs.forEach(tab => {
         tab.addEventListener('click', (e) => {
@@ -58,26 +55,19 @@ function setupContentTabs() {
             const mode = tab.dataset.mode;
             const targetId = tab.dataset.target;
 
-            console.log(`Tab clicked: mode=${mode}, target=${targetId}`);
-
             if (!mode || !targetId) return;
 
-            // Update state
             currentContentMode = mode;
 
-            // Update tab UI
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            // Update containers
             containers.forEach(c => c.classList.remove('active'));
             const targetContainer = document.getElementById(targetId);
             if (targetContainer) {
                 targetContainer.classList.add('active');
-                console.log(`Activated container: ${targetId}`);
             }
 
-            // Ensure textareas are visible
             const textareas = targetContainer?.querySelectorAll('textarea');
             textareas?.forEach(ta => {
                 ta.style.display = 'block';
@@ -87,17 +77,14 @@ function setupContentTabs() {
         });
     });
 
-    // Set initial state
     const activeTab = document.querySelector('.content-tab.active');
     if (activeTab) {
         currentContentMode = activeTab.dataset.mode || 'adCopy';
     }
-
-    console.log(`Content mode initialized: ${currentContentMode}`);
 }
 
 // ============================================
-// FORM HANDLER - FIXED
+// FORM HANDLER - FIXED RESPONSE HANDLING
 // ============================================
 function setupFormHandler() {
     const form = document.getElementById('analyzeForm');
@@ -115,7 +102,6 @@ function setupFormHandler() {
         const emptyState = document.getElementById('emptyState');
         const resultsContent = document.getElementById('resultsContent');
 
-        // Disable button and show loading
         if (analyzeBtn) {
             analyzeBtn.disabled = true;
             analyzeBtn.textContent = 'Analyzing...';
@@ -125,46 +111,58 @@ function setupFormHandler() {
         if (resultsContent) resultsContent.classList.add('hidden');
 
         try {
-            // Build FormData
-            const formData = new FormData(form);
+            const formData = new FormData();
 
-            // Get content based on mode with correct field mapping
+            // Get content based on mode
             let adCopy = '';
             let videoScript = '';
 
             if (currentContentMode === 'adCopy') {
                 adCopy = document.getElementById('adCopy')?.value?.trim() || '';
-                formData.set('ad_copy', adCopy);
-                formData.delete('video_script');
+                safeAppend(formData, 'ad_copy', adCopy);
             } else if (currentContentMode === 'videoScript') {
                 videoScript = document.getElementById('videoScript')?.value?.trim() || '';
-                formData.set('video_script', videoScript);
-                formData.delete('ad_copy');
+                safeAppend(formData, 'video_script', videoScript);
             } else if (currentContentMode === 'both') {
                 adCopy = document.getElementById('adCopyBoth')?.value?.trim() || '';
                 videoScript = document.getElementById('videoScriptBoth')?.value?.trim() || '';
-                formData.set('ad_copy', adCopy);
-                formData.set('video_script', videoScript);
+                safeAppend(formData, 'ad_copy', adCopy);
+                safeAppend(formData, 'video_script', videoScript);
             }
 
             console.log('Content mode:', currentContentMode);
             console.log('Ad copy length:', adCopy.length);
             console.log('Video script length:', videoScript.length);
 
-            // Validate content
             if (!adCopy && !videoScript) {
                 throw new Error('Please enter ad copy or video script');
             }
 
-            // Ensure all audience fields are properly mapped
-            const country = document.getElementById('country')?.value;
-            const age = document.getElementById('age')?.value;
+            // Required fields
             const platform = document.getElementById('platform')?.value;
             const industry = document.getElementById('industry')?.value;
+            const country = document.getElementById('country')?.value;
+            const age = document.getElementById('age')?.value;
 
-            if (!country || !age || !platform || !industry) {
+            if (!platform || !industry || !country || !age) {
                 throw new Error('Please fill in all required fields (Platform, Industry, Country, Age)');
             }
+
+            // Append all form data safely
+            safeAppend(formData, 'platform', platform);
+            safeAppend(formData, 'industry', industry);
+            safeAppend(formData, 'objective', document.getElementById('objective')?.value);
+            safeAppend(formData, 'audience_country', country);
+            safeAppend(formData, 'audience_region', document.getElementById('region')?.value);
+            safeAppend(formData, 'audience_age', age);
+            safeAppend(formData, 'audience_gender', document.getElementById('gender')?.value);
+            safeAppend(formData, 'audience_income', document.getElementById('income')?.value);
+            safeAppend(formData, 'audience_education', document.getElementById('education')?.value);
+            safeAppend(formData, 'audience_occupation', document.getElementById('occupation')?.value);
+            safeAppend(formData, 'audience_psychographic', document.getElementById('psychographic')?.value);
+            safeAppend(formData, 'audience_pain_point', document.getElementById('pain_point')?.value);
+            safeAppend(formData, 'tech_savviness', document.getElementById('tech_savviness')?.value);
+            safeAppend(formData, 'purchase_behavior', document.getElementById('purchase_behavior')?.value);
 
             // Debug: log form data
             console.log('=== Form Data ===');
@@ -184,25 +182,45 @@ function setupFormHandler() {
 
             console.log('Response status:', response.status);
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error:', errorText);
-                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            // Parse response
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                console.error('Failed to parse JSON:', parseError);
+                throw new Error('Invalid response from server');
             }
 
-            const data = await response.json();
-            console.log('Response data:', data);
+            console.log('API RESPONSE:', data);
 
-            if (data.success) {
-                analysisResults = data.analysis;
-                renderResults(analysisResults);
-                
-                if (resultsContent) {
-                    resultsContent.classList.remove('hidden');
-                    resultsContent.scrollIntoView({ behavior: 'smooth' });
-                }
+            // CRITICAL FIX: Handle response format properly
+            // Check for explicit failure
+            if (data && data.success === false) {
+                console.error('Backend error:', data);
+                alert(data.error || data.detail || 'Analysis failed');
+                return;
+            }
+
+            // Support both formats: {success: true, data: {...}} and raw {...}
+            let result;
+            if (data && data.success === true && data.data) {
+                // New format: {success: true, data: {...}}
+                result = data.data;
+            } else if (data && (data.analysis || data.scores)) {
+                // Old format: raw result
+                result = data;
             } else {
-                throw new Error(data.error || data.detail || 'Analysis failed');
+                console.error('Unexpected response structure:', data);
+                throw new Error('Invalid response structure from server');
+            }
+
+            // Store and render results
+            analysisResults = result;
+            renderResults(analysisResults);
+            
+            if (resultsContent) {
+                resultsContent.classList.remove('hidden');
+                resultsContent.scrollIntoView({ behavior: 'smooth' });
             }
 
         } catch (error) {
@@ -219,7 +237,7 @@ function setupFormHandler() {
 }
 
 // ============================================
-// RESULTS TABS - FIXED
+// RESULTS TABS
 // ============================================
 function setupResultsTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -234,13 +252,11 @@ function setupResultsTabs() {
 
             currentTab = tabId;
 
-            // Update buttons
             tabButtons.forEach(b => {
                 b.classList.toggle('tab-active', b.dataset.tab === tabId);
                 b.classList.toggle('text-gray-400', b.dataset.tab !== tabId);
             });
 
-            // Update content
             tabContents.forEach(content => {
                 const isActive = content.id === `tab-${tabId}`;
                 content.style.display = isActive ? 'block' : 'none';
@@ -249,14 +265,13 @@ function setupResultsTabs() {
         });
     });
 
-    // Activate first tab
     if (tabButtons[0]) {
         tabButtons[0].click();
     }
 }
 
 // ============================================
-// RENDER RESULTS - FIXED
+// RENDER RESULTS
 // ============================================
 function renderResults(analysis) {
     console.log('🎨 Rendering results...', analysis);
@@ -269,24 +284,20 @@ function renderResults(analysis) {
     const scores = analysis.scores || {};
     const overallScore = scores.overall || 0;
 
-    // Update score displays
     updateText('overallScore', overallScore);
     
-    // Update score circle
     const scoreCircle = document.getElementById('scoreCircle');
     if (scoreCircle) {
-        const circumference = 2 * Math.PI * 40; // r=40
+        const circumference = 2 * Math.PI * 40;
         const offset = circumference - (overallScore / 100) * circumference;
         scoreCircle.style.strokeDashoffset = offset;
         
-        // Color code
-        let color = '#ef4444'; // red
-        if (overallScore >= 70) color = '#22c55e'; // green
-        else if (overallScore >= 50) color = '#f59e0b'; // yellow
+        let color = '#ef4444';
+        if (overallScore >= 70) color = '#22c55e';
+        else if (overallScore >= 50) color = '#f59e0b';
         scoreCircle.style.stroke = color;
     }
 
-    // Verdict badge
     const runDecision = analysis.run_decision || {};
     const verdict = runDecision.should_run || 'REVIEW';
     const verdictEl = document.getElementById('verdictBadge');
@@ -299,16 +310,12 @@ function renderResults(analysis) {
         verdictEl.className = `px-3 py-1 rounded-full text-sm font-medium ${badgeColor}`;
     }
 
-    // Readiness and risk
     const behaviorSummary = analysis.behavior_summary || {};
     updateText('launchReadiness', behaviorSummary.launch_readiness || '0%');
     updateText('failureRisk', behaviorSummary.failure_risk || '0%');
     updateText('primaryReason', behaviorSummary.primary_reason || '');
 
-    // Run decision banner
     renderRunDecision(runDecision);
-
-    // Render all sections
     renderPerformanceBreakdown(scores);
     renderPhaseBreakdown(analysis.phase_breakdown);
     renderBehaviorSummary(analysis.behavior_summary);
@@ -323,7 +330,6 @@ function renderResults(analysis) {
     renderVideoExecution(analysis.video_execution_analysis);
     renderCompetitorAdvantage(analysis.competitor_advantage);
 
-    // Audience summary
     const audienceEl = document.getElementById('audienceParsed');
     if (audienceEl && analysis.audience_parsed) {
         audienceEl.textContent = analysis.audience_parsed;
@@ -492,10 +498,10 @@ function renderWeaknesses(weaknesses) {
     container.innerHTML = weaknesses.map((w, i) => `
         <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-red-400 font-semibold">${w.severity || 'Medium'} Priority</span>
+                <span class="text-red-400 font-semibold">Priority Issue</span>
                 <span class="text-xs text-gray-500">Issue #${i + 1}</span>
             </div>
-            <h5 class="font-medium mb-1">${w.title || w.issue || 'Unknown Issue'}</h5>
+            <h5 class="font-medium mb-1">${w.issue || w.title || 'Unknown Issue'}</h5>
             <p class="text-sm text-gray-400 mb-2">${w.impact || w.behavior_impact || ''}</p>
             <div class="text-sm text-green-400">
                 <strong>Fix:</strong> ${w.fix || w.precise_fix || 'Review and revise'}
@@ -603,9 +609,9 @@ function renderWinnerPrediction(prediction) {
 
     const confidence = prediction.confidence || 'Unknown';
     let color = 'text-gray-400';
-    if (confidence === 'High') color = 'text-green-400';
-    else if (confidence === 'Medium') color = 'text-yellow-400';
-    else if (confidence === 'Low') color = 'text-red-400';
+    if (confidence === 'high') color = 'text-green-400';
+    else if (confidence === 'medium') color = 'text-yellow-400';
+    else if (confidence === 'low') color = 'text-red-400';
 
     container.innerHTML = `
         <h3 class="text-lg font-semibold mb-4">🏆 Winner Prediction</h3>
@@ -721,12 +727,10 @@ function renderVideoExecution(video) {
                 <span class="text-gray-500 text-sm">Recommended Format:</span>
                 <span class="ml-2 px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-sm">${video.recommended_format || 'N/A'}</span>
             </div>
-            ${video.execution_gaps && video.execution_gaps.length > 0 ? `
+            ${video.biggest_execution_gap && video.biggest_execution_gap !== 'None identified' ? `
                 <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <span class="text-yellow-400 text-sm font-semibold">Execution Gaps:</span>
-                    <ul class="mt-1 text-sm text-gray-400">
-                        ${video.execution_gaps.map(g => `<li>• ${g}</li>`).join('')}
-                    </ul>
+                    <span class="text-yellow-400 text-sm font-semibold">Execution Gap:</span>
+                    <p class="text-sm text-gray-400 mt-1">${video.biggest_execution_gap}</p>
                 </div>
             ` : ''}
         </div>
@@ -820,7 +824,7 @@ function setupCharCounters() {
     if (videoScript && videoScriptCount) {
         videoScript.addEventListener('input', () => {
             const words = videoScript.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-            const readTime = Math.ceil(words / 3); // ~3 words per second
+            const readTime = Math.ceil(words / 3);
             videoScriptCount.textContent = `${words} words (~${readTime}s)`;
         });
     }
