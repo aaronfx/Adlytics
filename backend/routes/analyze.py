@@ -289,6 +289,57 @@ def _resolve_industry(industry: str) -> dict:
 # HELPERS
 # ─────────────────────────────────────────────
 
+
+# ─────────────────────────────────────────────
+# CURRENCY CONFIGURATION
+# Exchange rates vs USD (approximate, update periodically)
+# ─────────────────────────────────────────────
+CURRENCY = {
+    "nigeria":      {"symbol": "₦",  "code": "NGN", "rate": 1630.0},  # ₦ per $1
+    "ghana":        {"symbol": "GH₵","code": "GHS", "rate": 15.2},
+    "kenya":        {"symbol": "KSh","code": "KES", "rate": 129.0},
+    "south_africa": {"symbol": "R",  "code": "ZAR", "rate": 18.5},
+    "uk":           {"symbol": "£",  "code": "GBP", "rate": 0.79},
+    "us":           {"symbol": "$",  "code": "USD", "rate": 1.0},
+    "canada":       {"symbol": "CA$","code": "CAD", "rate": 1.37},
+    "australia":    {"symbol": "A$", "code": "AUD", "rate": 1.54},
+    "germany":      {"symbol": "€",  "code": "EUR", "rate": 0.92},
+    "india":        {"symbol": "₹",  "code": "INR", "rate": 83.5},
+}
+DEFAULT_CURRENCY = {"symbol": "$", "code": "USD", "rate": 1.0}
+
+def get_currency(country: str) -> dict:
+    """Return currency config for a given country string."""
+    key = country.lower().replace(" ", "_").replace("-", "_")
+    return CURRENCY.get(key, DEFAULT_CURRENCY)
+
+def fmt_money(usd_amount: float, currency: dict, decimals: int = 0) -> str:
+    """Convert a USD amount to local currency string."""
+    local = usd_amount * currency["rate"]
+    if decimals == 0:
+        formatted = f"{local:,.0f}"
+    else:
+        formatted = f"{local:,.{decimals}f}"
+    return f"{currency['symbol']}{formatted}"
+
+
+def recalculate_overall(scores: dict) -> int:
+    """
+    Compute overall as a proper weighted average of sub-scores.
+    Replaces the flat default-50 placeholder.
+    """
+    w = {
+        "hook_strength":  0.25,
+        "credibility":    0.20,
+        "emotional_pull": 0.20,
+        "cta_strength":   0.15,
+        "clarity":        0.10,
+        "audience_match": 0.05,
+        "platform_fit":   0.05,
+    }
+    total = sum(scores.get(k, 50) * wt for k, wt in w.items())
+    return max(1, min(99, round(total)))
+
 def safe_score(scores: dict, key: str, default: int = 50) -> int:
     v = scores.get(key, default)
     return default if (v is None or v == 0) else int(v)
