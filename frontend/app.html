@@ -196,6 +196,41 @@
         }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
+        /* ── Multi-select pill groups ─────────────────────── */
+        .multi-pill-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            background: var(--gray-50);
+            min-height: 46px;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+        .multi-pill-group:focus-within { border-color: var(--primary); background: white; }
+        .pill-option { display: flex; cursor: pointer; }
+        .pill-option input[type="checkbox"] { display: none; }
+        .pill-option span {
+            padding: 5px 13px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-200);
+            background: white;
+            color: var(--gray-700);
+            transition: all 0.15s;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .pill-option input[type="checkbox"]:checked + span {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .pill-option span:hover { border-color: var(--primary); color: var(--primary); }
+
         /* ── Loading & Error ──────────────────────────────── */
         .loading, .error-display, .results { display: none; }
         .loading.active, .error-display.active { display: block; }
@@ -1094,14 +1129,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Platform <span class="required">*</span></label>
-                    <select name="platform" id="platform" required>
-                        <option value="tiktok">TikTok</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="google">Google Ads</option>
-                    </select>
+                    <label>Platform <span class="required">*</span> <span style="font-size:0.72rem;color:var(--gray-400);font-weight:400;text-transform:none;">(pick all you run)</span></label>
+                    <div class="multi-pill-group" id="platformPills" data-field="platform">
+                        <label class="pill-option"><input type="checkbox" value="tiktok" checked onchange="syncMultiField('platformPills','platform')"><span>🎵 TikTok</span></label>
+                        <label class="pill-option"><input type="checkbox" value="facebook" onchange="syncMultiField('platformPills','platform')"><span>👥 Facebook</span></label>
+                        <label class="pill-option"><input type="checkbox" value="instagram" onchange="syncMultiField('platformPills','platform')"><span>📷 Instagram</span></label>
+                        <label class="pill-option"><input type="checkbox" value="youtube" onchange="syncMultiField('platformPills','platform')"><span>🎬 YouTube</span></label>
+                        <label class="pill-option"><input type="checkbox" value="google" onchange="syncMultiField('platformPills','platform')"><span>🔍 Google</span></label>
+                    </div>
+                    <input type="hidden" name="platform" id="platform" value="tiktok">
                 </div>
 
                 <div class="form-group">
@@ -1136,15 +1172,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Age Range <span class="required">*</span></label>
-                    <select name="audience_age" id="audienceAge" required>
-                        <option value="18-24">18-24</option>
-                        <option value="25-34">25-34</option>
-                        <option value="35-44">35-44</option>
-                        <option value="45-54">45-54</option>
-                        <option value="55-64">55-64</option>
-                        <option value="65+">65+</option>
-                    </select>
+                    <label>Age Range <span class="required">*</span> <span style="font-size:0.72rem;color:var(--gray-400);font-weight:400;text-transform:none;">(select all that apply)</span></label>
+                    <div class="multi-pill-group" id="agePills" data-field="audienceAge">
+                        <label class="pill-option"><input type="checkbox" value="18-24" onchange="syncMultiField('agePills','audienceAge')"><span>18–24</span></label>
+                        <label class="pill-option"><input type="checkbox" value="25-34" checked onchange="syncMultiField('agePills','audienceAge')"><span>25–34</span></label>
+                        <label class="pill-option"><input type="checkbox" value="35-44" onchange="syncMultiField('agePills','audienceAge')"><span>35–44</span></label>
+                        <label class="pill-option"><input type="checkbox" value="45-54" onchange="syncMultiField('agePills','audienceAge')"><span>45–54</span></label>
+                        <label class="pill-option"><input type="checkbox" value="55+" onchange="syncMultiField('agePills','audienceAge')"><span>55+</span></label>
+                    </div>
+                    <input type="hidden" name="audience_age" id="audienceAge" value="25-34">
                 </div>
 
                 <div class="form-group">
@@ -1159,16 +1195,16 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Occupation</label>
-                    <select name="audience_occupation" id="audienceOccupation">
-                        <option value="">Select Occupation</option>
-                        <option value="professional">Professional</option>
-                        <option value="entrepreneur">Entrepreneur</option>
-                        <option value="student">Student</option>
-                        <option value="retired">Retired</option>
-                        <option value="blue_collar">Blue Collar</option>
-                        <option value="creative">Creative</option>
-                    </select>
+                    <label>Occupation <span style="font-size:0.72rem;color:var(--gray-400);font-weight:400;text-transform:none;">(all that apply)</span></label>
+                    <div class="multi-pill-group" id="occPills" data-field="audienceOccupation">
+                        <label class="pill-option"><input type="checkbox" value="professional" onchange="syncMultiField('occPills','audienceOccupation')"><span>👔 Professional</span></label>
+                        <label class="pill-option"><input type="checkbox" value="entrepreneur" onchange="syncMultiField('occPills','audienceOccupation')"><span>🚀 Entrepreneur</span></label>
+                        <label class="pill-option"><input type="checkbox" value="student" onchange="syncMultiField('occPills','audienceOccupation')"><span>🎓 Student</span></label>
+                        <label class="pill-option"><input type="checkbox" value="trader" onchange="syncMultiField('occPills','audienceOccupation')"><span>📈 Trader</span></label>
+                        <label class="pill-option"><input type="checkbox" value="blue_collar" onchange="syncMultiField('occPills','audienceOccupation')"><span>🔧 Blue Collar</span></label>
+                        <label class="pill-option"><input type="checkbox" value="creative" onchange="syncMultiField('occPills','audienceOccupation')"><span>🎨 Creative</span></label>
+                    </div>
+                    <input type="hidden" name="audience_occupation" id="audienceOccupation" value="">
                 </div>
             </div>
 
@@ -1733,11 +1769,24 @@
                 toggleForm();
             }
 
-            // Store currency from metadata FIRST so all render fns can use it
-            if (data._metadata?.currency) {
-                window._currencyData = data._metadata.currency;
-                window._activeSym    = data._metadata.currency.symbol || '$';
+            // Extract currency from ANY available source, in priority order
+            const _currSrc = data._metadata?.currency
+                          || (data.budget_optimization?.currency_symbol
+                              ? { symbol: data.budget_optimization.currency_symbol,
+                                  code:   data.budget_optimization.currency_code || '' }
+                              : null)
+                          || (data.decision_engine?.currency_symbol
+                              ? { symbol: data.decision_engine.currency_symbol,
+                                  code:   data.decision_engine.currency_code || '' }
+                              : null);
+            if (_currSrc) {
+                window._currencyData = _currSrc;
+                window._activeSym    = _currSrc.symbol || '$';
+            } else {
+                window._activeSym = '$';
             }
+            // Helper used by all render fns
+            window._sym = () => window._activeSym || '$';
 
             // Expose data globally so tier2_features.js can access it
             window._adlyticsData     = data;
@@ -3011,6 +3060,29 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('calcBreakeven').textContent   = `Day ${daysToBreak}`;
         }
 
+        // ── Multi-select pill sync ────────────────────────
+        function syncMultiField(groupId, hiddenId) {
+            const group   = document.getElementById(groupId);
+            const hidden  = document.getElementById(hiddenId);
+            if (!group || !hidden) return;
+            const checked = [...group.querySelectorAll('input:checked')].map(i => i.value);
+            hidden.value  = checked.length ? checked.join(',') : '';
+            // Ensure at least one is selected (re-check first if all unchecked)
+            if (!checked.length) {
+                const first = group.querySelector('input[type="checkbox"]');
+                if (first) { first.checked = true; hidden.value = first.value; }
+            }
+        }
+        // Initialise hidden fields on load
+        document.addEventListener('DOMContentLoaded', () => {
+            ['platformPills','agePills','occPills'].forEach(id => {
+                const g = document.getElementById(id);
+                if (!g) return;
+                const fieldId = g.dataset.field;
+                syncMultiField(id, fieldId);
+            });
+        });
+
         // ══════════════════════════════════════════════════
         // ONBOARDING
         // ══════════════════════════════════════════════════
@@ -3071,266 +3143,262 @@ document.addEventListener('DOMContentLoaded', () => {
         async function exportPDF() {
             const btn = document.getElementById('pdfBtn');
             if (!window._adlyticsData) { alert('Run an analysis first.'); return; }
-
             btn.disabled = true;
-            btn.textContent = '⏳ Building report...';
+            btn.textContent = '⏳ Building...';
 
             try {
-                // Load jsPDF from CDN
-                if (!window.jspdf) {
+                // Load jsPDF synchronously-via-promise then confirm ready
+                if (!window.jspdf?.jsPDF) {
                     await new Promise((resolve, reject) => {
                         const s = document.createElement('script');
                         s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                        s.onload = resolve; s.onerror = reject;
+                        s.onload  = () => resolve();
+                        s.onerror = () => reject(new Error('Failed to load jsPDF'));
                         document.head.appendChild(s);
                     });
+                    // Give the UMD bundle time to register
+                    await new Promise(r => setTimeout(r, 200));
                 }
+                if (!window.jspdf?.jsPDF) throw new Error('jsPDF did not initialise. Try again.');
 
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const d   = window._adlyticsData;
-                const sym = d?.decision_engine?.currency_symbol
-                         || d?.budget_optimization?.currency_symbol
-                         || window._activeSym
-                         || '$';
-                const scores = d.scores || {};
-                const content = window._adlyticsContent || '';
-                const platform = window._adlyticsPlatform || '';
+                const d    = window._adlyticsData;
+                const sc   = d.scores || {};
+                const sym  = window._activeSym || '$';
+                const today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+                const platform = (window._adlyticsPlatform||'').toUpperCase();
                 const industry = window._adlyticsIndustry || '';
                 const country  = window._adlyticsCountry  || '';
-                const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+                const adText   = (window._adlyticsContent || '').replace(/\n/g,' ');
 
-                // ── Colours ──────────────────────────────────
-                const C = {
-                    primary:  [99, 102, 241],
-                    dark:     [17,  24,  39],
-                    mid:      [55,  65,  81],
-                    light:    [156, 163, 175],
-                    bg:       [249, 250, 251],
-                    success:  [16, 185, 129],
-                    warning:  [245, 158, 11],
-                    danger:   [239, 68,  68],
-                    white:    [255, 255, 255],
-                };
-
-                function scoreColor(v) {
-                    if (v >= 81) return C.success;
-                    if (v >= 61) return [59, 130, 246];
-                    if (v >= 41) return C.warning;
-                    return C.danger;
-                }
-
-                const PW = 210, PH = 297, M = 18, CW = PW - M * 2;
+                const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+                const PW=210, PH=297, M=18, CW=PW-M*2;
                 let y = 0;
 
-                function newPage() {
-                    doc.addPage();
-                    y = 18;
-                    // Footer on each page
-                    doc.setFontSize(8).setTextColor(...C.light);
-                    doc.text('ADLYTICS · Confidential · ' + today, M, PH - 8);
-                    doc.text(`Page ${doc.internal.getNumberOfPages()}`, PW - M, PH - 8, { align: 'right' });
+                // ── Colour helpers ──────────────────────────
+                const C = {
+                    purple:[99,102,241], dark:[17,24,39], mid:[55,65,81],
+                    light:[156,163,175], bg:[249,250,251],
+                    green:[16,185,129],  amber:[245,158,11],
+                    red:[239,68,68],     blue:[59,130,246],
+                    white:[255,255,255]
+                };
+                function scCol(v){
+                    if(v>=81) return C.green;
+                    if(v>=61) return C.blue;
+                    if(v>=41) return C.amber;
+                    return C.red;
+                }
+                function checkY(n){ if(y+n>PH-22){ addPage(); } }
+                function addPage(){
+                    doc.addPage(); y=20;
+                    doc.setFontSize(7).setTextColor(...C.light);
+                    doc.text('ADLYTICS · Confidential · '+today, M, PH-8);
+                    doc.text('Page '+doc.internal.getNumberOfPages(), PW-M, PH-8,{align:'right'});
                 }
 
-                function checkY(needed) { if (y + needed > PH - 22) newPage(); }
+                // ── COVER BAND ──────────────────────────────
+                doc.setFillColor(...C.purple);
+                doc.rect(0,0,PW,54,'F');
+                doc.setFont('helvetica','bold').setFontSize(26).setTextColor(...C.white);
+                doc.text('ADLYTICS',M,22);
+                doc.setFont('helvetica','normal').setFontSize(10).setTextColor(200,201,255);
+                doc.text('Ad Performance Intelligence Report',M,31);
+                doc.setFontSize(8).setTextColor(180,180,255);
+                doc.text(`${today}  ·  ${platform}  ·  ${industry}  ·  ${country}`,M,41);
 
-                // ── COVER PAGE ───────────────────────────────
-                // Header band
-                doc.setFillColor(...C.primary);
-                doc.rect(0, 0, PW, 58, 'F');
+                // Overall score badge
+                const ov = sc.overall||0;
+                doc.setFillColor(...scCol(ov));
+                doc.roundedRect(PW-54,8,38,38,5,5,'F');
+                doc.setFont('helvetica','bold').setFontSize(20).setTextColor(...C.white);
+                doc.text(String(ov),PW-35,25,{align:'center'});
+                doc.setFontSize(7).setFont('helvetica','normal');
+                doc.text('OVERALL',PW-35,33,{align:'center'});
+                y=62;
 
-                doc.setFont('helvetica', 'bold').setFontSize(28).setTextColor(...C.white);
-                doc.text('ADLYTICS', M, 26);
-                doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(200, 201, 255);
-                doc.text('Ad Performance Intelligence Report', M, 35);
-
-                doc.setFontSize(9).setTextColor(180, 180, 255);
-                doc.text(`Generated: ${today}   Platform: ${platform.toUpperCase()}   Industry: ${industry}   Country: ${country}`, M, 46);
-
-                // Overall score circle simulation (rect)
-                const ov = scores.overall || 0;
-                const ovColor = scoreColor(ov);
-                doc.setFillColor(...ovColor);
-                doc.roundedRect(PW - 58, 10, 42, 42, 6, 6, 'F');
-                doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor(...C.white);
-                doc.text(String(ov), PW - 37, 32, { align: 'center' });
-                doc.setFontSize(8).setFont('helvetica', 'normal');
-                doc.text('OVERALL', PW - 37, 40, { align: 'center' });
-                doc.text('SCORE', PW - 37, 45, { align: 'center' });
-
-                y = 68;
-
-                // Ad content preview
-                if (content.trim()) {
+                // ── AD PREVIEW ──────────────────────────────
+                if(adText.trim()){
+                    const prev = adText.substring(0,240)+(adText.length>240?'…':'');
+                    const pLines = doc.setFontSize(8).splitTextToSize(prev,CW-10);
+                    const ph = Math.min(pLines.length,4)*5+14;
                     doc.setFillColor(...C.bg);
-                    doc.roundedRect(M, y, CW, 28, 4, 4, 'F');
-                    doc.setFontSize(7.5).setTextColor(...C.light).setFont('helvetica', 'bold');
-                    doc.text('AD CONTENT ANALYSED', M + 6, y + 7);
-                    doc.setFont('helvetica', 'normal').setTextColor(...C.mid);
-                    const preview = content.replace(/\n/g, ' ').substring(0, 220);
-                    const lines = doc.splitTextToSize(preview + (content.length > 220 ? '…' : ''), CW - 12);
-                    doc.text(lines.slice(0,3), M + 6, y + 14);
-                    y += 34;
+                    doc.roundedRect(M,y,CW,ph,3,3,'F');
+                    doc.setFontSize(7).setTextColor(...C.light).setFont('helvetica','bold');
+                    doc.text('AD CONTENT ANALYSED',M+5,y+7);
+                    doc.setFont('helvetica','normal').setTextColor(...C.mid).setFontSize(8);
+                    doc.text(pLines.slice(0,4),M+5,y+13);
+                    y+=ph+8;
                 }
 
-                // ── SCORES SECTION ────────────────────────────
-                y += 6;
-                doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(...C.dark);
-                doc.text('Score Breakdown', M, y); y += 8;
-
-                const scoreDims = [
-                    { key: 'hook_strength',  label: 'Hook Strength',  wt: '25%' },
-                    { key: 'credibility',    label: 'Credibility',    wt: '20%' },
-                    { key: 'emotional_pull', label: 'Emotional Pull', wt: '20%' },
-                    { key: 'cta_strength',   label: 'CTA Strength',   wt: '15%' },
-                    { key: 'clarity',        label: 'Clarity',        wt: '10%' },
-                    { key: 'audience_match', label: 'Audience Match', wt: '5%' },
-                    { key: 'platform_fit',   label: 'Platform Fit',   wt: '5%' },
+                // ── SCORE BREAKDOWN ──────────────────────────
+                doc.setFont('helvetica','bold').setFontSize(12).setTextColor(...C.dark);
+                doc.text('Score Breakdown',M,y); y+=7;
+                const dims=[
+                    {k:'hook_strength',l:'Hook (25%)'},
+                    {k:'credibility',l:'Credibility (20%)'},
+                    {k:'emotional_pull',l:'Emotional (20%)'},
+                    {k:'cta_strength',l:'CTA (15%)'},
+                    {k:'clarity',l:'Clarity (10%)'},
+                    {k:'audience_match',l:'Audience (5%)'},
+                    {k:'platform_fit',l:'Platform (5%)'},
                 ];
-
-                // Two-column grid
-                const colW = (CW - 8) / 2;
-                let col = 0, rowY = y;
-                scoreDims.forEach((dim, i) => {
-                    const v = scores[dim.key] || 0;
-                    const cx = M + col * (colW + 8);
-                    checkY(24);
+                const cw2=(CW-6)/2;
+                let col=0, ry=y;
+                dims.forEach(dim=>{
+                    const v=sc[dim.k]||0;
+                    const cx=M+col*(cw2+6);
+                    checkY(22);
                     doc.setFillColor(...C.bg);
-                    doc.roundedRect(cx, rowY, colW, 20, 3, 3, 'F');
-                    doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...C.light);
-                    doc.text(dim.label.toUpperCase() + '  (' + dim.wt + ')', cx + 5, rowY + 7);
-                    // Bar track
-                    doc.setFillColor(225, 225, 235);
-                    doc.roundedRect(cx + 5, rowY + 11, colW - 36, 4, 1, 1, 'F');
-                    // Bar fill
-                    doc.setFillColor(...scoreColor(v));
-                    doc.roundedRect(cx + 5, rowY + 11, Math.max(2, (colW - 36) * v / 100), 4, 1, 1, 'F');
-                    // Score number
-                    doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor(...scoreColor(v));
-                    doc.text(String(v), cx + colW - 8, rowY + 16, { align: 'right' });
-
-                    col++;
-                    if (col === 2) { col = 0; rowY += 24; checkY(24); }
+                    doc.roundedRect(cx,ry,cw2,18,3,3,'F');
+                    doc.setFontSize(7.5).setTextColor(...C.light).setFont('helvetica','normal');
+                    doc.text(dim.l.toUpperCase(),cx+4,ry+7);
+                    doc.setFillColor(225,225,235);
+                    doc.roundedRect(cx+4,ry+10,cw2-30,4,1,1,'F');
+                    doc.setFillColor(...scCol(v));
+                    doc.roundedRect(cx+4,ry+10,Math.max(2,(cw2-30)*v/100),4,1,1,'F');
+                    doc.setFont('helvetica','bold').setFontSize(10).setTextColor(...scCol(v));
+                    doc.text(String(v),cx+cw2-4,ry+15,{align:'right'});
+                    col++; if(col===2){col=0;ry+=22;checkY(22);}
                 });
-                if (col === 1) rowY += 24;
-                y = rowY + 6;
+                if(col===1) ry+=22;
+                y=ry+8;
 
-                // ── STRATEGIC SUMMARY ─────────────────────────
-                checkY(40);
-                doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
-                doc.text('Strategic Summary', M, y); y += 7;
-                const summary = typeof d.behavior_summary === 'string'
+                // ── SUMMARY ──────────────────────────────────
+                const sumRaw = typeof d.behavior_summary==='string'
                     ? d.behavior_summary
-                    : (d.behavior_summary?.verdict || 'See full analysis in ADLYTICS.');
-                doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(...C.mid);
-                const sumLines = doc.splitTextToSize(summary, CW);
-                checkY(sumLines.length * 5 + 6);
-                doc.setFillColor(...C.bg);
-                doc.roundedRect(M, y, CW, sumLines.length * 5 + 8, 3, 3, 'F');
-                doc.text(sumLines, M + 6, y + 6);
-                y += sumLines.length * 5 + 14;
-
-                // ── CRITICAL ISSUES ────────────────────────────
-                const issues = d.critical_weaknesses || [];
-                if (issues.length) {
-                    checkY(20);
-                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
-                    doc.text('Critical Issues', M, y); y += 7;
-                    issues.slice(0, 5).forEach(w => {
-                        const txt = `${w.severity || 'HIGH'}: ${w.issue || ''} — Fix: ${w.fix || ''}`;
-                        const wLines = doc.splitTextToSize(txt, CW - 14);
-                        checkY(wLines.length * 5 + 10);
-                        doc.setFillColor(254, 242, 242);
-                        doc.roundedRect(M, y, CW, wLines.length * 5 + 8, 3, 3, 'F');
-                        doc.setFillColor(...C.danger);
-                        doc.rect(M, y, 3, wLines.length * 5 + 8, 'F');
-                        doc.setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...C.mid);
-                        doc.text(wLines, M + 8, y + 6);
-                        y += wLines.length * 5 + 12;
-                    });
+                    : (d.behavior_summary?.verdict||d.behavior_summary?.primary_reason||'');
+                if(sumRaw){
+                    checkY(30);
+                    doc.setFont('helvetica','bold').setFontSize(11).setTextColor(...C.dark);
+                    doc.text('Strategic Summary',M,y); y+=6;
+                    const sLines=doc.setFontSize(8.5).setFont('helvetica','normal').splitTextToSize(sumRaw,CW-8);
+                    const sh=sLines.length*5+10;
+                    checkY(sh);
+                    doc.setFillColor(...C.bg);
+                    doc.roundedRect(M,y,CW,sh,3,3,'F');
+                    doc.setFillColor(...C.purple);
+                    doc.rect(M,y,3,sh,'F');
+                    doc.setTextColor(...C.mid);
+                    doc.text(sLines,M+7,y+6);
+                    y+=sh+10;
                 }
 
-                // ── DECISION ──────────────────────────────────
-                const de = d.decision_engine;
-                if (de) {
-                    checkY(40);
-                    const runColor = de.should_run ? C.success : C.danger;
-                    doc.setFillColor(...runColor);
-                    doc.roundedRect(M, y, CW, 34, 5, 5, 'F');
-                    doc.setFont('helvetica', 'bold').setFontSize(14).setTextColor(...C.white);
-                    doc.text(de.should_run ? '✓  RECOMMENDED TO RUN' : '✗  DO NOT RUN', M + 10, y + 12);
-                    doc.setFont('helvetica', 'normal').setFontSize(9);
-                    doc.text(`Confidence: ${de.confidence || '—'}   ROI Prediction: ${de.roi_prediction || '—'}   Expected Profit: ${de.expected_profit ? sym+de.expected_profit.toLocaleString() : '—'}`, M + 10, y + 22);
-                    const reasonLines = doc.splitTextToSize(de.reasoning || '', CW - 20);
-                    doc.text(reasonLines.slice(0,2), M + 10, y + 29);
-                    y += 42;
+                // ── DECISION ─────────────────────────────────
+                const de=d.decision_engine;
+                if(de){
+                    checkY(36);
+                    const runCol=de.should_run?C.green:C.red;
+                    const runBg=de.should_run?[209,250,229]:[254,226,226];
+                    doc.setFillColor(...runBg);
+                    doc.roundedRect(M,y,CW,32,5,5,'F');
+                    doc.setFillColor(...runCol);
+                    doc.circle(M+14,y+12,7,'F');
+                    doc.setFont('helvetica','bold').setFontSize(13).setTextColor(...(de.should_run?[6,95,70]:[127,29,29]));
+                    doc.text(de.should_run?'Recommended to Run':'Do Not Run',M+26,y+10);
+                    doc.setFont('helvetica','normal').setFontSize(8);
+                    const rLines=doc.splitTextToSize(de.reasoning||'',CW-30);
+                    doc.text(rLines.slice(0,2),M+26,y+17);
+                    // Metrics row
+                    const mW=(CW)/3;
+                    [['CONFIDENCE',de.confidence||'—'],
+                     ['EXPECTED PROFIT',sym+(de.expected_profit||0).toLocaleString()],
+                     ['ROI PREDICTION',de.roi_prediction||'—']
+                    ].forEach(([lbl,val],i)=>{
+                        const mx=M+i*mW;
+                        doc.setFontSize(6.5).setTextColor(...C.light).setFont('helvetica','bold');
+                        doc.text(lbl,mx+3,y+27);
+                        doc.setFont('helvetica','bold').setFontSize(9).setTextColor(...C.dark);
+                        doc.text(String(val),mx+3,y+33);
+                    });
+                    y+=42;
+                }
+
+                // ── CRITICAL ISSUES ───────────────────────────
+                const issues=(d.critical_weaknesses||[]).slice(0,4);
+                if(issues.length){
+                    checkY(20);
+                    doc.setFont('helvetica','bold').setFontSize(11).setTextColor(...C.dark);
+                    doc.text('Critical Issues',M,y); y+=6;
+                    issues.forEach(w=>{
+                        const txt=`${w.severity||'HIGH'}: ${w.issue||''} — ${w.fix||''}`;
+                        const wl=doc.setFontSize(8).splitTextToSize(txt,CW-12);
+                        const wh=wl.length*5+8;
+                        checkY(wh+4);
+                        doc.setFillColor(254,242,242);
+                        doc.roundedRect(M,y,CW,wh,3,3,'F');
+                        doc.setFillColor(...C.red);
+                        doc.rect(M,y,3,wh,'F');
+                        doc.setFont('helvetica','normal').setTextColor(...C.mid);
+                        doc.text(wl,M+7,y+6);
+                        y+=wh+6;
+                    });
                 }
 
                 // ── BUDGET SNAPSHOT ───────────────────────────
-                const bo = d.budget_optimization;
-                if (bo) {
-                    checkY(30);
-                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
-                    doc.text('Budget Snapshot', M, y); y += 7;
-                    const budgItems = [
-                        ['Break-Even CPC', sym+(bo.break_even_cpc || '—').toLocaleString()+''],
-                        ['Safe Test Budget', bo.safe_test_budget ? sym+bo.safe_test_budget.toLocaleString() : '—'],
-                        ['Risk Level', bo.risk_level || '—'],
-                        ['Days to Profit', String(bo.days_to_profit || '—')],
+                const bo=d.budget_optimization;
+                if(bo){
+                    checkY(28);
+                    doc.setFont('helvetica','bold').setFontSize(11).setTextColor(...C.dark);
+                    doc.text('Budget Snapshot',M,y); y+=7;
+                    const bItems=[
+                        ['Break-Even CPC', String(bo.break_even_cpc||'—')],
+                        ['Safe Test Budget', (bo.safe_test_budget||0).toLocaleString()],
+                        ['Risk Level', bo.risk_level||'—'],
+                        ['Days to Profit', String(bo.days_to_profit||'—')],
                     ];
-                    const bColW = (CW - 6) / 4;
+                    const bW=(CW-4)/4;
                     doc.setFillColor(...C.bg);
-                    doc.roundedRect(M, y, CW, 22, 3, 3, 'F');
-                    budgItems.forEach(([lbl, val], i) => {
-                        const bx = M + i * (bColW + 2);
-                        doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...C.light);
-                        doc.text(lbl.toUpperCase(), bx + 5, y + 8);
-                        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...C.dark);
-                        doc.text(val, bx + 5, y + 17);
+                    doc.roundedRect(M,y,CW,20,3,3,'F');
+                    bItems.forEach(([lbl,val],i)=>{
+                        const bx=M+i*(bW+1.3);
+                        doc.setFontSize(6.5).setTextColor(...C.light).setFont('helvetica','bold');
+                        doc.text(lbl.toUpperCase(),bx+3,y+8);
+                        doc.setFont('helvetica','bold').setFontSize(9).setTextColor(...C.dark);
+                        doc.text(String(val),bx+3,y+16);
                     });
-                    y += 28;
+                    y+=26;
                 }
 
-                // ── PERSONAS (summary) ────────────────────────
-                const personas = d.persona_reactions || [];
-                if (personas.length) {
+                // ── PERSONAS ──────────────────────────────────
+                const personas=(d.persona_reactions||[]).slice(0,3);
+                if(personas.length){
                     checkY(20);
-                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
-                    doc.text('Audience Personas', M, y); y += 7;
-                    personas.slice(0,3).forEach(p => {
-                        const pName = p.name || p.persona || '—';
-                        const pReact = p.reaction || '';
-                        const pConv = p.conversion_likelihood || '—';
+                    doc.setFont('helvetica','bold').setFontSize(11).setTextColor(...C.dark);
+                    doc.text('Audience Personas',M,y); y+=6;
+                    personas.forEach(p=>{
+                        const name=p.name||p.persona||'—';
+                        const react=(p.reaction||'').substring(0,80);
+                        const conv=p.conversion_likelihood||'—';
                         checkY(16);
                         doc.setFillColor(...C.bg);
-                        doc.roundedRect(M, y, CW, 14, 2, 2, 'F');
-                        doc.setFont('helvetica', 'bold').setFontSize(8.5).setTextColor(...C.dark);
-                        doc.text(pName, M + 5, y + 6);
-                        doc.setFont('helvetica', 'normal').setTextColor(...C.mid);
-                        doc.text(pReact.substring(0, 70), M + 5, y + 11);
-                        doc.setFont('helvetica', 'bold').setTextColor(...C.primary);
-                        doc.text(pConv, M + CW - 5, y + 8, { align: 'right' });
-                        y += 17;
+                        doc.roundedRect(M,y,CW,14,2,2,'F');
+                        doc.setFont('helvetica','bold').setFontSize(8.5).setTextColor(...C.dark);
+                        doc.text(name,M+4,y+6);
+                        doc.setFont('helvetica','normal').setFontSize(7.5).setTextColor(...C.mid);
+                        doc.text(react,M+4,y+11);
+                        doc.setFont('helvetica','bold').setTextColor(...C.purple);
+                        doc.text(conv,M+CW-4,y+8,{align:'right'});
+                        y+=17;
                     });
                 }
 
-                // ── FOOTER ON LAST PAGE ───────────────────────
-                doc.setFontSize(8).setTextColor(...C.light);
-                doc.text('ADLYTICS · Confidential · ' + today, M, PH - 8);
-                doc.text(`Page ${doc.internal.getNumberOfPages()}`, PW - M, PH - 8, { align: 'right' });
+                // ── FOOTER ────────────────────────────────────
+                doc.setFontSize(7).setTextColor(...C.light);
+                doc.text('ADLYTICS · Confidential · '+today, M, PH-8);
+                doc.text('Page '+doc.internal.getNumberOfPages(), PW-M, PH-8,{align:'right'});
 
-                // ── SAVE ──────────────────────────────────────
-                const filename = `ADLYTICS_Report_${today.replace(/ /g,'_')}.pdf`;
-                doc.save(filename);
+                doc.save(`ADLYTICS_${country}_${today.replace(/ /g,'_')}.pdf`);
 
             } catch(err) {
                 console.error('PDF error:', err);
-                alert('PDF generation failed: ' + err.message);
+                alert('PDF error: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '📄 Download PDF Report';
             }
         }
+
 
         // ── Rewrite: delta masking + scam warning ─────────
         // Patched into tier2_features.js via window.onRewriteResult hook
