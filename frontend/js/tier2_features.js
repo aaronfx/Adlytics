@@ -180,7 +180,13 @@ function _renderRewriteResult(d) {
                 <div class="rewrite-score-row">${afterBadges}</div>
                 ${d.why_it_works ? `<div style="margin-top:12px;padding:12px;background:#f9fafb;border-radius:8px;font-size:.88rem;"><strong>Why it works:</strong> ${d.why_it_works}</div>` : ''}
                 ${changes ? `<ul style="margin-top:10px;font-size:.85rem;">${changes}</ul>` : ''}
-                <button class="use-rewrite-btn" onclick="useRewrittenAd()">📋 Use This Version</button>
+                <div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:8px 12px;border-radius:0 6px 6px 0;font-size:.8rem;color:#92400e;margin-top:12px;">
+                    ⚠️ Scores above are the AI's self-estimate. Click <strong>Verify Scores</strong> below for the real rating.
+                </div>
+                <button class="use-rewrite-btn" onclick="useRewrittenAd(false)" style="margin-top:10px;">📋 Use This Version</button>
+                <button onclick="useRewrittenAd(true)" style="display:block;width:100%;padding:11px;background:#6366f1;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:8px;font-size:.92rem;">
+                    🔬 Use &amp; Verify Scores
+                </button>
             </div>
         </div>
         ${voiceoverHTML}`;
@@ -194,15 +200,29 @@ window.copyVoiceScript = function() {
     });
 };
 
-window.useRewrittenAd = function() {
+window.useRewrittenAd = function(andVerify = false) {
     const text = document.getElementById('rewrittenText')?.innerText || '';
     const vs = document.getElementById('videoScript');
     const ac = document.getElementById('adCopy');
+    // Put text into whichever field has content, or default to ad copy
     if (vs && vs.value.trim()) vs.value = text;
     else if (ac) ac.value = text;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    const btn = document.querySelector('.use-rewrite-btn');
-    if (btn) { btn.textContent = '✅ Loaded into form!'; setTimeout(() => btn.textContent = '📋 Use This Version', 2500); }
+
+    if (andVerify) {
+        // Expand form so user can see it, then auto-submit
+        const wrapper = document.getElementById('formWrapper');
+        if (wrapper && wrapper.classList.contains('collapsed')) toggleForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Short delay so the form is visible before submit
+        setTimeout(() => {
+            const form = document.getElementById('analyzerForm');
+            if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }, 400);
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const btn = document.querySelector('.use-rewrite-btn');
+        if (btn) { btn.textContent = '✅ Loaded into form!'; setTimeout(() => btn.textContent = '📋 Use This Version', 2500); }
+    }
 };
 
 // ══════════════════════════════════════════════════════════════
