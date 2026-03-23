@@ -1628,6 +1628,11 @@
                 toggleForm();
             }
 
+            // Store currency from metadata
+            if (data._metadata?.currency) {
+                window._currencyData = data._metadata.currency;
+            }
+
             // Expose data globally so tier2_features.js can access it
             window._adlyticsData     = data;
             window._adlyticsContent  = (document.getElementById('videoScript')?.value?.trim()
@@ -2845,6 +2850,66 @@ function renderLandingResult(d) {
 document.addEventListener('DOMContentLoaded', () => {
     loadAbResults();
 });
+
+
+        // ── Budget Simulator ──────────────────────────────
+        function recalcBudget() {
+            const bd  = window._budgetData;
+            const sym = window._activeSym || '$';
+            const daily = parseFloat(document.getElementById('userDailyBudget')?.value) || 0;
+            const days  = parseInt(document.getElementById('userCampaignDays')?.value)  || 14;
+            const out   = document.getElementById('budgetCalcOutput');
+
+            if (!daily || daily <= 0) { if (out) out.style.display = 'none'; return; }
+            if (out) out.style.display = 'block';
+
+            const total       = daily * days;
+            const scores      = window._adlyticsData?.scores || {};
+            const overall     = scores.overall || 50;
+            const ctr         = (overall / 1000) * 2.1;   // estimated CTR based on score
+            const cpm_usd     = 1.2;                       // rough CPM base in USD
+            const curr        = window._currencyData;
+            const rate        = curr?.usd_rate || 1;
+            const cpm_local   = cpm_usd * rate;
+            const impressions = Math.round((total / cpm_local) * 1000);
+            const clicks      = Math.round(impressions * ctr);
+            const daysToBreak = bd?.days_to_profit || 10;
+
+            document.getElementById('calcTotal').textContent       = sym + total.toLocaleString();
+            document.getElementById('calcImpressions').textContent = impressions.toLocaleString();
+            document.getElementById('calcClicks').textContent      = clicks.toLocaleString();
+            document.getElementById('calcBreakeven').textContent   = `Day ${daysToBreak}`;
+        }
+
+        // ── Rewrite: delta masking + scam warning ─────────
+        // Patched into tier2_features.js via window.onRewriteResult hook
+        window._onRewriteResultPatch = function(d) {
+            // Scam warning banner
+            const out = document.getElementById('rewriteOutput');
+            if (d.scam_warning && out) {
+                const banner = document.createElement('div');
+                banner.style.cssText = 'background:#fee2e2;border-left:4px solid #ef4444;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;font-size:.88rem;color:#991b1b;font-weight:600;';
+                banner.textContent = d.scam_warning;
+                out.prepend(banner);
+            }
+            // Scores warning
+            if (d.scores_warning && out) {
+                const sw = document.createElement('div');
+                sw.style.cssText = 'background:#fef3c7;border-left:3px solid #f59e0b;padding:8px 12px;border-radius:0 6px 6px 0;font-size:.8rem;color:#92400e;margin-bottom:10px;';
+                sw.textContent = d.scores_warning;
+                out.prepend(sw);
+            }
+            // Mask inactive delta chips
+            if (d.score_delta && d.active_dims) {
+                document.querySelectorAll('.delta-chip').forEach(chip => {
+                    const dim = chip.dataset.dim;
+                    if (dim && !d.active_dims.includes(dim)) {
+                        chip.style.opacity = '0.3';
+                        chip.title = 'Not changed by this focus area';
+                    }
+                });
+            }
+        };
 
 </script>
 
