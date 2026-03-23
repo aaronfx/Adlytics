@@ -993,17 +993,36 @@
             <div class="rewrite-panel" id="rewritePanel">
     <div class="section-title">✨ Rewrite Engine</div>
     <p style="color:var(--gray-700); margin-bottom:16px; font-size:0.9rem;">
-        Choose a focus, then let AI fix the specific weakness and show you before/after scores.
+        Choose a focus area, then let AI fix the specific weakness and show before/after scores.
     </p>
+    <!-- Focus buttons -->
     <div class="rewrite-controls">
-        <button class="rewrite-focus-btn active" data-focus="full"     onclick="setRewriteFocus(this)">🔄 Full Rewrite</button>
-        <button class="rewrite-focus-btn"         data-focus="hook"     onclick="setRewriteFocus(this)">🪝 Hook Only</button>
-        <button class="rewrite-focus-btn"         data-focus="cta"      onclick="setRewriteFocus(this)">📣 CTA Only</button>
+        <button class="rewrite-focus-btn active" data-focus="full"        onclick="setRewriteFocus(this)">🔄 Full Rewrite</button>
+        <button class="rewrite-focus-btn"         data-focus="hook"        onclick="setRewriteFocus(this)">🪝 Hook Only</button>
+        <button class="rewrite-focus-btn"         data-focus="cta"         onclick="setRewriteFocus(this)">📣 CTA Only</button>
         <button class="rewrite-focus-btn"         data-focus="credibility" onclick="setRewriteFocus(this)">🏆 Credibility</button>
         <button class="rewrite-focus-btn"         data-focus="emotional"   onclick="setRewriteFocus(this)">❤️ Emotional</button>
-        <button class="rewrite-btn-main" id="rewriteRunBtn" onclick="runRewrite()">✨ Rewrite Now</button>
     </div>
-    <div id="rewriteOutput"></div>
+    <!-- Voiceover toggle -->
+    <div style="display:flex;align-items:center;gap:12px;margin:14px 0;padding:12px 16px;background:white;border-radius:10px;border:1px solid var(--gray-200);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;font-weight:600;">
+            <input type="checkbox" id="voiceoverToggle" onchange="toggleVoiceover(this)" style="width:16px;height:16px;cursor:pointer;" />
+            🎙️ Prepare for Voiceover (ElevenLabs / TTS)
+        </label>
+        <div id="voiceStyleOptions" style="display:none;gap:8px;align-items:center;">
+            <select id="voiceStyleSelect" onchange="window._voiceStyle=this.value"
+                    style="padding:6px 12px;border:2px solid var(--gray-200);border-radius:8px;font-size:.85rem;">
+                <option value="conversational">Conversational</option>
+                <option value="authoritative">Authoritative</option>
+                <option value="empathetic">Empathetic</option>
+                <option value="energetic">Energetic / Sales</option>
+                <option value="calm">Calm / Educational</option>
+            </select>
+        </div>
+    </div>
+    <!-- Run button -->
+    <button class="rewrite-btn-main" id="rewriteRunBtn" onclick="runRewrite()" style="width:100%;padding:14px;">✨ Rewrite Now</button>
+    <div id="rewriteOutput" style="margin-top:16px;"></div>
 </div>
 
             </div>
@@ -1154,6 +1173,13 @@
                 <div class="section">
                     <div class="section-title">⚖️ ROI Benchmarking</div>
                     <div class="section-content" id="roiComparison"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🏆 Competitive Analysis</div>
+                    <div class="section-content" id="competitorAdvantage"></div>
+                </div>
+            </div><!-- end tab-comparison -->
 
             <!-- Hooks Library Tab -->
 <div id="tab-hooks" class="tab-content">
@@ -1340,13 +1366,6 @@
     </div>
     <div id="landingOutput"></div>
 </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">🏆 Competitive Analysis</div>
-                    <div class="section-content" id="competitorAdvantage"></div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1423,6 +1442,16 @@
         // RENDER ALL RESULTS
         function renderAllResults(data) {
             results.classList.add('active');
+
+            // Expose data globally so tier2_features.js can access it
+            window._adlyticsData     = data;
+            window._adlyticsContent  = (document.getElementById('videoScript')?.value?.trim()
+                                     || document.getElementById('adCopy')?.value?.trim() || '');
+            window._adlyticsPlatform = document.getElementById('platform')?.value     || 'tiktok';
+            window._adlyticsIndustry = document.getElementById('industry')?.value     || 'finance';
+            window._adlyticsCountry  = document.getElementById('audienceCountry')?.value || 'nigeria';
+            // Notify tier2 features
+            window.dispatchEvent(new CustomEvent('adlytics:analyzed', { detail: data }));
 
             // Overview
             renderScores(data.scores);
@@ -2633,5 +2662,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
+
+    <!-- Tier 2 Features: Rewrite Engine, Hooks Library, Compliance, Psychographic,
+         Storyboard, Benchmarks, A/B Tracker, Landing Page Analyzer -->
+    <script src="/static/js/tier2_features.js" defer></script>
 </body>
 </html>
