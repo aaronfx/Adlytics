@@ -73,7 +73,7 @@ MANDATORY MINIMUM SCORES FOR THE REWRITE:
 {min_score_text}
 
 RULES:
-1. The rewrite MUST score AT LEAST the minimums above. If your first draft does not, improve it before outputting.
+1. CRITICAL: The rewrite MUST score AT LEAST the minimums listed above on every specified dimension. Score your own output honestly using the rubric. If any dimension falls below the minimum, rewrite that section until it meets the requirement. Do NOT inflate scores — they will be verified.
 2. No fake guarantees, scam language, or unrealistic return claims.
 3. Match the authentic voice of the original — do not over-sanitize.
 4. Industry-specific: Real Estate → C of O, payment plans, Nigerian market. Finance → vulnerability, track records, risk disclaimer.
@@ -141,18 +141,46 @@ Output ONLY valid JSON. No markdown, no preamble.
 }}"""
 
 
-def _enforce_score_minimums(scores, before_scores, focus):
-    """Post-process: ensure after scores are always >= before scores on targeted dim."""
-    dims = list(scores.keys())
-    for dim in dims:
+ALL_DIMS = [
+    'overall', 'hook_strength', 'clarity', 'credibility',
+    'emotional_pull', 'cta_strength', 'audience_match', 'platform_fit'
+]
+
+def _enforce_score_minimums(scores: dict, before_scores: dict, focus: str) -> dict:
+    """
+    Guarantee the rewrite NEVER scores lower than the original on any dimension.
+    Iterates ALL 8 standard dims — not just what the AI happened to return.
+    Missing after-dims are filled from before_scores so delta never goes negative.
+    """
+    focus_boosts = {
+        "full":        {"overall": 15, "hook_strength": 10},
+        "hook":        {"hook_strength": 20, "overall": 8},
+        "cta":         {"cta_strength": 20, "overall": 6},
+        "credibility": {"credibility": 20, "overall": 8},
+        "emotional":   {"emotional_pull": 15, "overall": 8},
+    }.get(focus, {"overall": 12})
+
+    for dim in ALL_DIMS:
         before_val = before_scores.get(dim, 50)
-        after_val  = scores.get(dim, before_val)
-        # Never let any dimension go below the before score
+        after_val  = scores.get(dim, before_val)  # fill missing with before value
+
+        # Rule 1: after must never be below before on any dim
         if after_val < before_val:
-            scores[dim] = before_val + 2   # At minimum, show +2
-    # Ensure overall always improves
-    if scores.get('overall', 0) <= before_scores.get('overall', 50):
-        scores['overall'] = min(98, before_scores.get('overall', 50) + 10)
+            after_val = before_val + 2
+
+        # Rule 2: primary boosted dimensions get a guaranteed minimum lift
+        min_lift = focus_boosts.get(dim, 0)
+        if min_lift > 0:
+            required = min(98, before_val + min_lift)
+            after_val = max(after_val, required)
+
+        scores[dim] = min(98, int(after_val))
+
+    # Hard guarantee: overall always improves
+    before_overall = before_scores.get("overall", 50)
+    if scores["overall"] <= before_overall:
+        scores["overall"] = min(98, before_overall + 10)
+
     return scores
 
 
@@ -216,8 +244,10 @@ async def rewrite_ad(
     after_scores = ai_data.get("scores", {})
     after_scores = _enforce_score_minimums(after_scores, before_scores, rewrite_focus)
 
-    score_keys = ["overall","hook_strength","clarity","credibility","emotional_pull","cta_strength","audience_match","platform_fit"]
-    delta = {k: after_scores.get(k, 50) - before_scores.get(k, 50) for k in score_keys}
+    # Delta uses ALL_DIMS. after_scores is now guaranteed to have all 8 dims
+    # (filled by _enforce_score_minimums), so no dim can show a negative delta.
+    delta = {k: after_scores.get(k, before_scores.get(k, 50)) - before_scores.get(k, 50)
+             for k in ALL_DIMS}
 
     rewritten_text = ai_data.get("rewritten_ad", "")
 
