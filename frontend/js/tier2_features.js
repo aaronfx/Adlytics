@@ -126,10 +126,14 @@ function _renderRewriteResult(d) {
     const content  = getContent();
 
     const deltaChips = dims.map(k => {
-        const dv = delta[k] || 0;
+        const dv = delta[k];
+        if (dv === null || dv === undefined) {
+            // masked dim — not changed by this focus
+            return `<span class="delta-chip flat" data-dim="${k}" style="opacity:.3" title="Not affected by this focus">${labels[k]}: —</span>`;
+        }
         const cls = dv > 0 ? 'up' : dv < 0 ? 'down' : 'flat';
         const arrow = dv > 0 ? '▲' : dv < 0 ? '▼' : '→';
-        return `<span class="delta-chip ${cls}">${labels[k]}: ${arrow}${Math.abs(dv)}</span>`;
+        return `<span class="delta-chip ${cls}" data-dim="${k}">${labels[k]}: ${arrow}${Math.abs(dv)}</span>`;
     }).join('');
 
     const beforeBadges = dims.map(k =>
@@ -190,6 +194,11 @@ function _renderRewriteResult(d) {
             </div>
         </div>
         ${voiceoverHTML}`;
+
+    // Apply scam warning / scores warning / delta masking via patch hook
+    if (typeof window._onRewriteResultPatch === 'function') {
+        window._onRewriteResultPatch(d);
+    }
 }
 
 window.copyVoiceScript = function() {
