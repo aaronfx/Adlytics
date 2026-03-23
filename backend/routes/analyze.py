@@ -294,19 +294,24 @@ def _resolve_industry(industry: str) -> dict:
 # CURRENCY CONFIGURATION
 # Exchange rates vs USD (approximate, update periodically)
 # ─────────────────────────────────────────────
+def _make_curr(symbol, code, rate, d_low, d_mid, d_high):
+    return {"symbol": symbol, "code": code,
+            "rate": rate, "usd_rate": rate,          # both keys supported
+            "daily_low": d_low, "daily_mid": d_mid, "daily_high": d_high}
+
 CURRENCY = {
-    "nigeria":      {"symbol": "₦",  "code": "NGN", "rate": 1630.0},  # ₦ per $1
-    "ghana":        {"symbol": "GH₵","code": "GHS", "rate": 15.2},
-    "kenya":        {"symbol": "KSh","code": "KES", "rate": 129.0},
-    "south_africa": {"symbol": "R",  "code": "ZAR", "rate": 18.5},
-    "uk":           {"symbol": "£",  "code": "GBP", "rate": 0.79},
-    "us":           {"symbol": "$",  "code": "USD", "rate": 1.0},
-    "canada":       {"symbol": "CA$","code": "CAD", "rate": 1.37},
-    "australia":    {"symbol": "A$", "code": "AUD", "rate": 1.54},
-    "germany":      {"symbol": "€",  "code": "EUR", "rate": 0.92},
-    "india":        {"symbol": "₹",  "code": "INR", "rate": 83.5},
+    "nigeria":      _make_curr("₦",   "NGN", 1630.0, 15_000,  50_000,  165_000),
+    "ghana":        _make_curr("GH₵", "GHS",   15.2,    150,     500,    1_500),
+    "kenya":        _make_curr("KSh", "KES",  129.0,  1_500,   5_000,   20_000),
+    "south_africa": _make_curr("R",   "ZAR",   18.5,    200,     700,    3_000),
+    "uk":           _make_curr("£",   "GBP",   0.79,     15,      50,      200),
+    "us":           _make_curr("$",   "USD",    1.0,     20,      50,      300),
+    "canada":       _make_curr("CA$", "CAD",   1.37,     25,      65,      400),
+    "australia":    _make_curr("A$",  "AUD",   1.54,     25,      65,      400),
+    "germany":      _make_curr("€",   "EUR",   0.92,     18,      55,      250),
+    "india":        _make_curr("₹",   "INR",   83.5,  1_500,   4_000,   15_000),
 }
-DEFAULT_CURRENCY = {"symbol": "$", "code": "USD", "rate": 1.0}
+DEFAULT_CURRENCY = _make_curr("$", "USD", 1.0, 20, 50, 300)
 
 def get_currency(country: str) -> dict:
     """Return currency config for a given country string."""
