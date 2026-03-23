@@ -1071,7 +1071,9 @@ async def analyze_endpoint(
     audience_occupation: str = Form(""),
 ):
     try:
-        logger.info(f"📥 v6.1 Analysis — industry={industry}, platform={platform}")
+        # Normalise multi-select platform value (e.g. "tiktok,facebook" → "tiktok" for AI prompt)
+        platform_primary = platform.split(',')[0].strip() if platform else 'tiktok'
+        logger.info(f"📥 v6.2 Analysis — industry={industry}, platform={platform_primary} (raw: {platform})")
 
         if ai_engine is None:
             raise HTTPException(status_code=503, detail="AI Engine not available")
@@ -1084,12 +1086,12 @@ async def analyze_endpoint(
         ind = _resolve_industry(industry)
 
         request_data = {
-            "ad_copy": ad_copy or "",
-            "video_script": video_script or "",
-            "platform": platform,
-            "industry": industry,
+            "ad_copy":          ad_copy or "",
+            "video_script":     video_script or "",
+            "platform":         platform_primary,
+            "industry":         industry,
             "audience_country": audience_country,
-            "audience_age": audience_age,
+            "audience_age":     audience_age.split(',')[0].strip() if audience_age else "25-34",
         }
 
         # ── AI call ────────────────────────────────────
