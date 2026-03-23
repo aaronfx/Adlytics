@@ -371,70 +371,115 @@ def _extract_cta(content: str) -> str:
 # GENERATORS (all receive industry config)
 # ─────────────────────────────────────────────
 
-def gen_decision_engine(scores: dict, summary: str) -> dict:
-    overall = safe_score(scores, "overall")
-    should_run = overall >= 60
-    confidence = min(95, overall + 10)
-    return {
-        "should_run": should_run,
-        "reasoning": summary or (
+def gen_decision_engine(scores: dict, summary: str, country: str = "us") -> dict:
+    overall   = safe_score(scores, "overall")
+    cred      = safe_score(scores, "credibility")
+    hook      = safe_score(scores, "hook_strength")
+    curr      = get_currency(country)
+    r         = curr["usd_rate"]
+    sym       = curr["symbol"]
+
+    # Multi-gate: credibility < 30 or hook < 25 = hard kill
+    hard_kill  = cred < 30 or hook < 25
+    should_run = (not hard_kill) and overall >= 60
+
+    if hard_kill:
+        reasoning = (
+            f"Credibility score {cred}/100 — scam patterns or zero proof detected. "
+            "Fix credibility before any spend." if cred < 30
+            else f"Hook score {hook}/100 — ad will not stop the scroll. Rewrite hook first."
+        )
+    else:
+        reasoning = summary or (
             f"Score of {overall}/100. " +
             ("Strong enough to deploy with a small test budget." if should_run
              else "Needs revision before spending on media.")
-        ),
-        "confidence": f"{confidence}%",
-        "expected_profit": overall * 180,
+        )
+
+    confidence = min(95, overall + 10) if not hard_kill else max(10, cred)
+
+    # All monetary values in local currency
+    expected_profit_local = round(overall * 180 * r)
+    low_case_local        = round(max(0, overall * 40)  * r)
+    base_case_local       = round(overall * 130 * r)
+    high_case_local       = round(overall * 280 * r)
+    cpm_threshold_local   = round(overall * 0.3 * r, 2)
+
+    return {
+        "should_run":     should_run,
+        "hard_kill":      hard_kill,
+        "reasoning":      reasoning,
+        "confidence":     f"{confidence}%",
+        "expected_profit": expected_profit_local,
         "roi_prediction": f"{overall / 35:.1f}x",
         "profit_scenarios": {
-            "low_case": max(0, overall * 40),
-            "base_case": overall * 130,
-            "high_case": overall * 280,
+            "low_case":  low_case_local,
+            "base_case": base_case_local,
+            "high_case": high_case_local,
         },
         "kill_threshold": (
-            f"Kill if CPM exceeds ${round(overall * 0.3, 2)} after 48 hours with no conversions."
+            f"Kill if CPM exceeds {sym}{cpm_threshold_local:,} after 48 hours with no conversions."
         ),
         "scale_threshold": (
             f"Scale to 2× budget when ROAS ≥ {round(overall / 35, 1)}× and CPA is below target."
         ),
         "confidence_breakdown": {
             "data_confidence": min(95, overall + 20),
-            "market_fit": safe_score(scores, "audience_match"),
-            "execution": safe_score(scores, "platform_fit"),
+            "market_fit":      safe_score(scores, "audience_match"),
+            "execution":       safe_score(scores, "platform_fit"),
         },
+        "currency_symbol": sym,
+        "currency_code":   curr["code"],
     }
 
 
-def gen_budget_optimization(scores: dict) -> dict:
+def gen_budget_optimization(scores: dict, country: str = "us") -> dict:
     overall = safe_score(scores, "overall")
+    curr    = get_currency(country)
+    r       = curr["usd_rate"]
+    sym     = curr["symbol"]
+
+    # Daily spend tiers localised per country
+    d_low  = curr["daily_low"]
+    d_mid  = curr["daily_mid"]
+    d_high = curr["daily_high"]
+
     if overall >= 70:
         phases = [
-            "Phase 1 (Days 1–3) – Validation: $50/day. Goal: confirm CTR & CPM.",
-            "Phase 2 (Days 4–10) – Learning: $100/day. Goal: lower CPA via optimisation.",
-            "Phase 3 (Days 11–24) – Scaling: $300/day. Goal: maximise ROAS.",
+            f"Phase 1 (Days 1–3) – Validation: {sym}{d_low:,}/day. Goal: confirm CTR & CPM.",
+            f"Phase 2 (Days 4–10) – Learning: {sym}{d_mid:,}/day. Goal: lower CPA via optimisation.",
+            f"Phase 3 (Days 11–24) – Scaling: {sym}{d_high:,}/day. Goal: maximise ROAS.",
         ]
-        risk, worst = "Low", 500
+        risk, worst_usd = "Low", 500
     else:
+        d_val = round(d_low * 0.6)
         phases = [
-            "Phase 1 (Days 1–5) – Validation: $30/day. Goal: identify weak points.",
-            "Phase 2 (Days 6–12) – Optimisation: $50/day. Goal: fix identified gaps.",
+            f"Phase 1 (Days 1–5) – Validation: {sym}{d_val:,}/day. Goal: identify weak points.",
+            f"Phase 2 (Days 6–12) – Optimisation: {sym}{d_low:,}/day. Goal: fix identified gaps.",
         ]
-        risk = "Medium" if overall >= 55 else "High"
-        worst = 1200 if overall >= 50 else 2500
+        risk     = "Medium" if overall >= 55 else "High"
+        worst_usd = 1200 if overall >= 50 else 2500
+
+    worst_local = round(worst_usd * r)
+    safe_local  = round((1500 if overall >= 70 else 800) * r)
+    cpc_local   = round(overall * 0.035 * r, 2)
 
     tip = (
-        "Start with a 3-day $30/day test. Kill if CPA exceeds your target by day 2."
+        f"Start with a 3-day {sym}{round(d_low * 0.6):,}/day test. Kill if CPA exceeds target by day 2."
         if overall < 60 else
-        "Strong score — run $100/day for 7 days to build algorithm confidence before scaling."
+        f"Strong score — run {sym}{d_mid:,}/day for 7 days to build algorithm confidence before scaling."
     )
     return {
-        "break_even_cpc": round(overall * 0.035, 2),
-        "safe_test_budget": 1500 if overall >= 70 else 800,
+        "break_even_cpc": cpc_local,
+        "safe_test_budget": safe_local,
         "days_to_profit": 5 if overall >= 70 else 10,
         "scaling_rule": f"Double budget every 7 days when ROAS ≥ {round(overall / 35, 1)}×.",
         "risk_level": risk,
-        "worst_case_loss": worst,
+        "worst_case_loss": worst_local,
         "budget_tip": tip,
         "budget_phases": phases,
+        "currency_symbol": sym,
+        "currency_code":   curr["code"],
     }
 
 
@@ -1101,10 +1146,10 @@ async def analyze_endpoint(
             "improvements": gen_improvements(scores, ind),
 
             # Decision
-            "decision_engine": gen_decision_engine(scores, ai_summary),
+            "decision_engine": gen_decision_engine(scores, ai_summary, audience_country),
 
             # Budget
-            "budget_optimization": gen_budget_optimization(scores),
+            "budget_optimization": gen_budget_optimization(scores, audience_country),
 
             # Neuro
             "neuro_response": gen_neuro_response(scores, content, ind),
@@ -1137,9 +1182,10 @@ async def analyze_endpoint(
             "competitor_advantage": gen_competitor_advantage(scores, content, ind),
 
             "_metadata": {
-                "version": "6.1",
+                "version": "6.2",
                 "industry_resolved": ind["label"],
                 "content_words": len(content.split()),
+                "currency": get_currency(audience_country),
             },
         }
 
