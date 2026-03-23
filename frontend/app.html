@@ -832,7 +832,6 @@
 .landing-blocker { background: white; border-left: 4px solid var(--danger); border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 8px; }
 .landing-quick-win { background: #ecfdf5; border-left: 4px solid var(--success); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 8px; font-size: 0.9rem; }
 </style>
-
 </style>
 <base target="_blank">
 </head>
@@ -1006,6 +1005,7 @@
     </div>
     <div id="rewriteOutput"></div>
 </div>
+
             </div>
 
             <!-- Decision Tab -->
@@ -1154,12 +1154,8 @@
                 <div class="section">
                     <div class="section-title">⚖️ ROI Benchmarking</div>
                     <div class="section-content" id="roiComparison"></div>
-                </div>
 
-                <div class="section">
-                    <div class="section-title">🏆 Competitive Analysis</div>
-                    <div class="section-content" id="competitorAdvantage"></div>
-                </div>\n\n<!-- Hooks Library Tab -->
+            <!-- Hooks Library Tab -->
 <div id="tab-hooks" class="tab-content">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <div class="section-title" style="margin-bottom:0;">📚 Hook Swipe File</div>
@@ -1344,6 +1340,12 @@
     </div>
     <div id="landingOutput"></div>
 </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🏆 Competitive Analysis</div>
+                    <div class="section-content" id="competitorAdvantage"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -2027,7 +2029,7 @@
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
         });
-    <script id="adlytics-additions-js">
+    
 // ── Shared state ─────────────────────────────────────────────
 let _lastAnalysisData   = null;   // set after every analysis
 let _rewriteFocus       = 'full';
@@ -2117,14 +2119,12 @@ function renderRewriteResult(d) {
         <div class="rewrite-comparison">
             <div class="rewrite-col">
                 <div class="rewrite-col-label">📄 Before</div>
-                <div class="rewrite-ad-text">${(_currentAdContent || '').replace(/
-/g,'<br>')}</div>
+                <div class="rewrite-ad-text">${(_currentAdContent || '').replace(/\n/g,'<br>')}</div>
                 <div class="rewrite-score-row">${beforeBadges}</div>
             </div>
             <div class="rewrite-col after">
                 <div class="rewrite-col-label">✨ After (${_rewriteFocus.replace('_',' ')} focus)</div>
-                <div class="rewrite-ad-text" id="rewrittenText">${(d.rewritten_ad||'').replace(/
-/g,'<br>')}</div>
+                <div class="rewrite-ad-text" id="rewrittenText">${(d.rewritten_ad||'').replace(/\n/g,'<br>')}</div>
                 <div class="rewrite-score-row">${afterBadges}</div>
                 <div style="margin-top:14px; padding:12px; background:var(--gray-50); border-radius:8px; font-size:0.88rem; color:var(--gray-700);">
                     <strong>Why it works:</strong> ${d.why_it_works || ''}
@@ -2631,7 +2631,6 @@ function renderLandingResult(d) {
 document.addEventListener('DOMContentLoaded', () => {
     loadAbResults();
 });
-</script>
 
 </script>
 </body>
