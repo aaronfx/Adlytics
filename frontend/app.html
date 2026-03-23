@@ -959,13 +959,223 @@
             font-size: 0.78rem;
             font-weight: 500;
         }
+
+        /* ── Onboarding Modal ────────────────────────── */
+        .ob-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(17,24,39,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .ob-overlay.active { display: flex; }
+        .ob-modal {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.3);
+        }
+        .ob-header {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            padding: 32px 32px 24px;
+            border-radius: 20px 20px 0 0;
+            color: white;
+            text-align: center;
+        }
+        .ob-logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+        .ob-tagline { font-size: 0.95rem; opacity: 0.85; margin-top: 4px; }
+        .ob-steps { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .ob-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            transition: background 0.2s;
+        }
+        .ob-dot.active { background: white; }
+        .ob-body { padding: 28px 32px 24px; }
+        .ob-step { display: none; }
+        .ob-step.active { display: block; }
+        .ob-step-icon { font-size: 2.5rem; margin-bottom: 12px; }
+        .ob-step h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; color: var(--gray-900); }
+        .ob-step p { color: var(--gray-700); font-size: 0.95rem; line-height: 1.7; margin-bottom: 14px; }
+        .ob-score-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+        .ob-legend-item {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--gray-50); border-radius: 8px; padding: 8px 12px;
+            font-size: 0.82rem; font-weight: 600;
+        }
+        .ob-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+        .ob-tip {
+            background: #eff6ff; border-left: 3px solid var(--info);
+            border-radius: 0 8px 8px 0; padding: 10px 14px;
+            font-size: 0.85rem; color: #1e40af; margin-top: 12px;
+        }
+        .ob-footer {
+            padding: 0 32px 28px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .ob-skip { background: none; border: none; color: var(--gray-400); font-size: 0.9rem; cursor: pointer; padding: 8px 0; }
+        .ob-skip:hover { color: var(--gray-700); }
+        .ob-next {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white; border: none; padding: 12px 28px;
+            border-radius: 8px; font-weight: 700; font-size: 0.95rem;
+            cursor: pointer; transition: transform 0.15s;
+        }
+        .ob-next:hover { transform: translateY(-1px); }
+        .ob-checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+        .ob-checklist li {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: var(--gray-50); border-radius: 8px; padding: 10px 12px;
+            font-size: 0.87rem; color: var(--gray-700); line-height: 1.5;
+        }
+        .ob-checklist li span:first-child { font-size: 1.1rem; flex-shrink: 0; }
+
+        /* ── PDF Export button ───────────────────────── */
+        .pdf-export-bar {
+            display: none;
+            padding: 10px 18px;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+        }
+        .results.active .pdf-export-bar { display: flex; }
+        .pdf-btn {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--danger); color: white; border: none;
+            padding: 8px 18px; border-radius: 8px;
+            font-size: 0.85rem; font-weight: 700; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .pdf-btn:hover { opacity: 0.88; }
+        .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Mobile overrides ────────────────────────── */
+        @media (max-width: 480px) {
+            .container { padding: 12px; }
+            header h1 { font-size: 1.7rem; }
+            header p { font-size: 0.85rem; }
+            .form-toggle-bar { padding: 10px 14px; }
+            .form-toggle-bar-title { font-size: 0.88rem; }
+            .summary-chip { font-size: 0.72rem; padding: 2px 7px; }
+            .tab-content { padding: 16px 14px; }
+            .scores-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .score-value { font-size: 1.6rem; }
+            .two-col { grid-template-columns: 1fr !important; }
+            .three-col { grid-template-columns: 1fr !important; }
+            .scenario-grid { grid-template-columns: 1fr !important; }
+            .data-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .platform-grid { grid-template-columns: 1fr !important; }
+            .rewrite-comparison { grid-template-columns: 1fr !important; }
+            .decision-card h2 { font-size: 1.3rem; }
+            .section-title { font-size: 1rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .ob-modal { border-radius: 14px; }
+            .ob-header { padding: 22px 20px 18px; }
+            .ob-body { padding: 20px 20px 16px; }
+            .ob-footer { padding: 0 20px 20px; }
+            .ob-score-legend { grid-template-columns: 1fr; }
+            .pdf-export-bar { padding: 8px 12px; }
+        }
+        @media (max-width: 768px) {
+            .ab-result-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .psycho-row { grid-template-columns: 1fr; }
+            .benchmark-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
 </style>
 <base target="_blank">
 </head>
 <body>
+
+    <!-- ══ ONBOARDING MODAL ══════════════════════════════ -->
+    <div class="ob-overlay" id="obOverlay">
+        <div class="ob-modal">
+            <div class="ob-header">
+                <div class="ob-logo">ADLYTICS</div>
+                <div class="ob-tagline">AI-powered ad intelligence for West African marketers</div>
+                <div class="ob-steps">
+                    <div class="ob-dot active" id="ob-dot-0"></div>
+                    <div class="ob-dot" id="ob-dot-1"></div>
+                    <div class="ob-dot" id="ob-dot-2"></div>
+                    <div class="ob-dot" id="ob-dot-3"></div>
+                </div>
+            </div>
+            <div class="ob-body">
+
+                <!-- Step 0: Welcome -->
+                <div class="ob-step active" id="ob-step-0">
+                    <div class="ob-step-icon">🎯</div>
+                    <h2>Welcome to ADLYTICS</h2>
+                    <p>ADLYTICS analyses your ad copy and video scripts before you spend a single naira — predicting performance, detecting weaknesses, and showing you exactly how to fix them.</p>
+                    <ul class="ob-checklist">
+                        <li><span>📊</span><span>19-tab analysis covering hook strength, credibility, emotional pull, CTA, personas, and more</span></li>
+                        <li><span>✨</span><span>Rewrite engine that fixes weak ads and shows before/after scores</span></li>
+                        <li><span>🛡️</span><span>Compliance scanner for TikTok, Meta, and Nigerian regulations</span></li>
+                        <li><span>💰</span><span>Budget simulator in your local currency (₦, GH₵, £, $)</span></li>
+                    </ul>
+                </div>
+
+                <!-- Step 1: Scores explained -->
+                <div class="ob-step" id="ob-step-1">
+                    <div class="ob-step-icon">🔢</div>
+                    <h2>Understanding your scores</h2>
+                    <p>Every ad gets 8 scores from 0–100. They are calculated using a weighted formula — hook and credibility carry the most weight.</p>
+                    <div class="ob-score-legend">
+                        <div class="ob-legend-item"><div class="ob-swatch" style="background:#10b981;"></div>81–100: Excellent</div>
+                        <div class="ob-legend-item"><div class="ob-swatch" style="background:#3b82f6;"></div>61–80: Good</div>
+                        <div class="ob-legend-item"><div class="ob-swatch" style="background:#f59e0b;"></div>41–60: Average</div>
+                        <div class="ob-legend-item"><div class="ob-swatch" style="background:#ef4444;"></div>0–40: Poor</div>
+                    </div>
+                    <div class="ob-tip">💡 <strong>Hook</strong> (25%) and <strong>Credibility</strong> (20%) have the biggest impact on your overall score. Fix these first.</div>
+                </div>
+
+                <!-- Step 2: How to get best results -->
+                <div class="ob-step" id="ob-step-2">
+                    <div class="ob-step-icon">✍️</div>
+                    <h2>Getting the best results</h2>
+                    <p>Paste your <strong>actual ad copy or video script</strong> — not a brief or idea. The more specific your input, the more accurate the analysis.</p>
+                    <ul class="ob-checklist">
+                        <li><span>✅</span><span>Use the <strong>Video Script</strong> field for TikTok/Reels — it analyses hook delivery, timecodes, and speech flow separately</span></li>
+                        <li><span>✅</span><span>Select the correct <strong>industry</strong> — personas, hooks, and compliance rules all change per industry</span></li>
+                        <li><span>✅</span><span>Set the right <strong>country</strong> — all budget figures appear in your local currency</span></li>
+                        <li><span>⚡</span><span>After analysis, use <strong>Rewrite Engine</strong> (Overview tab) to fix weak spots with one click</span></li>
+                    </ul>
+                </div>
+
+                <!-- Step 3: Ready -->
+                <div class="ob-step" id="ob-step-3">
+                    <div class="ob-step-icon">🚀</div>
+                    <h2>You're ready to go</h2>
+                    <p>Paste your first ad below and click <strong>Analyse Ad Performance</strong>. Results typically take 15–25 seconds.</p>
+                    <div class="ob-tip">💡 You can export any analysis as a <strong>PDF report</strong> using the button that appears after analysis — great for sharing with clients or a team.</div>
+                    <p style="margin-top:14px; font-size:0.85rem; color:var(--gray-400);">This walkthrough won't show again. You can reopen it from the header at any time.</p>
+                </div>
+
+            </div>
+            <div class="ob-footer">
+                <button class="ob-skip" onclick="closeOnboarding()">Skip</button>
+                <button class="ob-next" id="obNextBtn" onclick="obNext()">Next →</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
-            <h1>ADLYTICS <span class="badge">v5.0 PRO</span></h1>
+            <h1>ADLYTICS <span class="badge">v5.0 PRO</span>
+                <button onclick="openOnboarding()" title="How to use ADLYTICS"
+                        style="background:rgba(255,255,255,0.2);border:none;color:white;
+                               padding:4px 12px;border-radius:20px;font-size:0.78rem;
+                               font-weight:600;cursor:pointer;margin-left:8px;vertical-align:middle;">
+                    ? Help
+                </button>
+            </h1>
             <p>Strategic AI Intelligence for Ad Optimization</p>
         </header>
 
@@ -1090,6 +1300,13 @@
         </div>
 
         <div id="results" class="results">
+            <!-- PDF Export Bar — shown when results are active -->
+            <div class="pdf-export-bar" id="pdfBar">
+                <span style="font-size:0.82rem;color:var(--gray-400);">Export full analysis</span>
+                <button class="pdf-btn" id="pdfBtn" onclick="exportPDF()">
+                    📄 Download PDF Report
+                </button>
+            </div>
             <nav class="tabs-nav">
                 <button class="tab-btn active" data-tab="overview">📊 Overview</button>
                 <button class="tab-btn" data-tab="decision">🎯 Decision</button>
@@ -1741,7 +1958,7 @@
                         </div>
                         <div class="data-item">
                             <div class="data-label">Expected Profit</div>
-                            <div class="data-value">$${(decision.expected_profit || 0).toLocaleString()}</div>
+                            <div class="data-value">${(decision.currency_symbol || window._activeSym || '$')}${(decision.expected_profit || 0).toLocaleString()}</div>
                         </div>
                         <div class="data-item">
                             <div class="data-label">ROI Prediction</div>
@@ -1761,15 +1978,15 @@
                 <div class="scenario-grid">
                     <div class="scenario-card low">
                         <div class="scenario-label">Conservative</div>
-                        <div class="scenario-value">$${(scenarios.low_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${window._adlyticsData?.decision_engine?.currency_symbol||window._activeSym||'$'}${(scenarios.low_case || 0).toLocaleString()}</div>
                     </div>
                     <div class="scenario-card base">
                         <div class="scenario-label">Base Case</div>
-                        <div class="scenario-value">$${(scenarios.base_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${window._adlyticsData?.decision_engine?.currency_symbol||window._activeSym||'$'}${(scenarios.base_case || 0).toLocaleString()}</div>
                     </div>
                     <div class="scenario-card high">
                         <div class="scenario-label">Optimistic</div>
-                        <div class="scenario-value">$${(scenarios.high_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${window._adlyticsData?.decision_engine?.currency_symbol||window._activeSym||'$'}${(scenarios.high_case || 0).toLocaleString()}</div>
                     </div>
                 </div>
             `;
@@ -1796,19 +2013,37 @@
             `).join('');
         }
 
-        // BUDGET
+        // BUDGET — currency-aware
+        window._budgetData = null;
+        window._activeSym  = '$';
+
         function renderBudget(budget) {
             const container = document.getElementById('budgetMetrics');
             if (!budget) return;
+            window._budgetData = budget;
+
+            const sym  = budget.currency_symbol
+                      || window._adlyticsData?._metadata?.currency?.symbol
+                      || '$';
+            const code = budget.currency_code
+                      || window._adlyticsData?._metadata?.currency?.code
+                      || 'USD';
+            window._activeSym = sym;
+
+            // Keep budget simulator in sync
+            const lbl  = document.getElementById('budgetCurrencyLabel');
+            const bsym = document.getElementById('budgetSymbol');
+            if (lbl)  lbl.textContent  = code;
+            if (bsym) bsym.textContent = sym;
 
             container.innerHTML = `
                 <div class="data-item">
                     <div class="data-label">Break-Even CPC</div>
-                    <div class="data-value">$${budget.break_even_cpc || 0}</div>
+                    <div class="data-value">${sym}${(budget.break_even_cpc || 0).toLocaleString()}</div>
                 </div>
                 <div class="data-item">
                     <div class="data-label">Safe Test Budget</div>
-                    <div class="data-value">$${(budget.safe_test_budget || 0).toLocaleString()}</div>
+                    <div class="data-value">${sym}${(budget.safe_test_budget || 0).toLocaleString()}</div>
                 </div>
                 <div class="data-item">
                     <div class="data-label">Days to Profit</div>
@@ -1836,10 +2071,10 @@
         function renderBudgetRisk(budget) {
             const container = document.getElementById('budgetRisk');
             if (!budget) return;
-
+            const sym = budget.currency_symbol || window._activeSym || '$';
             container.innerHTML = `
                 <p><strong>Risk Level:</strong> <span class="objection-tag ${(budget.risk_level || '').toLowerCase().replace(' ', '-')}">${budget.risk_level || 'Unknown'}</span></p>
-                <p style="margin-top: 10px;"><strong>Worst Case Loss:</strong> $${(budget.worst_case_loss || 0).toLocaleString()}</p>
+                <p style="margin-top: 10px;"><strong>Worst Case Loss:</strong> ${sym}${(budget.worst_case_loss || 0).toLocaleString()}</p>
             `;
         }
 
@@ -2879,6 +3114,327 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('calcImpressions').textContent = impressions.toLocaleString();
             document.getElementById('calcClicks').textContent      = clicks.toLocaleString();
             document.getElementById('calcBreakeven').textContent   = `Day ${daysToBreak}`;
+        }
+
+        // ══════════════════════════════════════════════════
+        // ONBOARDING
+        // ══════════════════════════════════════════════════
+        let _obStep = 0;
+        const _obTotal = 4;
+
+        function openOnboarding() {
+            _obStep = 0;
+            _renderObStep();
+            document.getElementById('obOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeOnboarding() {
+            document.getElementById('obOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+            localStorage.setItem('adlytics_onboarded', '1');
+        }
+
+        function obNext() {
+            if (_obStep < _obTotal - 1) {
+                _obStep++;
+                _renderObStep();
+            } else {
+                closeOnboarding();
+            }
+        }
+
+        function _renderObStep() {
+            // Show correct step panel
+            document.querySelectorAll('.ob-step').forEach((s, i) => {
+                s.classList.toggle('active', i === _obStep);
+            });
+            // Update dots
+            document.querySelectorAll('.ob-dot').forEach((d, i) => {
+                d.classList.toggle('active', i === _obStep);
+            });
+            // Update button label
+            const btn = document.getElementById('obNextBtn');
+            btn.textContent = _obStep === _obTotal - 1 ? "Let's go! 🚀" : 'Next →';
+        }
+
+        // Close on overlay click (outside modal)
+        document.getElementById('obOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeOnboarding();
+        });
+
+        // Auto-open on first visit
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('adlytics_onboarded')) {
+                setTimeout(openOnboarding, 600);
+            }
+        });
+
+        // ══════════════════════════════════════════════════
+        // PDF EXPORT
+        // ══════════════════════════════════════════════════
+        async function exportPDF() {
+            const btn = document.getElementById('pdfBtn');
+            if (!window._adlyticsData) { alert('Run an analysis first.'); return; }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Building report...';
+
+            try {
+                // Load jsPDF from CDN
+                if (!window.jspdf) {
+                    await new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                        s.onload = resolve; s.onerror = reject;
+                        document.head.appendChild(s);
+                    });
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const d   = window._adlyticsData;
+                const sym = d?.decision_engine?.currency_symbol
+                         || d?.budget_optimization?.currency_symbol
+                         || window._activeSym
+                         || '$';
+                const scores = d.scores || {};
+                const content = window._adlyticsContent || '';
+                const platform = window._adlyticsPlatform || '';
+                const industry = window._adlyticsIndustry || '';
+                const country  = window._adlyticsCountry  || '';
+                const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+
+                // ── Colours ──────────────────────────────────
+                const C = {
+                    primary:  [99, 102, 241],
+                    dark:     [17,  24,  39],
+                    mid:      [55,  65,  81],
+                    light:    [156, 163, 175],
+                    bg:       [249, 250, 251],
+                    success:  [16, 185, 129],
+                    warning:  [245, 158, 11],
+                    danger:   [239, 68,  68],
+                    white:    [255, 255, 255],
+                };
+
+                function scoreColor(v) {
+                    if (v >= 81) return C.success;
+                    if (v >= 61) return [59, 130, 246];
+                    if (v >= 41) return C.warning;
+                    return C.danger;
+                }
+
+                const PW = 210, PH = 297, M = 18, CW = PW - M * 2;
+                let y = 0;
+
+                function newPage() {
+                    doc.addPage();
+                    y = 18;
+                    // Footer on each page
+                    doc.setFontSize(8).setTextColor(...C.light);
+                    doc.text('ADLYTICS · Confidential · ' + today, M, PH - 8);
+                    doc.text(`Page ${doc.internal.getNumberOfPages()}`, PW - M, PH - 8, { align: 'right' });
+                }
+
+                function checkY(needed) { if (y + needed > PH - 22) newPage(); }
+
+                // ── COVER PAGE ───────────────────────────────
+                // Header band
+                doc.setFillColor(...C.primary);
+                doc.rect(0, 0, PW, 58, 'F');
+
+                doc.setFont('helvetica', 'bold').setFontSize(28).setTextColor(...C.white);
+                doc.text('ADLYTICS', M, 26);
+                doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(200, 201, 255);
+                doc.text('Ad Performance Intelligence Report', M, 35);
+
+                doc.setFontSize(9).setTextColor(180, 180, 255);
+                doc.text(`Generated: ${today}   Platform: ${platform.toUpperCase()}   Industry: ${industry}   Country: ${country}`, M, 46);
+
+                // Overall score circle simulation (rect)
+                const ov = scores.overall || 0;
+                const ovColor = scoreColor(ov);
+                doc.setFillColor(...ovColor);
+                doc.roundedRect(PW - 58, 10, 42, 42, 6, 6, 'F');
+                doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor(...C.white);
+                doc.text(String(ov), PW - 37, 32, { align: 'center' });
+                doc.setFontSize(8).setFont('helvetica', 'normal');
+                doc.text('OVERALL', PW - 37, 40, { align: 'center' });
+                doc.text('SCORE', PW - 37, 45, { align: 'center' });
+
+                y = 68;
+
+                // Ad content preview
+                if (content.trim()) {
+                    doc.setFillColor(...C.bg);
+                    doc.roundedRect(M, y, CW, 28, 4, 4, 'F');
+                    doc.setFontSize(7.5).setTextColor(...C.light).setFont('helvetica', 'bold');
+                    doc.text('AD CONTENT ANALYSED', M + 6, y + 7);
+                    doc.setFont('helvetica', 'normal').setTextColor(...C.mid);
+                    const preview = content.replace(/\n/g, ' ').substring(0, 220);
+                    const lines = doc.splitTextToSize(preview + (content.length > 220 ? '…' : ''), CW - 12);
+                    doc.text(lines.slice(0,3), M + 6, y + 14);
+                    y += 34;
+                }
+
+                // ── SCORES SECTION ────────────────────────────
+                y += 6;
+                doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(...C.dark);
+                doc.text('Score Breakdown', M, y); y += 8;
+
+                const scoreDims = [
+                    { key: 'hook_strength',  label: 'Hook Strength',  wt: '25%' },
+                    { key: 'credibility',    label: 'Credibility',    wt: '20%' },
+                    { key: 'emotional_pull', label: 'Emotional Pull', wt: '20%' },
+                    { key: 'cta_strength',   label: 'CTA Strength',   wt: '15%' },
+                    { key: 'clarity',        label: 'Clarity',        wt: '10%' },
+                    { key: 'audience_match', label: 'Audience Match', wt: '5%' },
+                    { key: 'platform_fit',   label: 'Platform Fit',   wt: '5%' },
+                ];
+
+                // Two-column grid
+                const colW = (CW - 8) / 2;
+                let col = 0, rowY = y;
+                scoreDims.forEach((dim, i) => {
+                    const v = scores[dim.key] || 0;
+                    const cx = M + col * (colW + 8);
+                    checkY(24);
+                    doc.setFillColor(...C.bg);
+                    doc.roundedRect(cx, rowY, colW, 20, 3, 3, 'F');
+                    doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...C.light);
+                    doc.text(dim.label.toUpperCase() + '  (' + dim.wt + ')', cx + 5, rowY + 7);
+                    // Bar track
+                    doc.setFillColor(225, 225, 235);
+                    doc.roundedRect(cx + 5, rowY + 11, colW - 36, 4, 1, 1, 'F');
+                    // Bar fill
+                    doc.setFillColor(...scoreColor(v));
+                    doc.roundedRect(cx + 5, rowY + 11, Math.max(2, (colW - 36) * v / 100), 4, 1, 1, 'F');
+                    // Score number
+                    doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor(...scoreColor(v));
+                    doc.text(String(v), cx + colW - 8, rowY + 16, { align: 'right' });
+
+                    col++;
+                    if (col === 2) { col = 0; rowY += 24; checkY(24); }
+                });
+                if (col === 1) rowY += 24;
+                y = rowY + 6;
+
+                // ── STRATEGIC SUMMARY ─────────────────────────
+                checkY(40);
+                doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
+                doc.text('Strategic Summary', M, y); y += 7;
+                const summary = typeof d.behavior_summary === 'string'
+                    ? d.behavior_summary
+                    : (d.behavior_summary?.verdict || 'See full analysis in ADLYTICS.');
+                doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(...C.mid);
+                const sumLines = doc.splitTextToSize(summary, CW);
+                checkY(sumLines.length * 5 + 6);
+                doc.setFillColor(...C.bg);
+                doc.roundedRect(M, y, CW, sumLines.length * 5 + 8, 3, 3, 'F');
+                doc.text(sumLines, M + 6, y + 6);
+                y += sumLines.length * 5 + 14;
+
+                // ── CRITICAL ISSUES ────────────────────────────
+                const issues = d.critical_weaknesses || [];
+                if (issues.length) {
+                    checkY(20);
+                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
+                    doc.text('Critical Issues', M, y); y += 7;
+                    issues.slice(0, 5).forEach(w => {
+                        const txt = `${w.severity || 'HIGH'}: ${w.issue || ''} — Fix: ${w.fix || ''}`;
+                        const wLines = doc.splitTextToSize(txt, CW - 14);
+                        checkY(wLines.length * 5 + 10);
+                        doc.setFillColor(254, 242, 242);
+                        doc.roundedRect(M, y, CW, wLines.length * 5 + 8, 3, 3, 'F');
+                        doc.setFillColor(...C.danger);
+                        doc.rect(M, y, 3, wLines.length * 5 + 8, 'F');
+                        doc.setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...C.mid);
+                        doc.text(wLines, M + 8, y + 6);
+                        y += wLines.length * 5 + 12;
+                    });
+                }
+
+                // ── DECISION ──────────────────────────────────
+                const de = d.decision_engine;
+                if (de) {
+                    checkY(40);
+                    const runColor = de.should_run ? C.success : C.danger;
+                    doc.setFillColor(...runColor);
+                    doc.roundedRect(M, y, CW, 34, 5, 5, 'F');
+                    doc.setFont('helvetica', 'bold').setFontSize(14).setTextColor(...C.white);
+                    doc.text(de.should_run ? '✓  RECOMMENDED TO RUN' : '✗  DO NOT RUN', M + 10, y + 12);
+                    doc.setFont('helvetica', 'normal').setFontSize(9);
+                    doc.text(`Confidence: ${de.confidence || '—'}   ROI Prediction: ${de.roi_prediction || '—'}   Expected Profit: ${de.expected_profit ? sym+de.expected_profit.toLocaleString() : '—'}`, M + 10, y + 22);
+                    const reasonLines = doc.splitTextToSize(de.reasoning || '', CW - 20);
+                    doc.text(reasonLines.slice(0,2), M + 10, y + 29);
+                    y += 42;
+                }
+
+                // ── BUDGET SNAPSHOT ───────────────────────────
+                const bo = d.budget_optimization;
+                if (bo) {
+                    checkY(30);
+                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
+                    doc.text('Budget Snapshot', M, y); y += 7;
+                    const budgItems = [
+                        ['Break-Even CPC', sym+(bo.break_even_cpc || '—').toLocaleString()+''],
+                        ['Safe Test Budget', bo.safe_test_budget ? sym+bo.safe_test_budget.toLocaleString() : '—'],
+                        ['Risk Level', bo.risk_level || '—'],
+                        ['Days to Profit', String(bo.days_to_profit || '—')],
+                    ];
+                    const bColW = (CW - 6) / 4;
+                    doc.setFillColor(...C.bg);
+                    doc.roundedRect(M, y, CW, 22, 3, 3, 'F');
+                    budgItems.forEach(([lbl, val], i) => {
+                        const bx = M + i * (bColW + 2);
+                        doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...C.light);
+                        doc.text(lbl.toUpperCase(), bx + 5, y + 8);
+                        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...C.dark);
+                        doc.text(val, bx + 5, y + 17);
+                    });
+                    y += 28;
+                }
+
+                // ── PERSONAS (summary) ────────────────────────
+                const personas = d.persona_reactions || [];
+                if (personas.length) {
+                    checkY(20);
+                    doc.setFont('helvetica', 'bold').setFontSize(12).setTextColor(...C.dark);
+                    doc.text('Audience Personas', M, y); y += 7;
+                    personas.slice(0,3).forEach(p => {
+                        const pName = p.name || p.persona || '—';
+                        const pReact = p.reaction || '';
+                        const pConv = p.conversion_likelihood || '—';
+                        checkY(16);
+                        doc.setFillColor(...C.bg);
+                        doc.roundedRect(M, y, CW, 14, 2, 2, 'F');
+                        doc.setFont('helvetica', 'bold').setFontSize(8.5).setTextColor(...C.dark);
+                        doc.text(pName, M + 5, y + 6);
+                        doc.setFont('helvetica', 'normal').setTextColor(...C.mid);
+                        doc.text(pReact.substring(0, 70), M + 5, y + 11);
+                        doc.setFont('helvetica', 'bold').setTextColor(...C.primary);
+                        doc.text(pConv, M + CW - 5, y + 8, { align: 'right' });
+                        y += 17;
+                    });
+                }
+
+                // ── FOOTER ON LAST PAGE ───────────────────────
+                doc.setFontSize(8).setTextColor(...C.light);
+                doc.text('ADLYTICS · Confidential · ' + today, M, PH - 8);
+                doc.text(`Page ${doc.internal.getNumberOfPages()}`, PW - M, PH - 8, { align: 'right' });
+
+                // ── SAVE ──────────────────────────────────────
+                const filename = `ADLYTICS_Report_${today.replace(/ /g,'_')}.pdf`;
+                doc.save(filename);
+
+            } catch(err) {
+                console.error('PDF error:', err);
+                alert('PDF generation failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📄 Download PDF Report';
+            }
         }
 
         // ── Rewrite: delta masking + scam warning ─────────
