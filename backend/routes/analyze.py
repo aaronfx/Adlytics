@@ -1078,7 +1078,7 @@ async def analyze_endpoint(
     try:
         # Normalise multi-select platform value (e.g. "tiktok,facebook" → "tiktok" for AI prompt)
         platform_primary = platform.split(',')[0].strip() if platform else 'tiktok'
-        logger.info(f"📥 v6.2 Analysis — industry={industry}, platform={platform_primary} (raw: {platform})")
+        logger.info(f"📥 v7.0 Analysis — industry={industry}, platform={platform_primary} (raw: {platform})")
 
         if ai_engine is None:
             raise HTTPException(status_code=503, detail="AI Engine not available")
@@ -1091,12 +1091,14 @@ async def analyze_endpoint(
         ind = _resolve_industry(industry)
 
         request_data = {
-            "ad_copy":          ad_copy or "",
-            "video_script":     video_script or "",
-            "platform":         platform_primary,
-            "industry":         industry,
-            "audience_country": audience_country,
-            "audience_age":     audience_age.split(',')[0].strip() if audience_age else "25-34",
+            "ad_copy":            ad_copy or "",
+            "video_script":       video_script or "",
+            "platform":           platform_primary,
+            "industry":           industry,
+            "audience_country":   audience_country,
+            "audience_age":       audience_age or "25-34",        # pass full multi-select
+            "audience_income":    audience_income or "middle",
+            "audience_occupation": audience_occupation or "",      # full multi-select
         }
 
         # ── AI call ────────────────────────────────────
@@ -1189,7 +1191,7 @@ async def analyze_endpoint(
             "competitor_advantage": gen_competitor_advantage(scores, content, ind),
 
             "_metadata": {
-                "version": "6.2",
+                "version": "7.0",
                 "industry_resolved": ind["label"],
                 "content_words": len(content.split()),
                 "currency": get_currency(audience_country),
