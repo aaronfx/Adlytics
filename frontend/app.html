@@ -966,27 +966,157 @@
         /* ══════════════════════════════════════════════════
            MOBILE RESPONSIVE
            ══════════════════════════════════════════════════ */
+        /* ── Mobile Nav — bottom drawer ──────────────────── */
+        .mobile-nav-bar {
+            display: none; /* hidden on desktop */
+        }
+        .mobile-drawer-overlay {
+            display: none;
+        }
+        .mobile-drawer {
+            display: none;
+        }
+
         @media (max-width: 768px) {
+            /* Hide desktop sidebar entirely */
+            .tabs-nav { display: none !important; }
+
+            /* Results becomes single column */
             .results { flex-direction: column; }
-            .tabs-nav {
-                flex-direction: row;
-                width: 100%; min-width: unset;
-                overflow-x: auto; overflow-y: hidden;
-                padding: 0;
-                border-right: none;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
-            }
-            .tabs-nav-logo { display: none; }
-            .tab-btn {
-                padding: 11px 14px;
-                border-left: none;
-                border-bottom: 3px solid transparent;
-                font-size: 0.79rem;
-                flex-shrink: 0;
-                color: rgba(255,255,255,0.6);
-            }
-            .tab-btn.active { border-left: none; border-bottom-color: white; color: white; background: rgba(255,255,255,0.1); }
             .tab-content-wrapper { width: 100%; }
+
+            /* Show mobile nav bar at the TOP of results panel */
+            .mobile-nav-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: var(--sidebar-bg);
+                padding: 12px 16px;
+                border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            }
+            .mobile-nav-current {
+                font-size: 0.92rem;
+                font-weight: 700;
+                color: white;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .mobile-nav-toggle {
+                background: rgba(255,255,255,0.12);
+                border: 1px solid rgba(255,255,255,0.2);
+                color: white;
+                padding: 7px 14px;
+                border-radius: 20px;
+                font-size: 0.82rem;
+                font-weight: 700;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: background 0.15s;
+            }
+            .mobile-nav-toggle:hover { background: rgba(255,255,255,0.2); }
+
+            /* Drawer overlay */
+            .mobile-drawer-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 500;
+            }
+            .mobile-drawer-overlay.open { display: block; }
+
+            /* Drawer panel slides up from bottom */
+            .mobile-drawer {
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                bottom: -100%;
+                left: 0;
+                right: 0;
+                max-height: 75vh;
+                background: var(--sidebar-bg);
+                border-radius: 20px 20px 0 0;
+                z-index: 501;
+                transition: bottom 0.3s ease;
+                overflow: hidden;
+            }
+            .mobile-drawer.open { bottom: 0; }
+            .mobile-drawer-handle {
+                width: 36px;
+                height: 4px;
+                background: rgba(255,255,255,0.25);
+                border-radius: 2px;
+                margin: 12px auto 0;
+                flex-shrink: 0;
+            }
+            .mobile-drawer-header {
+                padding: 14px 20px 10px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: rgba(255,255,255,0.35);
+                flex-shrink: 0;
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+            }
+            .mobile-drawer-scroll {
+                overflow-y: auto;
+                flex: 1;
+                padding: 8px 0 24px;
+            }
+            .mobile-drawer-section {
+                padding: 8px 20px 4px;
+                font-size: 0.65rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: rgba(255,255,255,0.25);
+            }
+            .mobile-drawer-divider {
+                height: 1px;
+                background: rgba(255,255,255,0.08);
+                margin: 6px 16px;
+            }
+            .mobile-tab-btn {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                padding: 13px 20px;
+                border: none;
+                background: none;
+                color: rgba(255,255,255,0.65);
+                font-size: 0.92rem;
+                font-weight: 500;
+                text-align: left;
+                cursor: pointer;
+                transition: background 0.12s;
+            }
+            .mobile-tab-btn:hover { background: rgba(255,255,255,0.06); }
+            .mobile-tab-btn.active {
+                background: rgba(99,102,241,0.25);
+                color: white;
+                font-weight: 700;
+            }
+            .mobile-tab-btn .mtb-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+            .mobile-tab-btn .mtb-label { flex: 1; }
+            .mobile-tab-btn .mtb-check {
+                width: 18px; height: 18px;
+                border-radius: 50%;
+                background: var(--primary);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                color: white;
+                font-weight: 700;
+            }
+            .mobile-tab-btn.active .mtb-check { display: flex; }
+
+            /* Content adjustments */
             .two-col { grid-template-columns: 1fr; }
             .three-col { grid-template-columns: 1fr; }
             .scenario-grid { grid-template-columns: 1fr; }
@@ -994,16 +1124,103 @@
             .decision-metric { border-right: none; border-bottom: 1px solid var(--gray-100); }
             .scores-grid { grid-template-columns: repeat(2, 1fr); }
             .rewrite-comparison { grid-template-columns: 1fr; }
+            .tab-content { padding: 20px 16px; }
         }
         @media (max-width: 480px) {
-            .container { padding: 12px; }
-            header h1 { font-size: 1.8rem; }
-            .tab-content { padding: 16px 14px; }
+            .container { padding: 10px; }
+            header h1 { font-size: 1.6rem; }
             .scores-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .score-value { font-size: 2rem; }
+            .score-value { font-size: 1.9rem; }
             .data-grid { grid-template-columns: 1fr 1fr; }
             .form-grid { grid-template-columns: 1fr; }
+            .history-bar { padding: 14px 14px; }
         }
+
+        /* ── Score History Sparkline ──────────────────────── */
+        .history-bar {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-100);
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .history-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--gray-400);
+        }
+        .history-clear {
+            background: none;
+            border: none;
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .history-clear:hover { color: var(--danger); background: var(--danger-bg); }
+        .sparkline-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 5px;
+            height: 52px;
+        }
+        .spark-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: default;
+        }
+        .spark-bar {
+            width: 100%;
+            border-radius: 3px 3px 0 0;
+            transition: opacity 0.15s;
+            min-height: 4px;
+        }
+        .spark-bar:hover { opacity: 0.75; }
+        .spark-val {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--gray-500);
+        }
+        .spark-date {
+            font-size: 0.62rem;
+            color: var(--gray-400);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            text-align: center;
+        }
+        .history-empty {
+            font-size: 0.85rem;
+            color: var(--gray-400);
+            text-align: center;
+            padding: 12px 0;
+        }
+        .history-trend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+        .trend-up   { color: var(--success); font-weight: 700; }
+        .trend-down { color: var(--danger);  font-weight: 700; }
+        .trend-flat { color: var(--gray-400); font-weight: 700; }
+
 </style>
 <base target="_blank">
 </head>
@@ -1223,6 +1440,86 @@
                     📄 Download PDF Report
                 </button>
             </div>
+
+            <!-- ── MOBILE NAV BAR (visible only on mobile) ── -->
+            <div class="mobile-nav-bar" id="mobileNavBar">
+                <div class="mobile-nav-current" id="mobileNavCurrent">📊 Overview</div>
+                <button class="mobile-nav-toggle" onclick="openMobileDrawer()">
+                    ☰ All Tabs
+                </button>
+            </div>
+
+            <!-- ── MOBILE DRAWER OVERLAY ── -->
+            <div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="closeMobileDrawer()"></div>
+
+            <!-- ── MOBILE DRAWER ── -->
+            <div class="mobile-drawer" id="mobileDrawer">
+                <div class="mobile-drawer-handle"></div>
+                <div class="mobile-drawer-header">Switch Tab</div>
+                <div class="mobile-drawer-scroll">
+                    <div class="mobile-drawer-section">Analysis</div>
+                    <button class="mobile-tab-btn active" data-tab="overview" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">📊</span><span class="mtb-label">Overview</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="decision" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🎯</span><span class="mtb-label">Decision</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="budget" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">💰</span><span class="mtb-label">Budget</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="neuro" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🧠</span><span class="mtb-label">Neuro</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="variants" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🎨</span><span class="mtb-label">Variants</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="objections" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">⚠️</span><span class="mtb-label">Objections</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="fatigue" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">😴</span><span class="mtb-label">Fatigue</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="crossplatform" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">📱</span><span class="mtb-label">Cross-Platform</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="video" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🎥</span><span class="mtb-label">Video</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="personas" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">👥</span><span class="mtb-label">Personas</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="analysis" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🔍</span><span class="mtb-label">Analysis</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="comparison" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">⚖️</span><span class="mtb-label">Comparison</span><span class="mtb-check">✓</span>
+                    </button>
+                    <div class="mobile-drawer-divider"></div>
+                    <div class="mobile-drawer-section">Features</div>
+                    <button class="mobile-tab-btn" data-tab="hooks" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">📚</span><span class="mtb-label">Hooks Library</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="compliance" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🛡️</span><span class="mtb-label">Compliance</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="psychographic" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🧬</span><span class="mtb-label">Psychographic</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="storyboard" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🎬</span><span class="mtb-label">Storyboard</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="benchmarks" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">📊</span><span class="mtb-label">Benchmarks</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="abtracker" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🔬</span><span class="mtb-label">A/B Tracker</span><span class="mtb-check">✓</span>
+                    </button>
+                    <button class="mobile-tab-btn" data-tab="landing" onclick="mobileTabSwitch(this)">
+                        <span class="mtb-icon">🔗</span><span class="mtb-label">Landing Page</span><span class="mtb-check">✓</span>
+                    </button>
+                </div>
+            </div>
+
             <nav class="tabs-nav">
                 <div class="tabs-nav-logo">Analysis</div>
                 <button class="tab-btn active" data-tab="overview">📊 Overview</button>
@@ -1251,6 +1548,17 @@
 
             <!-- Overview Tab -->
             <div id="tab-overview" class="tab-content active">
+
+                <!-- Score History Sparkline -->
+                <div class="history-bar" id="historyBar">
+                    <div class="history-header">
+                        <div class="history-title">📈 Score History (last 10 analyses)</div>
+                        <button class="history-clear" onclick="clearScoreHistory()" title="Clear history">Clear</button>
+                    </div>
+                    <div id="sparklineContainer"><div class="history-empty">Run your first analysis to start tracking scores over time.</div></div>
+                    <div class="history-trend" id="historyTrend"></div>
+                </div>
+
                 <div id="scoresContainer" class="scores-grid"></div>
 
                 <div class="section">
@@ -1733,7 +2041,17 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    let errMsg = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errData = await response.json();
+                        if (response.status === 429) {
+                            const mins = Math.ceil((errData.error?.retry_after_seconds || 3600) / 60);
+                            errMsg = `⏱️ Rate limit reached — ${errData.error?.message || 'Too many requests. Please wait ' + mins + ' minutes.'}`;
+                        } else {
+                            errMsg = errData.error?.message || errData.detail || errMsg;
+                        }
+                    } catch(_) {}
+                    throw new Error(errMsg);
                 }
 
                 const result = await response.json();
@@ -2456,6 +2774,161 @@
             document.getElementById('calcBreakeven').textContent   = `Day ${daysToBreak}`;
         }
 
+        // ══════════════════════════════════════════════════
+        // MOBILE DRAWER NAVIGATION
+        // ══════════════════════════════════════════════════
+        const MOBILE_TAB_LABELS = {
+            overview:'📊 Overview', decision:'🎯 Decision', budget:'💰 Budget',
+            neuro:'🧠 Neuro', variants:'🎨 Variants', objections:'⚠️ Objections',
+            fatigue:'😴 Fatigue', crossplatform:'📱 Cross-Platform', video:'🎥 Video',
+            personas:'👥 Personas', analysis:'🔍 Analysis', comparison:'⚖️ Comparison',
+            hooks:'📚 Hooks', compliance:'🛡️ Compliance', psychographic:'🧬 Psychographic',
+            storyboard:'🎬 Storyboard', benchmarks:'📊 Benchmarks',
+            abtracker:'🔬 A/B Tracker', landing:'🔗 Landing Page',
+        };
+
+        function openMobileDrawer() {
+            document.getElementById('mobileDrawer').classList.add('open');
+            document.getElementById('mobileDrawerOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileDrawer() {
+            document.getElementById('mobileDrawer').classList.remove('open');
+            document.getElementById('mobileDrawerOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function mobileTabSwitch(btn) {
+            const tabName = btn.dataset.tab;
+            // Switch the actual tab content
+            switchTab(tabName);
+            // Update active state in drawer
+            document.querySelectorAll('.mobile-tab-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.tab === tabName)
+            );
+            // Update the nav bar label
+            const label = document.getElementById('mobileNavCurrent');
+            if (label) label.textContent = MOBILE_TAB_LABELS[tabName] || tabName;
+            // Close drawer with a small delay for feel
+            setTimeout(closeMobileDrawer, 120);
+        }
+
+        // Keep desktop sidebar + mobile nav bar in sync
+        const _origSwitchTab = window.switchTab;
+        window.switchTab = function(tabName) {
+            if (typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
+            // Sync mobile nav bar label
+            const label = document.getElementById('mobileNavCurrent');
+            if (label) label.textContent = MOBILE_TAB_LABELS[tabName] || tabName;
+            // Sync mobile drawer active states
+            document.querySelectorAll('.mobile-tab-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.tab === tabName)
+            );
+        };
+
+        // Swipe down to close drawer
+        (function() {
+            let startY = 0;
+            const drawer = document.getElementById('mobileDrawer');
+            if (!drawer) return;
+            drawer.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive:true});
+            drawer.addEventListener('touchend', e => {
+                const dy = e.changedTouches[0].clientY - startY;
+                if (dy > 60) closeMobileDrawer();
+            }, {passive:true});
+        })();
+
+        // ══════════════════════════════════════════════════
+        // SCORE HISTORY — localStorage, last 10 analyses
+        // ══════════════════════════════════════════════════
+        const ADLYTICS_HISTORY_KEY = 'adlytics_score_history';
+        const ADLYTICS_HISTORY_MAX = 10;
+
+        function saveScoreHistory(data) {
+            const scores   = data.scores || {};
+            const now      = new Date();
+            const entry    = {
+                ts:       now.toISOString(),
+                date:     now.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}),
+                time:     now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+                overall:  scores.overall  || 0,
+                hook:     scores.hook_strength  || 0,
+                cred:     scores.credibility    || 0,
+                emo:      scores.emotional_pull || 0,
+                cta:      scores.cta_strength   || 0,
+                industry: (data._metadata?.industry_resolved || window._adlyticsIndustry || ''),
+                platform: (window._adlyticsPlatform || ''),
+                preview:  (window._adlyticsContent || '').substring(0, 60),
+            };
+            try {
+                const raw  = localStorage.getItem(ADLYTICS_HISTORY_KEY);
+                const hist = raw ? JSON.parse(raw) : [];
+                hist.push(entry);
+                localStorage.setItem(ADLYTICS_HISTORY_KEY, JSON.stringify(hist.slice(-ADLYTICS_HISTORY_MAX)));
+            } catch(e) { console.warn('Score history save failed:', e); }
+            renderScoreHistory();
+        }
+
+        function loadScoreHistory() {
+            try {
+                const raw = localStorage.getItem(ADLYTICS_HISTORY_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) { return []; }
+        }
+
+        function clearScoreHistory() {
+            if (!confirm('Clear all score history?')) return;
+            localStorage.removeItem(ADLYTICS_HISTORY_KEY);
+            renderScoreHistory();
+        }
+
+        function renderScoreHistory() {
+            const container = document.getElementById('sparklineContainer');
+            const trendEl   = document.getElementById('historyTrend');
+            if (!container) return;
+            const hist = loadScoreHistory();
+            if (!hist.length) {
+                container.innerHTML = '<div class="history-empty">Run your first analysis to start tracking scores over time.</div>';
+                if (trendEl) trendEl.innerHTML = '';
+                return;
+            }
+            function barColor(v) {
+                if (v >= 81) return '#10b981';
+                if (v >= 61) return '#3b82f6';
+                if (v >= 41) return '#f59e0b';
+                return '#ef4444';
+            }
+            const maxH = 46;
+            const bars = hist.map((e, i) => {
+                const h      = Math.max(4, Math.round((e.overall / 100) * maxH));
+                const color  = barColor(e.overall);
+                const isCurr = i === hist.length - 1;
+                const ring   = isCurr ? `outline:2px solid ${color};outline-offset:2px;` : '';
+                const tip    = `${e.date} ${e.time}\nOverall: ${e.overall} | Hook: ${e.hook} | Cred: ${e.cred}\n${e.platform} · ${e.industry}`;
+                return `<div class="spark-col" title="${tip}">
+                    <div class="spark-val">${e.overall}</div>
+                    <div class="spark-bar" style="height:${h}px;background:${color};${ring}"></div>
+                    <div class="spark-date">${e.date}</div>
+                </div>`;
+            }).join('');
+            container.innerHTML = `<div class="sparkline-wrap">${bars}</div>`;
+            if (trendEl && hist.length >= 2) {
+                const delta = hist[hist.length-1].overall - hist[hist.length-2].overall;
+                const total = hist[hist.length-1].overall - hist[0].overall;
+                const deltaHtml = delta > 0
+                    ? `<span class="trend-up">▲ +${delta} vs last</span>`
+                    : delta < 0 ? `<span class="trend-down">▼ ${delta} vs last</span>`
+                    : `<span class="trend-flat">→ Same as last</span>`;
+                const totalHtml = hist.length >= 3
+                    ? ` &nbsp;·&nbsp; ${total >= 0 ? '📈' : '📉'} ${total >= 0?'+':''}${total} across ${hist.length} runs`
+                    : '';
+                trendEl.innerHTML = deltaHtml + totalHtml;
+            } else if (trendEl) {
+                trendEl.innerHTML = '<span style="color:var(--gray-400);font-size:.8rem;">First entry logged — run more analyses to see trends.</span>';
+            }
+        }
+
         // ── Multi-select pill sync ────────────────────────
         function syncMultiField(groupId, hiddenId) {
             const group   = document.getElementById(groupId);
@@ -2528,6 +3001,7 @@
 
         // Auto-open on first visit
         document.addEventListener('DOMContentLoaded', function() {
+            renderScoreHistory();
             if (!localStorage.getItem('adlytics_onboarded')) {
                 setTimeout(openOnboarding, 600);
             }
