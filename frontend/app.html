@@ -1221,6 +1221,22 @@
         .trend-down { color: var(--danger);  font-weight: 700; }
         .trend-flat { color: var(--gray-400); font-weight: 700; }
 
+
+        /* ── Budget planner duration pills ───────────────── */
+        .dur-pill {
+            padding: 7px 16px;
+            border: 2px solid var(--gray-200);
+            background: white;
+            border-radius: 20px;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--gray-700);
+            transition: all .15s;
+        }
+        .dur-pill:hover { border-color: var(--primary); color: var(--primary); }
+        .dur-pill.active { background: var(--primary); border-color: var(--primary); color: white; }
+
 </style>
 <base target="_blank">
 </head>
@@ -1641,10 +1657,81 @@
 
             <!-- Budget Tab -->
             <div id="tab-budget" class="tab-content">
-                <div class="data-grid" id="budgetMetrics"></div>
+
+                <!-- ── YOUR BUDGET INPUT ────────────────────── -->
+                <div style="background:linear-gradient(135deg,#eef2ff 0%,#f5f3ff 100%);border:2px solid var(--primary);border-radius:16px;padding:22px 24px;margin-bottom:24px;">
+                    <div style="font-size:1rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+                        💰 Your Budget Planner
+                        <span id="budgetCurrencyLabel" style="background:var(--primary);color:white;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;letter-spacing:.5px;">NGN</span>
+                    </div>
+                    <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:18px;">Enter your actual budget — all projections will update instantly based on what you plan to spend.</p>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+                        <div>
+                            <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);display:block;margin-bottom:6px;">Daily Budget</label>
+                            <div style="display:flex;align-items:stretch;border:2px solid var(--gray-200);border-radius:var(--radius-md);overflow:hidden;background:white;transition:border-color .2s;" id="dailyBudgetWrap">
+                                <span id="budgetSymbol" style="background:var(--gray-100);padding:0 14px;display:flex;align-items:center;font-weight:700;font-size:1rem;color:var(--gray-700);border-right:1px solid var(--gray-200);">₦</span>
+                                <input type="number" id="userDailyBudget" min="1" placeholder="e.g. 50,000"
+                                       style="flex:1;padding:11px 14px;border:none;outline:none;font-size:1rem;background:transparent;width:100%;"
+                                       oninput="recalcUserBudget()" onfocus="document.getElementById('dailyBudgetWrap').style.borderColor='var(--primary)'" onblur="document.getElementById('dailyBudgetWrap').style.borderColor='var(--gray-200)'" />
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400);display:block;margin-bottom:6px;">Campaign Duration</label>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="durationPills">
+                                <button class="dur-pill active" data-days="7"  onclick="setDuration(this)">7 days</button>
+                                <button class="dur-pill"        data-days="14" onclick="setDuration(this)">14 days</button>
+                                <button class="dur-pill"        data-days="21" onclick="setDuration(this)">21 days</button>
+                                <button class="dur-pill"        data-days="30" onclick="setDuration(this)">30 days</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results grid — hidden until user types -->
+                    <div id="userBudgetResults" style="display:none;">
+                        <div style="height:1px;background:rgba(99,102,241,.15);margin-bottom:18px;"></div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;">
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Total Spend</div>
+                                <div id="ubTotal" style="font-size:1.35rem;font-weight:800;color:var(--primary);">—</div>
+                            </div>
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Est. Impressions</div>
+                                <div id="ubImpressions" style="font-size:1.35rem;font-weight:800;color:var(--info);">—</div>
+                            </div>
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Est. Clicks</div>
+                                <div id="ubClicks" style="font-size:1.35rem;font-weight:800;color:var(--success);">—</div>
+                            </div>
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Est. Conversions</div>
+                                <div id="ubConversions" style="font-size:1.35rem;font-weight:800;color:var(--purple);">—</div>
+                            </div>
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Est. Revenue</div>
+                                <div id="ubRevenue" style="font-size:1.35rem;font-weight:800;color:var(--success);">—</div>
+                            </div>
+                            <div style="background:white;border-radius:var(--radius-md);padding:14px;text-align:center;border:1px solid var(--gray-200);">
+                                <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:5px;">Est. ROAS</div>
+                                <div id="ubRoas" style="font-size:1.35rem;font-weight:800;color:var(--warning);">—</div>
+                            </div>
+                        </div>
+                        <!-- Budget verdict bar -->
+                        <div id="ubVerdict" style="border-radius:var(--radius-md);padding:12px 16px;font-size:.88rem;font-weight:600;"></div>
+                    </div>
+
+                    <!-- Placeholder when no input -->
+                    <div id="userBudgetPlaceholder" style="text-align:center;padding:10px 0;color:var(--gray-400);font-size:.85rem;">
+                        👆 Type your daily budget above to see personalised projections
+                    </div>
+                </div>
+
+                <!-- ── AI BENCHMARK METRICS ───────────────────── -->
+                <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray-400);margin-bottom:10px;">AI Estimates (based on your ad score)</div>
+                <div class="data-grid" id="budgetMetrics" style="margin-bottom:24px;"></div>
 
                 <div class="section">
-                    <div class="section-title">📊 Budget Phases</div>
+                    <div class="section-title">📊 Recommended Phases</div>
                     <div class="section-content" id="budgetPhases"></div>
                 </div>
 
@@ -2746,33 +2833,113 @@
 
 
         // ── Budget Simulator ──────────────────────────────
-        function recalcBudget() {
-            const bd  = window._budgetData;
-            const sym = window._activeSym || '$';
-            const daily = parseFloat(document.getElementById('userDailyBudget')?.value) || 0;
-            const days  = parseInt(document.getElementById('userCampaignDays')?.value)  || 14;
-            const out   = document.getElementById('budgetCalcOutput');
+        // ── Budget planner state ──────────────────────────────────
+        window._budgetDays = 7;
 
-            if (!daily || daily <= 0) { if (out) out.style.display = 'none'; return; }
-            if (out) out.style.display = 'block';
+        function setDuration(btn) {
+            document.querySelectorAll('.dur-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window._budgetDays = parseInt(btn.dataset.days) || 7;
+            recalcUserBudget();
+        }
+
+        function recalcUserBudget() {
+            const daily = parseFloat(document.getElementById('userDailyBudget')?.value) || 0;
+            const days  = window._budgetDays || 7;
+            const results = document.getElementById('userBudgetResults');
+            const placeholder = document.getElementById('userBudgetPlaceholder');
+
+            if (!daily || daily <= 0) {
+                if (results)     results.style.display     = 'none';
+                if (placeholder) placeholder.style.display = 'block';
+                return;
+            }
+            if (results)     results.style.display     = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+
+            const sym      = window._activeSym || '₦';
+            const scores   = window._adlyticsData?.scores || {};
+            const overall  = scores.overall || 50;
+            const curr     = window._currencyData;
+            const rate     = curr?.usd_rate || curr?.rate || 1630;
+
+            // Platform-aware CTR estimates (fraction)
+            const platform = window._adlyticsPlatform || 'tiktok';
+            const baseCtr = {
+                tiktok: 0.011, facebook: 0.009, instagram: 0.010,
+                youtube: 0.006, google: 0.028
+            }[platform] || 0.010;
+            // Score multiplier: overall 50 = 1×, 80 = 1.6×, 30 = 0.6×
+            const scoreMult   = 0.4 + (overall / 100) * 1.2;
+            const adjCtr      = baseCtr * scoreMult;
+
+            // CPM in local currency
+            const baseCpmUsd  = { tiktok:1.0, facebook:1.8, instagram:1.6, youtube:0.8, google:2.5 }[platform] || 1.2;
+            const cpmLocal    = baseCpmUsd * rate;
+
+            // Conversion rate: 1–4% of clicks depending on score
+            const convRate    = 0.01 + (overall / 100) * 0.03;
+            // Average order value in local currency (rough proxy)
+            const avgOrderUsd = { finance:150, realestate:2000, ecommerce:40, health:80, saas:60 }[window._adlyticsIndustry || 'finance'] || 100;
+            const avgOrderLocal = avgOrderUsd * rate;
 
             const total       = daily * days;
-            const scores      = window._adlyticsData?.scores || {};
-            const overall     = scores.overall || 50;
-            const ctr         = (overall / 1000) * 2.1;   // estimated CTR based on score
-            const cpm_usd     = 1.2;                       // rough CPM base in USD
-            const curr        = window._currencyData;
-            const rate        = curr?.usd_rate || 1;
-            const cpm_local   = cpm_usd * rate;
-            const impressions = Math.round((total / cpm_local) * 1000);
-            const clicks      = Math.round(impressions * ctr);
-            const daysToBreak = bd?.days_to_profit || 10;
+            const impressions = Math.round((total / cpmLocal) * 1000);
+            const clicks      = Math.round(impressions * adjCtr);
+            const conversions = Math.round(clicks * convRate);
+            const revenue     = Math.round(conversions * avgOrderLocal);
+            const roas        = total > 0 ? (revenue / total).toFixed(1) : '0.0';
+            const roasNum     = parseFloat(roas);
 
-            document.getElementById('calcTotal').textContent       = sym + total.toLocaleString();
-            document.getElementById('calcImpressions').textContent = impressions.toLocaleString();
-            document.getElementById('calcClicks').textContent      = clicks.toLocaleString();
-            document.getElementById('calcBreakeven').textContent   = `Day ${daysToBreak}`;
+            // Format helper
+            const fmt = (n) => sym + Math.round(n).toLocaleString();
+            const fmtK = (n) => n >= 1000000 ? sym + (n/1000000).toFixed(1) + 'M'
+                               : n >= 1000    ? sym + Math.round(n/1000) + 'K'
+                               : fmt(n);
+
+            document.getElementById('ubTotal').textContent       = fmtK(total);
+            document.getElementById('ubImpressions').textContent = impressions >= 1000000 ? (impressions/1000000).toFixed(1)+'M' : impressions >= 1000 ? Math.round(impressions/1000)+'K' : impressions.toLocaleString();
+            document.getElementById('ubClicks').textContent      = clicks >= 1000 ? Math.round(clicks/1000)+'K' : clicks.toLocaleString();
+            document.getElementById('ubConversions').textContent = conversions.toLocaleString();
+            document.getElementById('ubRevenue').textContent     = fmtK(revenue);
+            document.getElementById('ubRoas').textContent        = roasNum + '×';
+
+            // Verdict bar
+            const verdict = document.getElementById('ubVerdict');
+            if (verdict) {
+                const bd = window._budgetData;
+                const safeTest = bd?.safe_test_budget || 0;
+                let msg = '', bg = '', color = '';
+
+                if (roasNum >= 2.5) {
+                    bg='#d1fae5'; color='#065f46';
+                    msg = `✅ Strong projection — ${roas}× ROAS suggests this budget will be profitable. Consider starting with a smaller test first.`;
+                } else if (roasNum >= 1.2) {
+                    bg='#fef3c7'; color='#92400e';
+                    msg = `⚡ Moderate projection — ${roas}× ROAS. Profitable but tight. Focus spend on your top-performing audience segment.`;
+                } else if (roasNum > 0 && roasNum < 1.2) {
+                    bg='#fee2e2'; color='#991b1b';
+                    msg = `⚠️ Low ROAS projection (${roas}×). Your ad score of ${overall}/100 suggests this budget may not break even. Improve the ad first.`;
+                } else {
+                    bg='var(--gray-100)'; color='var(--gray-700)';
+                    msg = `Enter a daily budget to see your profit projection.`;
+                }
+
+                // Compare to AI recommended test budget
+                if (safeTest > 0 && daily < safeTest / days) {
+                    msg += ` Note: AI recommends ${fmt(safeTest)} total test budget (${fmt(Math.round(safeTest/days))}/day) for statistically valid results.`;
+                } else if (safeTest > 0 && total > safeTest * 3) {
+                    msg += ` ⚠️ This is a large spend. Run a small test (${fmt(safeTest)}) first to validate performance before committing this amount.`;
+                }
+
+                verdict.style.background = bg;
+                verdict.style.color      = color;
+                verdict.textContent      = msg;
+            }
         }
+
+        // Legacy alias for any old references
+        function recalcBudget() { recalcUserBudget(); }
 
         // ══════════════════════════════════════════════════
         // MOBILE DRAWER NAVIGATION
