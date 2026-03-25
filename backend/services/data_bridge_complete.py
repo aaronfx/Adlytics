@@ -132,11 +132,15 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
         analysis["neuro_response"] = generate_neuro_response(scores)
 
     # ========== VARIANTS TAB ==========
-    if "variations" not in analysis or not analysis["variations"]:
-        analysis["variations"] = generate_variants(content, scores, ctx)
+    # Prefer AI-generated variants — only use bridge if AI returned nothing
+    ai_variants = analysis.get("ad_variants", [])
+    if ai_variants and isinstance(ai_variants, list) and len(ai_variants) > 0:
+        analysis["variations"] = ai_variants   # AI variants — content-specific
+    elif not analysis.get("variations"):
+        analysis["variations"] = generate_variants(content, scores, ctx)  # bridge fallback
 
-    if "winner_prediction" not in analysis:
-        analysis["winner_prediction"] = generate_winner_prediction(scores)
+    if not analysis.get("winner_prediction"):
+        analysis["winner_prediction"] = generate_winner_prediction(scores, content, ctx)
 
     # ========== OBJECTIONS TAB ==========
     if "scam_triggers" not in analysis or not analysis["scam_triggers"]:
@@ -437,55 +441,97 @@ def generate_neuro_response(scores: Dict[str, int]) -> Dict[str, int]:
     }
 
 def generate_variants(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
-    """Generate A/B variants using actual content hooks."""
+    """
+    Bridge fallback variants — only used if AI didn't generate them.
+    Extracts key terms from actual ad content so variants aren't generic.
+    """
     ctx     = ctx or {}
     cur     = _currency(ctx.get("country", "nigeria"))
-    hook    = _extract_hook(content, 50)
     overall = scores.get("overall", 50)
     words   = content.split()
-    mid     = " ".join(words[len(words)//3: len(words)//3 + 6]) if len(words) > 6 else hook
+    hook    = _extract_hook(content, 55)
+
+    # Extract content-specific terms to avoid generic templates
+    content_lower = content.lower()
+    # Try to find the core topic/product from the ad
+    topic_words = [w for w in words if len(w) > 5 and w[0].isupper()]
+    topic = topic_words[0] if topic_words else ctx.get("industry", "this").replace("_", " ")
+
+    # Find any numbers already in the ad for reuse
+    import re
+    numbers = re.findall(r'[\₦\$\£]?\d[\d,]+', content)
+    proof_num = numbers[0] if numbers else f"{cur}50,000"
+
+    mid = " ".join(words[len(words)//3: len(words)//3 + 8]) if len(words) > 8 else hook
 
     return [
         {
+            "id": 1,
             "variant": "A (Original)",
+            "angle": "Current approach",
             "hook": hook,
-            "body_preview": mid + "...",
+            "body": mid + "...",
+            "cta": f"DM 'INFO' to learn more",
             "predicted_score": overall,
             "test_budget": f"{cur}5,000",
             "win_probability": "40%",
-            "angle": "Current approach"
+            "why_it_works": "Baseline — test against all variants."
         },
         {
-            "variant": "B (Trauma Lead)",
-            "hook": f"I burned {cur}150,000 before I stopped doing what every 'expert' told me...",
-            "body_preview": mid + "...",
-            "predicted_score": min(100, overall + 15),
+            "id": 2,
+            "variant": "B (Fear / Loss)",
+            "angle": "Fear / Loss",
+            "hook": f"I almost gave up on {topic} after losing {proof_num}. Then I noticed one pattern everyone else missed...",
+            "body": f"Most people approach {topic.lower()} the wrong way. {mid}...",
+            "cta": f"Comment 'SHOW ME' to see exactly what changed.",
+            "predicted_score": min(100, overall + 14),
             "test_budget": f"{cur}5,000",
-            "win_probability": "60%",
-            "angle": "Loss-first vulnerability"
+            "win_probability": "58%",
+            "why_it_works": f"Loss-framing activates fear of missing out. Specific number ({proof_num}) makes it credible."
         },
         {
-            "variant": "C (Provocation)",
-            "hook": f"The reason your {ctx.get('industry','').replace('_',' ')} ad is failing has nothing to do with your budget.",
-            "body_preview": mid + "...",
-            "predicted_score": min(100, overall + 10),
+            "id": 3,
+            "variant": "C (Curiosity Gap)",
+            "angle": "Curiosity Gap",
+            "hook": f"Nobody talks about the real reason most people fail at {topic.lower()}. Until now.",
+            "body": f"The pattern is hiding in plain sight. {mid}...",
+            "cta": f"Watch to the end — the answer is in the last 10 seconds.",
+            "predicted_score": min(100, overall + 9),
             "test_budget": f"{cur}5,000",
-            "win_probability": "52%",
-            "angle": "Contrarian challenge"
+            "win_probability": "50%",
+            "why_it_works": "Open loop forces completion. Audience must watch/click to resolve the tension."
         }
     ]
 
 
 
-def generate_winner_prediction(scores: Dict[str, int]) -> Dict[str, Any]:
-    """Generate winner prediction"""
+def generate_winner_prediction(scores: Dict[str, int], content: str = "", ctx: Dict = None) -> Dict[str, Any]:
+    """Generate winner prediction with content-aware reasoning."""
+    ctx     = ctx or {}
     overall = scores.get("overall", 50)
+    hook    = _extract_hook(content, 40) if content else "the current hook"
+    ind     = ctx.get("industry", "finance").replace("_", " ").title()
+    country = ctx.get("country", "nigeria").title()
+
     if overall >= 80:
-        return {"predicted_winner": "Current version", "confidence": "85%", "expected_improvement": "+20%"}
+        return {
+            "winner_id": None, "predicted_winner": "Current version",
+            "angle": "Current approach", "confidence": "80%",
+            "reasoning": f'The current ad already performs strongly. Minor A/B test recommended on the hook angle for {country} {ind} audiences.'
+        }
     elif overall >= 60:
-        return {"predicted_winner": "Variant B", "confidence": "65%", "expected_improvement": "+35%"}
+        return {
+            "winner_id": 1, "predicted_winner": "Fear / Loss variant",
+            "angle": "Fear / Loss", "confidence": "65%",
+            "reasoning": f'For {country} {ind} audiences, loss-framing outperforms the current approach "{hook}". Fear of missing out is the primary conversion driver at this score range.'
+        }
     else:
-        return {"predicted_winner": "Needs rework", "confidence": "90%", "expected_improvement": "N/A - Major changes needed"}
+        return {
+            "winner_id": 1, "predicted_winner": "Requires full rewrite",
+            "angle": "Fear / Loss", "confidence": "55%",
+            "reasoning": f'Current ad "{hook}" scores too low to predict a winner confidently. The Fear/Loss variant is the best starting point, but the whole ad needs restructuring first.'
+        }
+
 
 def generate_scam_triggers(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
     """Generate scam trigger analysis"""
