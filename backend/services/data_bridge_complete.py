@@ -5,6 +5,7 @@ Ensures ALL frontend tabs have data - no more N/A or empty sections
 
 from typing import Dict, Any, List
 import random
+import re
 
 # ── Industry CPA multipliers (vs base) ───────────────────────────────────────
 INDUSTRY_CPA_MULTIPLIER = {
@@ -92,44 +93,44 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
 
     # ========== OVERVIEW TAB ==========
     if "strategic_summary" not in analysis or analysis["strategic_summary"] in [None, "", "N/A"]:
-        analysis["strategic_summary"] = generate_strategic_summary(content, scores)
+        analysis["strategic_summary"] = generate_strategic_summary(content, scores, ctx)
 
     if "critical_weaknesses" not in analysis or not analysis["critical_weaknesses"]:
         analysis["critical_weaknesses"] = generate_critical_issues(content, scores, ctx)
 
     if "critical_success_factors" not in analysis:
-        analysis["critical_success_factors"] = generate_success_factors(scores)
+        analysis["critical_success_factors"] = generate_success_factors(scores, ctx)
 
     # ========== DECISION TAB ==========
     if "profit_scenarios" not in analysis:
         analysis["profit_scenarios"] = {
-            "kill_threshold":        generate_kill_threshold(scores),
+            "kill_threshold":        generate_kill_threshold(scores, ctx),
             "scale_threshold":       generate_scale_threshold(scores, ctx),
             "confidence_breakdown":  generate_confidence_breakdown(scores)
         }
 
     if "decision_recommendation" not in analysis:
-        analysis["decision_recommendation"] = generate_decision(scores)
+        analysis["decision_recommendation"] = generate_decision(scores, ctx)
 
     # ========== BUDGET TAB ==========
     if "budget_phases" not in analysis or not analysis["budget_phases"]:
         analysis["budget_phases"] = generate_budget_phases(scores, ctx)
 
     if "risk_assessment" not in analysis:
-        analysis["risk_assessment"] = generate_risk_assessment(scores)
+        analysis["risk_assessment"] = generate_risk_assessment(scores, ctx)
 
     if "pro_tip" not in analysis or analysis["pro_tip"] in [None, "", "N/A"]:
         analysis["pro_tip"] = generate_pro_tip(scores, content, ctx)
 
     # ========== NEURO TAB ==========
     if "emotional_triggers" not in analysis or not analysis["emotional_triggers"]:
-        analysis["emotional_triggers"] = generate_emotional_triggers(content, scores)
+        analysis["emotional_triggers"] = generate_emotional_triggers(content, scores, ctx)
 
     if "psychological_gaps" not in analysis or not analysis["psychological_gaps"]:
-        analysis["psychological_gaps"] = generate_psychological_gaps(content, scores)
+        analysis["psychological_gaps"] = generate_psychological_gaps(content, scores, ctx)
 
     if "neuro_response" not in analysis:
-        analysis["neuro_response"] = generate_neuro_response(scores)
+        analysis["neuro_response"] = generate_neuro_response(scores, ctx)
 
     # ========== VARIANTS TAB ==========
     # Prefer AI-generated variants — only use bridge if AI returned nothing
@@ -144,7 +145,7 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
 
     # ========== OBJECTIONS TAB ==========
     if "scam_triggers" not in analysis or not analysis["scam_triggers"]:
-        analysis["scam_triggers"] = generate_scam_triggers(content, scores)
+        analysis["scam_triggers"] = generate_scam_triggers(content, scores, ctx)
 
     if "trust_gaps" not in analysis or not analysis["trust_gaps"]:
         analysis["trust_gaps"] = generate_trust_gaps(content, scores, ctx)
@@ -153,14 +154,14 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
         analysis["compliance_risks"] = generate_compliance_risks(content, ctx)
 
     if "objection_detection" not in analysis:
-        analysis["objection_detection"] = generate_objections(content, scores)
+        analysis["objection_detection"] = generate_objections(content, scores, ctx)
 
     # ========== FATIGUE TAB ==========
     if "creative_fatigue" not in analysis:
         analysis["creative_fatigue"] = generate_fatigue_data(content, scores, ctx)
 
     if "refresh_strategy" not in analysis or not analysis["refresh_strategy"]:
-        analysis["refresh_strategy"] = generate_refresh_strategy(scores)
+        analysis["refresh_strategy"] = generate_refresh_strategy(scores, ctx)
 
     # ========== CROSS-PLATFORM TAB ==========
     if "cross_platform" not in analysis:
@@ -168,24 +169,24 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
 
     # ========== VIDEO TAB ==========
     if "video_execution_analysis" not in analysis:
-        analysis["video_execution_analysis"] = generate_video_analysis(content, scores)
+        analysis["video_execution_analysis"] = generate_video_analysis(content, scores, ctx)
 
     if "timecode_breakdown" not in analysis or not analysis["timecode_breakdown"]:
-        analysis["timecode_breakdown"] = generate_timecode_breakdown(content, scores)
+        analysis["timecode_breakdown"] = generate_timecode_breakdown(content, scores, ctx)
 
     # ========== PERSONAS TAB ==========
     if "persona_reactions" not in analysis or not analysis["persona_reactions"]:
         analysis["persona_reactions"] = generate_persona_reactions(content, scores, ctx)
 
     if "audience_segments" not in analysis:
-        analysis["audience_segments"] = generate_audience_segments(scores)
+        analysis["audience_segments"] = generate_audience_segments(scores, ctx)
 
     # ========== ANALYSIS TAB ==========
     if "line_by_line_analysis" not in analysis or not analysis["line_by_line_analysis"]:
-        analysis["line_by_line_analysis"] = generate_line_analysis(content, scores)
+        analysis["line_by_line_analysis"] = generate_line_analysis(content, scores, ctx)
 
     if "phase_breakdown" not in analysis or not analysis["phase_breakdown"]:
-        analysis["phase_breakdown"] = generate_phase_breakdown(content, scores)
+        analysis["phase_breakdown"] = generate_phase_breakdown(content, scores, ctx)
 
     # ========== COMPARISON TAB ==========
     if "roi_comparison" not in analysis:
@@ -196,13 +197,13 @@ def ensure_complete_response(analysis: Dict[str, Any], content: str, scores: Dic
 
     # ========== IMPROVED AD ==========
     if "improved_ad_analysis" not in analysis:
-        analysis["improved_ad_analysis"] = generate_improved_ad(content, scores)
+        analysis["improved_ad_analysis"] = generate_improved_ad(content, scores, ctx)
 
     return analysis
 
 # ========== GENERATOR FUNCTIONS ==========
 
-def generate_strategic_summary(content: str, scores: Dict[str, int]) -> str:
+def generate_strategic_summary(content: str, scores: Dict[str, int], ctx: Dict = None) -> str:
     """Generate strategic summary based on actual scores"""
     overall = scores.get("overall", 50)
     hook = scores.get("hook_strength", 50)
@@ -282,7 +283,7 @@ def generate_critical_issues(content: str, scores: Dict[str, int], ctx: Dict = N
 
 
 
-def generate_success_factors(scores: Dict[str, int]) -> List[Dict[str, str]]:
+def generate_success_factors(scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, str]]:
     """Generate what's working well"""
     factors = []
     if scores.get("hook_strength", 0) >= 80:
@@ -293,7 +294,7 @@ def generate_success_factors(scores: Dict[str, int]) -> List[Dict[str, str]]:
         factors.append({"factor": "Clear value proposition", "why_it_works": "Users understand offer immediately"})
     return factors
 
-def generate_kill_threshold(scores: Dict[str, int]) -> Dict[str, Any]:
+def generate_kill_threshold(scores: Dict[str, int], ctx: Dict = None) -> Dict[str, Any]:
     """Generate kill threshold data"""
     overall = scores.get("overall", 50)
     if overall < 40:
@@ -327,7 +328,7 @@ def generate_scale_threshold(scores: Dict[str, int], ctx: Dict = None) -> Dict[s
 
 
 
-def generate_confidence_breakdown(scores: Dict[str, int]) -> Dict[str, int]:
+def generate_confidence_breakdown(scores: Dict[str, int], ctx: Dict = None) -> Dict[str, int]:
     """Generate confidence breakdown"""
     return {
         "data_confidence": min(95, scores.get("overall", 50) + 20),
@@ -336,7 +337,7 @@ def generate_confidence_breakdown(scores: Dict[str, int]) -> Dict[str, int]:
         "prediction_reliability": min(90, scores.get("overall", 50) + 15)
     }
 
-def generate_decision(scores: Dict[str, int]) -> Dict[str, str]:
+def generate_decision(scores: Dict[str, int], ctx: Dict = None) -> Dict[str, str]:
     """Generate decision recommendation"""
     overall = scores.get("overall", 50)
     if overall >= 80:
@@ -369,7 +370,7 @@ def generate_budget_phases(scores: Dict[str, int], ctx: Dict = None) -> List[Dic
 
 
 
-def generate_risk_assessment(scores: Dict[str, int]) -> Dict[str, str]:
+def generate_risk_assessment(scores: Dict[str, int], ctx: Dict = None) -> Dict[str, str]:
     """Generate risk assessment"""
     overall = scores.get("overall", 50)
     if overall >= 80:
@@ -405,7 +406,7 @@ def generate_pro_tip(scores: Dict[str, int], content: str, ctx: Dict = None) -> 
 
 
 
-def generate_emotional_triggers(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_emotional_triggers(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate emotional triggers found in content"""
     triggers = []
     content_lower = content.lower()
@@ -421,7 +422,7 @@ def generate_emotional_triggers(content: str, scores: Dict[str, int]) -> List[Di
 
     return triggers if triggers else [{"trigger": "Aspiration", "intensity": "Low", "activation_point": "General"}]
 
-def generate_psychological_gaps(content: str, scores: Dict[str, int]) -> List[Dict[str, str]]:
+def generate_psychological_gaps(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, str]]:
     """Generate psychological gaps"""
     gaps = []
     if scores.get("emotional_pull", 50) < 60:
@@ -430,7 +431,7 @@ def generate_psychological_gaps(content: str, scores: Dict[str, int]) -> List[Di
         gaps.append({"gap": "Trust establishment", "impact": "Skepticism barrier", "fix": "Lead with vulnerability, not claims"})
     return gaps
 
-def generate_neuro_response(scores: Dict[str, int]) -> Dict[str, int]:
+def generate_neuro_response(scores: Dict[str, int], ctx: Dict = None) -> Dict[str, int]:
     """Generate neuro response data"""
     return {
         "dopamine_potential": min(100, scores.get("hook_strength", 50) + 10),
@@ -458,7 +459,6 @@ def generate_variants(content: str, scores: Dict[str, int], ctx: Dict = None) ->
     topic = topic_words[0] if topic_words else ctx.get("industry", "this").replace("_", " ")
 
     # Find any numbers already in the ad for reuse
-    import re
     numbers = re.findall(r'[\₦\$\£]?\d[\d,]+', content)
     proof_num = numbers[0] if numbers else f"{cur}50,000"
 
@@ -533,7 +533,7 @@ def generate_winner_prediction(scores: Dict[str, int], content: str = "", ctx: D
         }
 
 
-def generate_scam_triggers(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_scam_triggers(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate scam trigger analysis"""
     content_lower = content.lower()
     triggers = []
@@ -605,7 +605,7 @@ def generate_compliance_risks(content: str, ctx: Dict = None) -> List[Dict[str, 
 
 
 
-def generate_objections(content: str, scores: Dict[str, int]) -> Dict[str, Any]:
+def generate_objections(content: str, scores: Dict[str, int], ctx: Dict = None) -> Dict[str, Any]:
     """Generate objection detection"""
     return {
         "hidden_objections": [
@@ -644,7 +644,7 @@ def generate_fatigue_data(content: str, scores: Dict[str, int], ctx: Dict = None
 
 
 
-def generate_refresh_strategy(scores: Dict[str, int]) -> List[Dict[str, str]]:
+def generate_refresh_strategy(scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, str]]:
     """Generate refresh strategy"""
     return [
         {"week": "Week 2", "action": "Rotate hook angle", "expected_lift": "+15%"},
@@ -690,7 +690,7 @@ def generate_cross_platform(scores: Dict[str, int], content: str, ctx: Dict = No
 
 
 
-def generate_video_analysis(content: str, scores: Dict[str, int]) -> Dict[str, Any]:
+def generate_video_analysis(content: str, scores: Dict[str, int], ctx: Dict = None) -> Dict[str, Any]:
     """Generate video execution analysis"""
     words = len(content.split())
     estimated_seconds = words // 2.5  # Rough estimate
@@ -704,7 +704,7 @@ def generate_video_analysis(content: str, scores: Dict[str, int]) -> Dict[str, A
         "delivery_risk": "Low" if scores.get("credibility", 0) >= 70 else "Medium - may sound salesy"
     }
 
-def generate_timecode_breakdown(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_timecode_breakdown(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate timecode breakdown"""
     words = content.split()
     total_words = len(words)
@@ -810,7 +810,7 @@ def generate_persona_reactions(content: str, scores: Dict[str, int], ctx: Dict =
 
 
 
-def generate_audience_segments(scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_audience_segments(scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate audience segments"""
     return [
         {"segment": "High Intent", "match_score": min(100, scores.get("audience_match", 50) + 20), "recommended_bid": "+30%"},
@@ -818,7 +818,7 @@ def generate_audience_segments(scores: Dict[str, int]) -> List[Dict[str, Any]]:
         {"segment": "Broad", "match_score": max(30, scores.get("audience_match", 50) - 20), "recommended_bid": "-20%"}
     ]
 
-def generate_line_analysis(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_line_analysis(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate line-by-line analysis"""
     lines = content.split(".")
     analysis = []
@@ -835,7 +835,7 @@ def generate_line_analysis(content: str, scores: Dict[str, int]) -> List[Dict[st
 
     return analysis
 
-def generate_phase_breakdown(content: str, scores: Dict[str, int]) -> List[Dict[str, Any]]:
+def generate_phase_breakdown(content: str, scores: Dict[str, int], ctx: Dict = None) -> List[Dict[str, Any]]:
     """Generate phase breakdown"""
     return [
         {
@@ -965,7 +965,7 @@ def generate_competitive_analysis(scores: Dict[str, int], content: str, ctx: Dic
 
 
 
-def generate_improved_ad(content: str, scores: Dict[str, int]) -> Dict[str, Any]:
+def generate_improved_ad(content: str, scores: Dict[str, int], ctx: Dict = None) -> Dict[str, Any]:
     """Generate improved ad version"""
     overall = scores.get("overall", 50)
 
