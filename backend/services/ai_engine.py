@@ -247,6 +247,10 @@ SCORING RULES:
 3. Every score must be justified by something specific in the content
 4. Reference fingerprint {fingerprint.content_hash} in verification
 5. Be HARDER on weak ads. Most ads score 35–65. Only exceptional ads hit 80+.
+6. Generic copy that could have been written for any product → cap overall at 55
+7. No specific proof elements (numbers, screenshots, named results) → credibility max 55
+8. Every critical_weakness must include a precise_fix with an EXACT rewrite, not "add more proof"
+9. what_to_change_right_now must name the specific line to change and show the improved version
 
 OUTPUT STRICT JSON (no markdown, no preamble):
 {{
@@ -272,10 +276,14 @@ OUTPUT STRICT JSON (no markdown, no preamble):
     "audience_match": 0,
     "platform_fit": 0
   }},
-  "strategic_summary": "2–3 sentence summary specific to THIS content and audience",
+  "strategic_summary": "2–3 sentence summary specific to THIS content and audience. Must name the ad's biggest strength AND biggest failure. Must reference the actual content.",
   "critical_weaknesses": [
-    {{"issue": "...", "severity": "High|Medium|Low", "impact": "...", "precise_fix": "..."}},
-    {{"issue": "...", "severity": "High|Medium|Low", "impact": "...", "precise_fix": "..."}}
+    {{"issue": "...", "severity": "High|Medium|Low", "impact": "Specific metric impact (e.g. 70% of users scroll past)", "precise_fix": "Exact rewrite or change — not generic advice", "expected_lift": "e.g. +25% CTR"}},
+    {{"issue": "...", "severity": "High|Medium|Low", "impact": "...", "precise_fix": "...", "expected_lift": "..."}}
+  ],
+  "what_to_change_right_now": "Single most impactful change the advertiser can make TODAY. Must be a specific rewrite instruction, not general advice.",
+  "line_by_line_analysis": [
+    {{"line": "first sentence or phrase", "verdict": "Strong|Weak|Neutral", "reason": "why", "rewrite": "exact improved version if Weak"}}
   ]
 }}"""
 
@@ -336,17 +344,19 @@ FINGERPRINT FACTS (ground truth):
 {build_audience_context(request_data)}
 
 YOUR JOB:
-Review each score. For each inflation flag above, decide:
+Review each score. For each flag above, decide:
   A) The score is justified — explain why the fingerprint facts are wrong
   B) The score is inflated — provide the corrected, lower score
+  C) The score is too harsh — provide the corrected, higher score (only if reasoning genuinely supports it)
 
 CRITIC RULES:
-1. You may LOWER scores — you may NOT raise them (raising is the analyst's job)
+1. You may LOWER or RAISE scores — accuracy matters more than direction
 2. A claim without proof cannot score above 60 on credibility
 3. A hook without a specific number, loss, or pattern interrupt cannot score above 72 on hook_strength
 4. audience_match above 70 requires market-specific language (local currency, city, cultural reference)
-5. If spread < 20 points, you MUST widen it — real ads always have strong and weak dimensions
-6. Be merciful on 1–2 genuinely strong dimensions. Only penalise the inflated ones.
+5. If spread < 20 points, you MUST widen it — real ads always have strong AND weak dimensions
+6. Be merciful on 1–2 genuinely strong dimensions. Only adjust the inaccurate ones.
+7. If a score is correct, leave it unchanged — do not adjust for the sake of adjusting
 
 OUTPUT STRICT JSON:
 {{
@@ -515,12 +525,22 @@ class AIEngine:
             adjustments   = critic_result.get("adjustments_made", [])
             critic_notes  = critic_result.get("critic_notes", "")
 
-            # Merge: critic can only lower scores, not raise them
+            # Merge: balanced reviewer — critic can lower OR raise,
+            # weighted by magnitude of disagreement
             final_scores = {}
             for dim in first_scores:
                 orig = first_scores.get(dim, 50)
                 crit = critic_scores.get(dim, orig)
-                final_scores[dim] = min(orig, crit)  # take the lower (critic's job is to penalise)
+                diff = crit - orig
+                if abs(diff) > 15:
+                    # Large disagreement: critic wins (it has full context + stage-1 scores)
+                    final_scores[dim] = crit
+                elif abs(diff) > 5:
+                    # Moderate disagreement: average
+                    final_scores[dim] = round((orig + crit) / 2)
+                else:
+                    # Small diff: keep original
+                    final_scores[dim] = orig
 
             if adjustments:
                 logger.info(f"✏️  Critic adjusted {len(adjustments)} dimension(s): "
@@ -551,6 +571,8 @@ class AIEngine:
             "scores":               final_scores,
             "strategic_summary":    summary,
             "critical_weaknesses":  weaknesses,
+            "what_to_change_right_now": first_pass.get("what_to_change_right_now", ""),
+            "line_by_line_analysis":    first_pass.get("line_by_line_analysis", []),
             "content_verification": verification,
             "_engine_metadata": {
                 "version":          "7.0",
