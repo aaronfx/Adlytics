@@ -17,6 +17,7 @@ class AdAnalyzer {
         this.cacheElements();
         this.bindEvents();
         this.loadAudienceConfig();
+        this.renderHistory();
         console.log('✅ ADLYTICS v6.1 Analyzer Initialized');
     }
 
@@ -226,7 +227,20 @@ class AdAnalyzer {
             window._adlyticsCountry   = this.elements.country?.value  || 'nigeria';
             // ─────────────────────────────────────────────────────────
 
+            // ── Save to localStorage history ──────────────────────────
+            this.saveToHistory(
+                videoScript.trim() || adCopy.trim(),
+                this.currentAnalysis,
+                {
+                    platform: this.elements.platform?.value || 'tiktok',
+                    industry: this.elements.industry?.value || 'finance',
+                    country:  this.elements.country?.value  || 'nigeria',
+                }
+            );
+            // ─────────────────────────────────────────────────────────
+
             this.renderResults(this.currentAnalysis);
+            this.renderWhatToChangeNow(this.currentAnalysis.what_to_change_right_now);
 
             // Notify Tier 2 features that a fresh analysis is available
             window.dispatchEvent(new CustomEvent('adlytics:analyzed', { detail: this.currentAnalysis }));
@@ -242,6 +256,25 @@ class AdAnalyzer {
             clearTimeout(timeoutId);
             this.hideLoading();
         }
+    }
+
+    renderWhatToChangeNow(text) {
+        const el = document.getElementById('whatToChangeNow');
+        if (!el || !text) return;
+        el.innerHTML = `
+            <div style="
+                background:linear-gradient(135deg,#fef3c7,#fde68a);
+                border:2px solid #f59e0b;border-radius:12px;
+                padding:18px 22px;margin:16px 0;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:1.2rem;">⚡</span>
+                    <strong style="font-size:.9rem;text-transform:uppercase;letter-spacing:.5px;color:#92400e;">
+                        #1 Change Right Now
+                    </strong>
+                </div>
+                <p style="margin:0;color:#78350f;font-size:.95rem;line-height:1.6;">${text}</p>
+            </div>`;
+        el.classList.remove('hidden');
     }
 
     renderResults(data) {
@@ -510,11 +543,21 @@ class AdAnalyzer {
             </div>`).join('');
     }
 
-    formatCurrency(value) {
+    formatCurrency(value, country) {
         if (value === undefined || value === null || value === '') return 'N/A';
         const num = Number(value);
         if (isNaN(num)) return 'N/A';
-        return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(num);
+        const c = (country || this.elements.country?.value || 'us').toLowerCase();
+        if (c.includes('nigeria'))      return '₦' + num.toLocaleString();
+        if (c.includes('ghana'))        return 'GH₵' + num.toLocaleString();
+        if (c.includes('kenya'))        return 'KSh' + num.toLocaleString();
+        if (c.includes('south_africa')) return 'R' + num.toLocaleString();
+        if (c.includes('uk'))           return '£' + num.toLocaleString();
+        if (c.includes('india'))        return '₹' + num.toLocaleString();
+        if (c.includes('germany') || c.includes('europe')) return '€' + num.toLocaleString();
+        if (c.includes('australia'))    return 'A$' + num.toLocaleString();
+        if (c.includes('canada'))       return 'CA$' + num.toLocaleString();
+        return '$' + num.toLocaleString();
     }
 
     switchTab(tabName) {
@@ -526,13 +569,132 @@ class AdAnalyzer {
         });
     }
 
+    // ── Analysis History (localStorage) ───────────────────────
+    saveToHistory(content, analysisData, formMeta) {
+        try {
+            const history = this.getHistory();
+            const entry = {
+                id:        Date.now(),
+                timestamp: new Date().toISOString(),
+                snippet:   content.trim().slice(0, 80) + (content.length > 80 ? '…' : ''),
+                platform:  formMeta.platform  || 'unknown',
+                industry:  formMeta.industry  || 'unknown',
+                country:   formMeta.country   || 'unknown',
+                scores: {
+                    overall:       analysisData.scores?.overall       || 0,
+                    hook_strength: analysisData.scores?.hook_strength  || 0,
+                    credibility:   analysisData.scores?.credibility    || 0,
+                    cta_strength:  analysisData.scores?.cta_strength   || 0,
+                }
+            };
+            history.unshift(entry);
+            const trimmed = history.slice(0, 10); // keep last 10
+            localStorage.setItem('adlytics_history', JSON.stringify(trimmed));
+            this.renderHistory();
+        } catch(e) {
+            console.warn('History save failed:', e);
+        }
+    }
+
+    getHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('adlytics_history') || '[]');
+        } catch { return []; }
+    }
+
+    renderHistory() {
+        const container = document.getElementById('analysisHistory');
+        if (!container) return;
+        const history = this.getHistory();
+        if (!history.length) {
+            container.innerHTML = '<p style="color:var(--gray-400);font-size:.85rem;padding:8px 0;">No analyses yet. Run your first analysis above.</p>';
+            return;
+        }
+        const scoreColor = s => s >= 70 ? '#10b981' : s >= 50 ? '#f59e0b' : '#ef4444';
+        container.innerHTML = history.map(h => `
+            <div class="history-item" style="
+                display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+                padding:12px 16px;background:white;border:1px solid var(--gray-200);
+                border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .2s;"
+                onmouseenter="this.style.borderColor='var(--primary)'"
+                onmouseleave="this.style.borderColor='var(--gray-200)'"
+                onclick="window.adAnalyzer && window.adAnalyzer.restoreFromHistory(${h.id})">
+                <div>
+                    <div style="font-size:.88rem;font-weight:500;color:var(--gray-800);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.snippet}</div>
+                    <div style="font-size:.75rem;color:var(--gray-400);">
+                        ${h.platform.toUpperCase()} · ${h.industry} · ${new Date(h.timestamp).toLocaleDateString()}
+                    </div>
+                </div>
+                <div style="text-align:center;flex-shrink:0;">
+                    <div style="font-size:1.3rem;font-weight:700;color:${scoreColor(h.scores.overall)};">${h.scores.overall}</div>
+                    <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;">Score</div>
+                </div>
+            </div>`).join('');
+    }
+
+    restoreFromHistory(id) {
+        // Just scroll to form and show a message — full restore would need stored full analysis
+        const history = this.getHistory();
+        const entry   = history.find(h => h.id === id);
+        if (!entry) return;
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Expand form if collapsed
+        const wrapper = document.getElementById('formWrapper');
+        if (wrapper && wrapper.classList.contains('collapsed')) {
+            if (typeof toggleForm === 'function') toggleForm();
+        }
+        // Populate industry/platform/country selectors
+        if (this.elements.platform && entry.platform !== 'unknown') this.elements.platform.value = entry.platform;
+        if (this.elements.industry && entry.industry !== 'unknown') this.elements.industry.value = entry.industry;
+        if (this.elements.country  && entry.country  !== 'unknown') {
+            this.elements.country.value = entry.country;
+            this.updateRegions();
+        }
+    }
+
+    clearHistory() {
+        if (!confirm('Clear all analysis history?')) return;
+        localStorage.removeItem('adlytics_history');
+        this.renderHistory();
+    }
+
+    // ── Staged loading messages ────────────────────────────────
+    startStagedLoading() {
+        const el = document.getElementById('loadingStage');
+        if (!el) return;
+        const stages = [
+            { msg: '🔬 Fingerprinting ad content…',          delay: 0    },
+            { msg: '🧠 Analysing hook strength & clarity…',  delay: 4000 },
+            { msg: '👥 Simulating 5 audience personas…',     delay: 9000 },
+            { msg: '📊 Scoring credibility & emotion…',      delay: 14000 },
+            { msg: '🔍 Running critic review pass…',         delay: 20000 },
+            { msg: '💡 Building improvement recommendations…', delay: 26000 },
+            { msg: '⚡ Finalising your report…',             delay: 32000 },
+        ];
+        this._loadingTimers = [];
+        stages.forEach(s => {
+            const t = setTimeout(() => { el.textContent = s.msg; }, s.delay);
+            this._loadingTimers.push(t);
+        });
+    }
+
+    stopStagedLoading() {
+        (this._loadingTimers || []).forEach(t => clearTimeout(t));
+        this._loadingTimers = [];
+        const el = document.getElementById('loadingStage');
+        if (el) el.textContent = '';
+    }
+
     showLoading() {
         this.elements.loading?.classList.remove('hidden');
         this.elements.submitBtn?.setAttribute('disabled', 'true');
+        this.startStagedLoading();
     }
     hideLoading() {
         this.elements.loading?.classList.add('hidden');
         this.elements.submitBtn?.removeAttribute('disabled');
+        this.stopStagedLoading();
     }
     showError(message) {
         if (this.elements.errorDisplay) {
