@@ -110,6 +110,9 @@ if frontend_path:
 
     @app.get("/{path:path}", response_class=HTMLResponse)
     async def serve_spa(path: str):
+        # Block diagnostic tool from public access
+        if path in ["diagnostic.html", "diagnostic"]:
+            raise HTTPException(status_code=404, detail="Not found")
         if path.startswith("api/") or path in ["docs", "redoc", "openapi.json", "health"]:
             raise HTTPException(status_code=404, detail="Not found")
         try:
