@@ -252,6 +252,15 @@ SCORING RULES:
 8. Every critical_weakness must include a precise_fix with an EXACT rewrite, not "add more proof"
 9. what_to_change_right_now must name the specific line to change and show the improved version
 
+VARIANT GENERATION RULES (critical — read carefully):
+10. ad_variants MUST be derived from the ACTUAL ad content above — not generic forex/finance templates
+11. Every hook in ad_variants must reference the specific product, topic, or mechanism in THIS ad
+12. If the ad mentions "Pipways" → variants must mention Pipways. If it mentions "risk management" → variants reference that.
+13. NEVER write generic hooks like "I lost ₦120,000 before I discovered this" unless the ad is about financial loss specifically
+14. The body of each variant must expand on what THIS ad is actually selling — not a generic trading pitch
+15. predicted_score for variants: Fear/Loss typically +10–18 pts over original, Curiosity Gap +8–14, Social Proof +5–10
+16. winner_prediction reasoning must explain why that angle beats others FOR THIS specific ad and audience
+
 OUTPUT STRICT JSON (no markdown, no preamble):
 {{
   "reasoning": {{
@@ -281,10 +290,45 @@ OUTPUT STRICT JSON (no markdown, no preamble):
     {{"issue": "...", "severity": "High|Medium|Low", "impact": "Specific metric impact (e.g. 70% of users scroll past)", "precise_fix": "Exact rewrite or change — not generic advice", "expected_lift": "e.g. +25% CTR"}},
     {{"issue": "...", "severity": "High|Medium|Low", "impact": "...", "precise_fix": "...", "expected_lift": "..."}}
   ],
-  "what_to_change_right_now": "Single most impactful change the advertiser can make TODAY. Must be a specific rewrite instruction, not general advice.",
+  "what_to_change_right_now": "Single most impactful change the advertiser can make TODAY. Must be a specific rewrite instruction referencing an actual line from the ad, not general advice.",
   "line_by_line_analysis": [
     {{"line": "first sentence or phrase", "verdict": "Strong|Weak|Neutral", "reason": "why", "rewrite": "exact improved version if Weak"}}
-  ]
+  ],
+  "ad_variants": [
+    {{
+      "id": 1,
+      "angle": "Fear / Loss",
+      "predicted_score": 0,
+      "hook": "Rewrite the ad's opening using a specific loss/failure framing. Must reference the actual product/topic from this ad — NOT a generic template.",
+      "body": "2-3 sentences expanding on the loss, then pivoting to the solution this ad offers.",
+      "cta": "Low-friction CTA matching the platform and country.",
+      "why_it_works": "Why this angle works for THIS audience."
+    }},
+    {{
+      "id": 2,
+      "angle": "Curiosity Gap",
+      "predicted_score": 0,
+      "hook": "Open loop hook that withholds a key insight from the ad. Must be specific to this ad's topic.",
+      "body": "Deepen the curiosity, hint at the mechanism, create urgency.",
+      "cta": "CTA that closes the loop — 'watch to see', 'comment to get', etc.",
+      "why_it_works": "Why curiosity gap works for this specific content."
+    }},
+    {{
+      "id": 3,
+      "angle": "Social Proof",
+      "predicted_score": 0,
+      "hook": "Lead with a specific result or transformation related to the ad's core promise.",
+      "body": "Build credibility with specifics — numbers, timeframes, named outcomes from this topic.",
+      "cta": "Trust-building CTA.",
+      "why_it_works": "Why proof-first works for this audience and topic."
+    }}
+  ],
+  "winner_prediction": {{
+    "winner_id": 1,
+    "angle": "Fear / Loss",
+    "confidence": "65%",
+    "reasoning": "Why this variant wins for THIS specific ad and audience combination."
+  }}
 }}"""
 
 
@@ -573,6 +617,8 @@ class AIEngine:
             "critical_weaknesses":  weaknesses,
             "what_to_change_right_now": first_pass.get("what_to_change_right_now", ""),
             "line_by_line_analysis":    first_pass.get("line_by_line_analysis", []),
+            "ad_variants":          first_pass.get("ad_variants", []),
+            "winner_prediction":    first_pass.get("winner_prediction", {}),
             "content_verification": verification,
             "_engine_metadata": {
                 "version":          "7.0",
