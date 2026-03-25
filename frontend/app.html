@@ -2314,12 +2314,7 @@
                         result.data._metadata.currency = { symbol: getCurrencySymbol() };
                     }
                     renderAllResults(result.data);
-                    // Save to history
-                    const content = document.getElementById('videoScript')?.value?.trim()
-                                 || document.getElementById('adCopy')?.value?.trim() || '';
-                    saveAnalysisToHistory(content, result.data);
-                    // Show #1 change right now
-                    renderWhatToChangeNow(result.data.what_to_change_right_now);
+                    // history + whatToChangeNow are called inside renderAllResults
                 } else {
                     throw new Error(result.error?.message || 'Analysis failed');
                 }
@@ -3135,11 +3130,22 @@
             if (results)     results.style.display     = 'block';
             if (placeholder) placeholder.style.display = 'none';
 
-            const sym      = window._activeSym || '₦';
+            const sym      = window._activeSym || getCurrencySymbol();
             const scores   = window._adlyticsData?.scores || {};
             const overall  = scores.overall || 50;
             const curr     = window._currencyData;
-            const rate     = curr?.usd_rate || curr?.rate || 1630;
+
+            // Country-aware USD conversion rates (approximate — update periodically)
+            const countryRates = {
+                nigeria: 1620, ghana: 14.5, kenya: 130, south_africa: 18.5,
+                uk: 0.79, us: 1, canada: 1.36, australia: 1.53,
+                india: 83.5, germany: 0.92
+            };
+            const selectedCountry = (window._adlyticsCountry || 'nigeria').toLowerCase();
+            const rate = curr?.usd_rate || curr?.rate
+                      || countryRates[selectedCountry]
+                      || countryRates[Object.keys(countryRates).find(k => selectedCountry.includes(k))]
+                      || 1620;
 
             // Platform-aware CTR estimates (fraction)
             const platform = window._adlyticsPlatform || 'tiktok';
@@ -3746,8 +3752,8 @@
         };
 
         // ══════════════════════════════════════════════════
-        // VARIANT REGENERATOR — calls Anthropic API directly
-        // Bypasses backend bridge to generate content-specific variants
+        // VARIANT REGENERATOR — routes through FastAPI backend
+        // (Direct browser→Anthropic API blocked by CORS)
         // ══════════════════════════════════════════════════
         async function regenerateVariants() {
             const content  = window._adlyticsContent || '';
@@ -3765,103 +3771,55 @@
 
             const btn    = document.getElementById('regenVariantsBtn');
             const status = document.getElementById('variantsGenStatus');
-            const list   = document.getElementById('variantsList');
 
             btn.disabled = true;
             btn.textContent = '⏳ Generating…';
             status.style.display = 'block';
+            status.style.color   = '#6b7280';
             status.textContent   = '🧠 Reading your ad and writing content-specific variants…';
 
-            const prompt = `You are an expert performance marketing copywriter specialising in ${country.toUpperCase()} ${industry} ads.
-
-The advertiser has this ad (score: ${overall}/100 on ${platform.toUpperCase()}):
----
-${content}
----
-
-Your job: Write 3 A/B test variants that are COMPLETELY derived from this specific ad.
-RULES:
-- Every hook must reference the actual product/service/topic in the ad above
-- Do NOT write generic hooks like "I lost ₦120,000" unless the ad is literally about losing that
-- Do NOT write "Nobody shows you the losing trades" unless the ad is about trade transparency
-- Body and CTA must match what this ad is actually selling
-- Use ${sym} for currency references
-- Platform: ${platform.toUpperCase()} — keep CTAs native (DM, Comment, Watch)
-
-Return ONLY valid JSON, no markdown, no preamble:
-{
-  "variants": [
-    {
-      "id": 1,
-      "angle": "Fear / Loss",
-      "predicted_score": ${Math.min(98, overall + 12)},
-      "hook": "opening line using fear/loss framing specific to THIS ad's topic",
-      "body": "2-3 sentences expanding the problem, referencing this ad's actual offer",
-      "cta": "low-friction CTA for ${platform}",
-      "why_it_works": "why this angle works for ${country} ${industry} audience"
-    },
-    {
-      "id": 2,
-      "angle": "Curiosity Gap",
-      "predicted_score": ${Math.min(98, overall + 8)},
-      "hook": "open loop hook specific to this ad's topic",
-      "body": "deepen curiosity, hint at the mechanism this ad offers",
-      "cta": "CTA that resolves the loop",
-      "why_it_works": "why curiosity gap works here"
-    },
-    {
-      "id": 3,
-      "angle": "Social Proof",
-      "predicted_score": ${Math.min(98, overall + 5)},
-      "hook": "result/transformation hook specific to this ad's offer",
-      "body": "build credibility with specifics relevant to this ad",
-      "cta": "trust-building CTA",
-      "why_it_works": "why proof-first converts for this audience"
-    }
-  ],
-  "winner_prediction": {
-    "winner_id": 1,
-    "angle": "Fear / Loss",
-    "confidence": "65%",
-    "reasoning": "why this wins specifically for this ad and ${country} ${industry} audience"
-  }
-}`;
-
             try {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                const fd = new FormData();
+                fd.append('ad_copy',          content);
+                fd.append('platform',         platform);
+                fd.append('industry',         industry);
+                fd.append('audience_country', country);
+                fd.append('overall_score',    String(overall));
+                fd.append('currency_symbol',  sym);
+                fd.append('current_scores',   JSON.stringify(scores));
+
+                const response = await fetch('/api/generate-variants', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 1500,
-                        messages: [{ role: 'user', content: prompt }]
-                    })
+                    body:   fd
                 });
 
-                if (!response.ok) throw new Error(`API ${response.status}`);
+                if (!response.ok) {
+                    // Fallback: if endpoint doesn't exist yet, show clear message
+                    if (response.status === 404 || response.status === 405) {
+                        throw new Error('The /api/generate-variants endpoint is not deployed yet. Add it to your backend routes — see INTEGRATION_PATCH.md.');
+                    }
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
                 const result = await response.json();
-                const raw    = result.content?.[0]?.text || '';
+                if (!result.success) throw new Error(result.detail || 'Generation failed');
 
-                // Strip markdown fences if present
-                const clean  = raw.replace(/```json|```/g, '').trim();
-                const parsed = JSON.parse(clean);
+                const variants = result.data?.variants || result.data?.ad_variants || [];
+                const winner   = result.data?.winner_prediction || {};
 
-                const variants = parsed.variants || [];
-                const winner   = parsed.winner_prediction || {};
+                if (!variants.length) throw new Error('No variants returned from server');
 
-                if (!variants.length) throw new Error('No variants returned');
-
-                // Render them
                 renderVariants(variants, winner);
                 renderWinnerPrediction(winner);
 
-                status.textContent   = '✅ Variants regenerated from your actual ad content.';
-                status.style.color   = '#059669';
-                btn.textContent      = '🔄 Regenerate Again';
+                status.textContent = '✅ Variants regenerated from your actual ad content.';
+                status.style.color = '#059669';
+                btn.textContent    = '🔄 Regenerate Again';
 
             } catch(err) {
                 console.error('Variant regen error:', err);
-                status.textContent = `❌ Regeneration failed: ${err.message}. The variants shown are AI estimates from your last analysis.`;
+                status.textContent = `❌ ${err.message}`;
                 status.style.color = '#dc2626';
                 btn.textContent    = '🔄 Regenerate Variants';
             } finally {
