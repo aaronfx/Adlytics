@@ -1445,8 +1445,17 @@
         <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Generating strategic intelligence...</p>
-            <p style="font-size: 0.9rem; opacity: 0.8;">This takes 15-30 seconds for complete analysis</p>
+            <p style="font-size: 0.9rem; opacity: 0.8;">This takes 20–40 seconds for complete analysis</p>
+            <p id="loadingStage" style="
+                font-size:.88rem;margin-top:16px;opacity:.9;
+                background:rgba(255,255,255,.12);
+                border-radius:20px;padding:8px 20px;
+                display:inline-block;min-height:1.4em;
+                transition:opacity .3s;"></p>
         </div>
+
+        <!-- #1 Change Right Now — injected by analyzer.js after analysis, rendered inside overview tab -->
+
 
         <div id="results" class="results">
             <!-- PDF Export Bar — shown when results are active -->
@@ -1575,6 +1584,20 @@
                     <div class="history-trend" id="historyTrend"></div>
                 </div>
 
+                <!-- Recent Analyses History -->
+                <div class="section" id="historySection">
+                    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>🕓 Recent Analyses</span>
+                        <button onclick="window.adAnalyzer?.clearHistory()"
+                            style="font-size:.75rem;padding:4px 10px;border:1px solid var(--gray-200);border-radius:6px;background:white;cursor:pointer;color:var(--gray-500);">
+                            Clear
+                        </button>
+                    </div>
+                    <div id="analysisHistory" style="margin-top:8px;">
+                        <p style="color:var(--gray-400);font-size:.85rem;padding:8px 0;">No analyses yet. Run your first analysis above.</p>
+                    </div>
+                </div>
+
                 <div id="scoresContainer" class="scores-grid"></div>
 
                 <div class="section">
@@ -1585,6 +1608,8 @@
                 <div class="section">
                     <div class="section-title">🚨 Critical Issues</div>
                     <div id="criticalWeaknesses"></div>
+                    <!-- #1 Change Right Now — populated by analyzer.js -->
+                    <div id="whatToChangeNow" class="hidden"></div>
                 </div>
 
                 <div class="section">
