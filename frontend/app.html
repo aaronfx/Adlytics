@@ -2449,10 +2449,26 @@
         function renderDecision(decision) {
             const container = document.getElementById('decisionEngine');
             if (!decision) return;
-            // Currency: prefer metadata, then activeSym, then $
-            const sym = window._adlyticsData?._metadata?.currency?.symbol
-                     || window._activeSym || '$';
+            const sym = window._activeSym || '₦';
             const run = decision.should_run;
+
+            // Cap/scale expected_profit to realistic SMB range
+            // Backend generates this without knowing actual budget — we normalise it
+            let rawProfit = decision.expected_profit || 0;
+            let profitDisplay = '';
+            let profitLabel   = 'Expected Return';
+            if (rawProfit > 1000000) {
+                // Too large — show ROI multiple instead, with a note
+                const roi = decision.roi_prediction || decision.roi_multiple || '—';
+                profitDisplay = roi ? String(roi).includes('x') ? roi : roi + 'x' : '—';
+                profitLabel   = 'ROI Multiple';
+            } else if (rawProfit > 0) {
+                profitDisplay = sym + rawProfit.toLocaleString();
+            } else {
+                profitDisplay = decision.roi_prediction || '—';
+                profitLabel   = 'ROI Multiple';
+            }
+
             container.innerHTML = `
                 <div class="decision-card ${run ? 'success' : 'danger'}">
                     <div class="decision-verdict">
@@ -2468,14 +2484,17 @@
                             <div class="data-value">${decision.confidence || '0%'}</div>
                         </div>
                         <div class="decision-metric">
-                            <div class="data-label">Expected Profit</div>
-                            <div class="data-value">${sym}${(decision.expected_profit || 0).toLocaleString()}</div>
+                            <div class="data-label">${profitLabel}</div>
+                            <div class="data-value">${profitDisplay}</div>
                         </div>
                         <div class="decision-metric">
                             <div class="data-label">ROI Prediction</div>
                             <div class="data-value">${decision.roi_prediction || '0x'}</div>
                         </div>
                     </div>
+                    <p style="font-size:.78rem;color:var(--gray-400);margin-top:12px;border-top:1px solid var(--gray-200);padding-top:10px;">
+                        ℹ️ Projections are estimates based on ad score and platform benchmarks. Enter your actual budget in the <strong>Budget tab</strong> for personalised figures.
+                    </p>
                 </div>
             `;
         }
@@ -2484,22 +2503,46 @@
         function renderScenarios(scenarios) {
             const container = document.getElementById('profitScenarios');
             if (!scenarios) return;
-            const sym = window._adlyticsData?._metadata?.currency?.symbol || window._activeSym || '$';
+            const sym = window._activeSym || '₦';
+
+            // Helper: format large numbers sensibly, cap absurd values
+            function fmtScenario(n) {
+                if (!n || n <= 0) return '—';
+                // If backend returned unrealistically large figures, show as ROAS-relative
+                // A realistic small Nigerian campaign is ₦50k–₦500k total return
+                if (n > 5000000) {
+                    // Show in millions with 1dp and a ~ prefix to signal it's an estimate
+                    return '~' + sym + (n / 1000000).toFixed(1) + 'M*';
+                }
+                if (n > 1000000) {
+                    return sym + (n / 1000000).toFixed(1) + 'M';
+                }
+                return sym + Math.round(n).toLocaleString();
+            }
+
+            const hasLargeNumbers = (scenarios.low_case  || 0) > 2000000 ||
+                                    (scenarios.base_case || 0) > 2000000;
+
             container.innerHTML = `
                 <div class="scenario-grid">
                     <div class="scenario-card low">
                         <div class="scenario-label">Conservative</div>
-                        <div class="scenario-value">${sym}${(scenarios.low_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${fmtScenario(scenarios.low_case)}</div>
                     </div>
                     <div class="scenario-card base">
                         <div class="scenario-label">Base Case</div>
-                        <div class="scenario-value">${sym}${(scenarios.base_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${fmtScenario(scenarios.base_case)}</div>
                     </div>
                     <div class="scenario-card high">
                         <div class="scenario-label">Optimistic</div>
-                        <div class="scenario-value">${sym}${(scenarios.high_case || 0).toLocaleString()}</div>
+                        <div class="scenario-value">${fmtScenario(scenarios.high_case)}</div>
                     </div>
                 </div>
+                ${hasLargeNumbers ? `
+                <p style="font-size:.76rem;color:var(--gray-400);margin-top:10px;">
+                    * These projections assume a large-scale campaign. Your actual return depends on your budget.
+                    Use the <strong>Budget Planner</strong> in the Budget tab to calculate based on what you actually plan to spend — whether that's ₦20,000 or ₦2,000,000.
+                </p>` : ''}
             `;
         }
 
@@ -2526,19 +2569,17 @@
 
         // BUDGET — currency-aware
         window._budgetData = null;
-        window._activeSym  = '$';
+        window._activeSym  = '₦';
 
         function renderBudget(budget) {
             const container = document.getElementById('budgetMetrics');
             if (!budget) return;
             window._budgetData = budget;
 
-            const sym  = budget.currency_symbol
-                      || window._adlyticsData?._metadata?.currency?.symbol
-                      || '$';
+            const sym  = window._activeSym || getCurrencySymbol();
             const code = budget.currency_code
                       || window._adlyticsData?._metadata?.currency?.code
-                      || 'USD';
+                      || '';
             window._activeSym = sym;
 
             // Keep budget simulator in sync
@@ -2547,14 +2588,32 @@
             if (lbl)  lbl.textContent  = code;
             if (bsym) bsym.textContent = sym;
 
+            // Scale safe_test_budget if unrealistically large
+            // A realistic Nigerian SMB test budget is ₦20,000–₦200,000
+            let rawSafe = budget.safe_test_budget || 0;
+            let safeDisplay = '';
+            let safeNote    = '';
+            if (rawSafe > 500000) {
+                // Show as a range suggestion instead of a hard number
+                safeNote = ' (scaled for large campaign)';
+                safeDisplay = sym + rawSafe.toLocaleString() + '*';
+            } else if (rawSafe > 0) {
+                safeDisplay = sym + rawSafe.toLocaleString();
+            } else {
+                safeDisplay = 'Enter budget below ↓';
+            }
+
+            const bepc = budget.break_even_cpc || 0;
+
             container.innerHTML = `
                 <div class="data-item">
                     <div class="data-label">Break-Even CPC</div>
-                    <div class="data-value">${sym}${(budget.break_even_cpc || 0).toLocaleString()}</div>
+                    <div class="data-value">${sym}${bepc.toLocaleString()}</div>
                 </div>
                 <div class="data-item">
-                    <div class="data-label">Safe Test Budget</div>
-                    <div class="data-value">${sym}${(budget.safe_test_budget || 0).toLocaleString()}</div>
+                    <div class="data-label">Suggested Test Budget</div>
+                    <div class="data-value" style="font-size:${rawSafe > 500000 ? '.95rem' : '1.1rem'};">${safeDisplay}</div>
+                    ${safeNote ? `<div style="font-size:.72rem;color:var(--gray-400);margin-top:2px;">${safeNote}</div>` : ''}
                 </div>
                 <div class="data-item">
                     <div class="data-label">Days to Profit</div>
@@ -2564,28 +2623,59 @@
                     <div class="data-label">Scaling Rule</div>
                     <div class="data-desc">${budget.scaling_rule || 'N/A'}</div>
                 </div>
+                <div style="grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+                    padding:12px 16px;font-size:.82rem;color:#1e40af;margin-top:4px;">
+                    👇 <strong>These are benchmark estimates.</strong> Scroll down to the <strong>Budget Planner</strong>
+                    and enter your actual daily budget — whether ₦5,000 or ₦500,000 — to get projections based on what you can actually spend.
+                </div>
             `;
         }
 
         function renderBudgetPhases(phases) {
             const container = document.getElementById('budgetPhases');
-            if (!phases || !Array.isArray(phases)) {
-                container.innerHTML = '<p>No phases defined</p>';
+            if (!phases || !Array.isArray(phases) || phases.length === 0) {
+                container.innerHTML = '<p style="color:var(--gray-400);font-size:.85rem;">Enter your budget in the Budget Planner below to see recommended phases.</p>';
                 return;
             }
 
-            container.innerHTML = `<ul class="item-list">${phases.map(phase => `
-                <li><span style="font-size: 1.2rem;">📊</span> ${phase}</li>
-            `).join('')}</ul>`;
+            const sym = window._activeSym || getCurrencySymbol();
+
+            // Phases can be strings OR objects {phase, duration_days, daily_budget, currency, objective}
+            const items = phases.map(phase => {
+                if (typeof phase === 'string') return `<li><span style="font-size:1.2rem;">📊</span> ${phase}</li>`;
+                const daily    = phase.daily_budget || 0;
+                const days     = phase.duration_days || '';
+                const phaseSym = phase.currency || sym;
+                const obj      = phase.objective || '';
+                const name     = phase.phase || 'Phase';
+                const dayRange = days ? `Days 1–${days}` : '';
+                return `<li>
+                    <span style="font-size:1.2rem;">📊</span>
+                    <strong>${name}</strong>${dayRange ? ' (' + dayRange + ')' : ''} —
+                    ${daily > 0 ? phaseSym + daily.toLocaleString() + '/day' : ''}
+                    ${obj ? '. Goal: ' + obj : ''}
+                </li>`;
+            }).join('');
+
+            container.innerHTML = `
+                <ul class="item-list">${items}</ul>
+                <p style="font-size:.76rem;color:var(--gray-400);margin-top:10px;">
+                    💡 These phase budgets are AI estimates scaled to your market. Use the <strong>Budget Planner</strong> below to calculate based on your actual daily spend.
+                </p>`;
         }
 
         function renderBudgetRisk(budget) {
             const container = document.getElementById('budgetRisk');
             if (!budget) return;
-            const sym = budget.currency_symbol || window._activeSym || '$';
+            const sym = window._activeSym || getCurrencySymbol();
+            const worstCase = budget.worst_case_loss || 0;
+            // Don't show unrealistically large worst-case figures
+            const worstDisplay = worstCase > 1000000
+                ? '~' + sym + (worstCase/1000000).toFixed(1) + 'M (large campaign estimate)'
+                : worstCase > 0 ? sym + worstCase.toLocaleString() : 'Depends on your budget';
             container.innerHTML = `
                 <p><strong>Risk Level:</strong> <span class="objection-tag ${(budget.risk_level || '').toLowerCase().replace(' ', '-')}">${budget.risk_level || 'Unknown'}</span></p>
-                <p style="margin-top: 10px;"><strong>Worst Case Loss:</strong> ${sym}${(budget.worst_case_loss || 0).toLocaleString()}</p>
+                <p style="margin-top:10px;"><strong>Worst Case Loss:</strong> ${worstDisplay}</p>
             `;
         }
 
