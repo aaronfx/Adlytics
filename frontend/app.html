@@ -1788,6 +1788,22 @@
             <div id="tab-variants" class="tab-content">
                 <div class="section">
                     <div class="section-title">🎨 A/B Test Variants</div>
+                    <!-- Regenerate button — calls Anthropic API directly with the actual ad content -->
+                    <div id="variantsControlBar" style="display:none;margin-bottom:16px;">
+                        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                            <div style="font-size:.85rem;color:#0369a1;">
+                                <strong>⚡ Variants are generated from your actual ad copy.</strong>
+                                <span style="color:#64748b;"> If they look generic, click Regenerate.</span>
+                            </div>
+                            <button id="regenVariantsBtn" onclick="regenerateVariants()"
+                                style="background:#6366f1;color:white;border:none;border-radius:8px;
+                                padding:9px 18px;font-size:.85rem;font-weight:600;cursor:pointer;
+                                white-space:nowrap;flex-shrink:0;">
+                                🔄 Regenerate Variants
+                            </button>
+                        </div>
+                        <div id="variantsGenStatus" style="display:none;margin-top:10px;font-size:.82rem;color:#6b7280;text-align:center;"></div>
+                    </div>
                     <div id="variantsList"></div>
                 </div>
 
@@ -2384,6 +2400,9 @@
             // Variants
             renderVariants(data.ad_variants || data.variations, data.winner_prediction);
             renderWinnerPrediction(data.winner_prediction);
+            // Show the regenerate control bar now that we have content
+            const vcb = document.getElementById('variantsControlBar');
+            if (vcb) vcb.style.display = 'block';
 
             // Objections
             renderObjections(data.objection_detection);
@@ -3725,6 +3744,130 @@
                 });
             }
         };
+
+        // ══════════════════════════════════════════════════
+        // VARIANT REGENERATOR — calls Anthropic API directly
+        // Bypasses backend bridge to generate content-specific variants
+        // ══════════════════════════════════════════════════
+        async function regenerateVariants() {
+            const content  = window._adlyticsContent || '';
+            const platform = window._adlyticsPlatform || 'tiktok';
+            const industry = window._adlyticsIndustry || 'finance';
+            const country  = window._adlyticsCountry  || 'nigeria';
+            const scores   = window._adlyticsData?.scores || {};
+            const overall  = scores.overall || 50;
+            const sym      = getCurrencySymbol();
+
+            if (!content.trim()) {
+                alert('Run an analysis first before regenerating variants.');
+                return;
+            }
+
+            const btn    = document.getElementById('regenVariantsBtn');
+            const status = document.getElementById('variantsGenStatus');
+            const list   = document.getElementById('variantsList');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating…';
+            status.style.display = 'block';
+            status.textContent   = '🧠 Reading your ad and writing content-specific variants…';
+
+            const prompt = `You are an expert performance marketing copywriter specialising in ${country.toUpperCase()} ${industry} ads.
+
+The advertiser has this ad (score: ${overall}/100 on ${platform.toUpperCase()}):
+---
+${content}
+---
+
+Your job: Write 3 A/B test variants that are COMPLETELY derived from this specific ad.
+RULES:
+- Every hook must reference the actual product/service/topic in the ad above
+- Do NOT write generic hooks like "I lost ₦120,000" unless the ad is literally about losing that
+- Do NOT write "Nobody shows you the losing trades" unless the ad is about trade transparency
+- Body and CTA must match what this ad is actually selling
+- Use ${sym} for currency references
+- Platform: ${platform.toUpperCase()} — keep CTAs native (DM, Comment, Watch)
+
+Return ONLY valid JSON, no markdown, no preamble:
+{
+  "variants": [
+    {
+      "id": 1,
+      "angle": "Fear / Loss",
+      "predicted_score": ${Math.min(98, overall + 12)},
+      "hook": "opening line using fear/loss framing specific to THIS ad's topic",
+      "body": "2-3 sentences expanding the problem, referencing this ad's actual offer",
+      "cta": "low-friction CTA for ${platform}",
+      "why_it_works": "why this angle works for ${country} ${industry} audience"
+    },
+    {
+      "id": 2,
+      "angle": "Curiosity Gap",
+      "predicted_score": ${Math.min(98, overall + 8)},
+      "hook": "open loop hook specific to this ad's topic",
+      "body": "deepen curiosity, hint at the mechanism this ad offers",
+      "cta": "CTA that resolves the loop",
+      "why_it_works": "why curiosity gap works here"
+    },
+    {
+      "id": 3,
+      "angle": "Social Proof",
+      "predicted_score": ${Math.min(98, overall + 5)},
+      "hook": "result/transformation hook specific to this ad's offer",
+      "body": "build credibility with specifics relevant to this ad",
+      "cta": "trust-building CTA",
+      "why_it_works": "why proof-first converts for this audience"
+    }
+  ],
+  "winner_prediction": {
+    "winner_id": 1,
+    "angle": "Fear / Loss",
+    "confidence": "65%",
+    "reasoning": "why this wins specifically for this ad and ${country} ${industry} audience"
+  }
+}`;
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1500,
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API ${response.status}`);
+                const result = await response.json();
+                const raw    = result.content?.[0]?.text || '';
+
+                // Strip markdown fences if present
+                const clean  = raw.replace(/```json|```/g, '').trim();
+                const parsed = JSON.parse(clean);
+
+                const variants = parsed.variants || [];
+                const winner   = parsed.winner_prediction || {};
+
+                if (!variants.length) throw new Error('No variants returned');
+
+                // Render them
+                renderVariants(variants, winner);
+                renderWinnerPrediction(winner);
+
+                status.textContent   = '✅ Variants regenerated from your actual ad content.';
+                status.style.color   = '#059669';
+                btn.textContent      = '🔄 Regenerate Again';
+
+            } catch(err) {
+                console.error('Variant regen error:', err);
+                status.textContent = `❌ Regeneration failed: ${err.message}. The variants shown are AI estimates from your last analysis.`;
+                status.style.color = '#dc2626';
+                btn.textContent    = '🔄 Regenerate Variants';
+            } finally {
+                btn.disabled = false;
+            }
+        }
 
 </script>
 
