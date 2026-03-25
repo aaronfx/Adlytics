@@ -1,12 +1,13 @@
 """
 ADLYTICS Tier 2 Features
-- POST /api/compliance        — multi-platform compliance scan
-- POST /api/psychographic     — deep audience profiler
-- POST /api/storyboard        — video storyboard generator
-- GET  /api/benchmarks        — NGX + West Africa market data
-- POST /api/ab-result         — store real A/B test result
-- GET  /api/ab-results        — retrieve stored A/B results
-- POST /api/landing-page      — analyze a landing page URL
+- POST /api/compliance          — multi-platform compliance scan
+- POST /api/psychographic       — deep audience profiler
+- POST /api/storyboard          — video storyboard generator
+- GET  /api/benchmarks          — NGX + West Africa market data
+- POST /api/ab-result           — store real A/B test result
+- GET  /api/ab-results          — retrieve stored A/B results
+- POST /api/landing-page        — analyze a landing page URL
+- POST /api/generate-variants   — generate content-specific A/B variants
 """
 from fastapi import APIRouter, Form, Query, HTTPException
 from typing import Optional
@@ -177,7 +178,6 @@ async def check_compliance(
 
     # 2. Platform rule checks
     for rule in rules_db.get("rules", []):
-        # Finance checks
         if "financial" in rule["rule"].lower() and industry_key == "finance":
             violations.append({
                 "rule": rule["rule"],
@@ -569,7 +569,6 @@ async def save_ab_result(
 
     # Calculate prediction accuracy if we have ROAS
     if actual_roas is not None:
-        # Simple heuristic: score 80+ should predict ROAS ≥ 2.5×
         expected_roas = predicted_score / 35
         accuracy_delta = abs(actual_roas - expected_roas)
         entry["prediction_accuracy"] = "high" if accuracy_delta < 0.5 else "medium" if accuracy_delta < 1.5 else "low"
@@ -595,7 +594,6 @@ async def get_ab_results(
 
     results = results[:limit]
 
-    # Aggregate stats
     with_roas = [r for r in results if r["actual_roas"] is not None]
     avg_roas = round(sum(r["actual_roas"] for r in with_roas) / len(with_roas), 2) if with_roas else None
 
@@ -644,7 +642,7 @@ async def analyze_landing_page(
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             resp = await client.get(url, headers={"User-Agent": "ADLYTICS/1.0 (analysis bot)"})
             resp.raise_for_status()
-            html_content = resp.text[:8000]   # cap at 8K chars
+            html_content = resp.text[:8000]
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Could not fetch page: {e}")
 
@@ -708,3 +706,175 @@ OUTPUT ONLY valid JSON. No markdown, no preamble.
 
     data["url_analyzed"] = url
     return {"success": True, "data": data}
+
+
+# ══════════════════════════════════════════════════════════════
+# GENERATE VARIANTS
+# ══════════════════════════════════════════════════════════════
+
+# Country currency + CTA style lookup
+_COUNTRY_PROFILES = {
+    "nigeria":      {"currency": "₦",   "cta_style": "DM 'INFO' or Comment below"},
+    "ghana":        {"currency": "GH₵", "cta_style": "DM or WhatsApp"},
+    "kenya":        {"currency": "KSh", "cta_style": "DM or Comment"},
+    "south_africa": {"currency": "R",   "cta_style": "Click the link or DM"},
+    "uk":           {"currency": "£",   "cta_style": "Click the link below"},
+    "us":           {"currency": "$",   "cta_style": "Click the link or DM"},
+    "canada":       {"currency": "CA$", "cta_style": "Click the link below"},
+    "australia":    {"currency": "A$",  "cta_style": "Click the link or DM"},
+    "india":        {"currency": "₹",   "cta_style": "DM or WhatsApp"},
+    "germany":      {"currency": "€",   "cta_style": "Click the link below"},
+}
+
+def _resolve_profile(country: str) -> dict:
+    c = country.lower()
+    return (
+        _COUNTRY_PROFILES.get(c)
+        or next((v for k, v in _COUNTRY_PROFILES.items() if k in c), None)
+        or {"currency": "$", "cta_style": "Click or DM"}
+    )
+
+
+@router.post("/generate-variants")
+async def generate_variants(
+    ad_copy:          str   = Form(...),
+    platform:         str   = Form("tiktok"),
+    industry:         str   = Form("finance"),
+    audience_country: str   = Form("nigeria"),
+    overall_score:    str   = Form("50"),
+    currency_symbol:  str   = Form(""),
+    current_scores:   str   = Form("{}"),
+):
+    """
+    Generate 3 content-specific A/B variants for the submitted ad copy.
+    Called by the "Regenerate Variants" button in the frontend.
+    """
+    if not ad_copy.strip():
+        raise HTTPException(status_code=422, detail="ad_copy is required")
+    if not OPENROUTER_KEY:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    # Resolve context
+    profile   = _resolve_profile(audience_country)
+    currency  = currency_symbol.strip() or profile["currency"]
+    cta_style = profile["cta_style"]
+    score     = int(overall_score) if overall_score.isdigit() else 50
+
+    platform_clean  = platform.strip().lower()
+    industry_clean  = industry.strip().lower()
+    country_clean   = audience_country.strip().lower()
+
+    prompt = f"""You are an expert performance marketing copywriter specialising in {country_clean.upper()} {industry_clean} ads on {platform_clean.upper()}.
+
+The advertiser submitted this ad (overall score: {score}/100):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{ad_copy.strip()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR TASK: Write 3 A/B test variants completely derived from the ad above.
+
+STRICT RULES — follow every rule before writing:
+1. Every hook MUST reference the specific product, service, topic, or mechanism in the ad above.
+2. Do NOT use generic hooks (e.g. "I lost {currency}120,000") unless the ad literally mentions that loss.
+3. Do NOT write "Nobody shows you the losing trades" unless the ad specifically covers trade transparency.
+4. Each variant body must expand on what THIS ad is actually offering — not a generic industry pitch.
+5. Use {currency} for any currency amounts.
+6. CTAs must suit {platform_clean.upper()} — preferred style: {cta_style}
+7. Score guidance: Fear/Loss angle typically adds 10–15 pts; Curiosity Gap 7–12; Social Proof 4–9.
+8. winner_prediction reasoning must explain why that angle wins FOR THIS specific ad and {country_clean} audience.
+
+OUTPUT STRICT JSON ONLY — no markdown, no preamble:
+{{
+  "variants": [
+    {{
+      "id": 1,
+      "angle": "Fear / Loss",
+      "predicted_score": {min(98, score + 13)},
+      "hook": "fear/loss opening derived from THIS ad's specific topic/product",
+      "body": "2–3 sentences expanding the problem then pivoting to THIS ad's actual solution",
+      "cta": "{platform_clean} CTA",
+      "why_it_works": "why fear/loss works for {country_clean} {industry_clean} audience with THIS content"
+    }},
+    {{
+      "id": 2,
+      "angle": "Curiosity Gap",
+      "predicted_score": {min(98, score + 9)},
+      "hook": "open-loop hook withholding a key insight from THIS ad's topic",
+      "body": "deepen curiosity, hint at the mechanism THIS ad offers",
+      "cta": "CTA that resolves the loop",
+      "why_it_works": "why curiosity gap converts for this specific content and audience"
+    }},
+    {{
+      "id": 3,
+      "angle": "Social Proof",
+      "predicted_score": {min(98, score + 6)},
+      "hook": "result/transformation hook specific to THIS ad's core promise",
+      "body": "credibility with specifics — numbers, timeframes, outcomes from THIS topic",
+      "cta": "trust-building {platform_clean} CTA",
+      "why_it_works": "why proof-first converts for {country_clean} {industry_clean} with this content"
+    }}
+  ],
+  "winner_prediction": {{
+    "winner_id": 1,
+    "angle": "Fear / Loss",
+    "confidence": "65%",
+    "reasoning": "why this angle beats the others for THIS ad, THIS audience, and {platform_clean.upper()}"
+  }}
+}}"""
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type":  "application/json",
+                    "HTTP-Referer":  "https://adlytics.ai",
+                },
+                json={
+                    "model":           "openai/gpt-4o",
+                    "messages":        [{"role": "user", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "max_tokens":      1800,
+                    "temperature":     0.3,
+                },
+            )
+        resp.raise_for_status()
+        raw     = resp.json()["choices"][0]["message"]["content"]
+        clean   = re.sub(r"```json|```", "", raw).strip()
+        parsed  = json.loads(clean)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ generate-variants JSON parse error: {e}")
+        raise HTTPException(status_code=500, detail="AI returned malformed JSON — try again")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"❌ generate-variants OpenRouter error: {e.response.status_code}")
+        raise HTTPException(status_code=502, detail=f"AI API error: {e.response.status_code}")
+    except Exception as e:
+        logger.error(f"❌ generate-variants unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    variants = parsed.get("variants", [])
+    winner   = parsed.get("winner_prediction", {})
+
+    if not variants:
+        raise HTTPException(status_code=500, detail="AI returned no variants — try again")
+
+    logger.info(
+        f"✅ generate-variants: {len(variants)} variants | "
+        f"{industry_clean}/{platform_clean}/{country_clean} | score={score}"
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "variants":          variants,
+            "winner_prediction": winner,
+            "context": {
+                "platform": platform_clean,
+                "industry": industry_clean,
+                "country":  country_clean,
+                "score":    score,
+            },
+        },
+    }
