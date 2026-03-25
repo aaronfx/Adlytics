@@ -1447,15 +1447,10 @@
             <p>Generating strategic intelligence...</p>
             <p style="font-size: 0.9rem; opacity: 0.8;">This takes 20–40 seconds for complete analysis</p>
             <p id="loadingStage" style="
-                font-size:.88rem;margin-top:16px;opacity:.9;
-                background:rgba(255,255,255,.12);
-                border-radius:20px;padding:8px 20px;
-                display:inline-block;min-height:1.4em;
-                transition:opacity .3s;"></p>
+                font-size:.88rem;margin-top:16px;opacity:.9;min-height:1.4em;
+                background:rgba(255,255,255,.15);border-radius:20px;
+                padding:8px 20px;display:inline-block;transition:opacity .3s;"></p>
         </div>
-
-        <!-- #1 Change Right Now — injected by analyzer.js after analysis, rendered inside overview tab -->
-
 
         <div id="results" class="results">
             <!-- PDF Export Bar — shown when results are active -->
@@ -1585,11 +1580,12 @@
                 </div>
 
                 <!-- Recent Analyses History -->
-                <div class="section" id="historySection">
+                <div class="section">
                     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
                         <span>🕓 Recent Analyses</span>
-                        <button onclick="window.adAnalyzer?.clearHistory()"
-                            style="font-size:.75rem;padding:4px 10px;border:1px solid var(--gray-200);border-radius:6px;background:white;cursor:pointer;color:var(--gray-500);">
+                        <button onclick="clearAnalysisHistory()"
+                            style="font-size:.75rem;padding:4px 10px;border:1px solid var(--gray-200);
+                            border-radius:6px;background:white;cursor:pointer;color:var(--gray-500);">
                             Clear
                         </button>
                     </div>
@@ -1608,8 +1604,8 @@
                 <div class="section">
                     <div class="section-title">🚨 Critical Issues</div>
                     <div id="criticalWeaknesses"></div>
-                    <!-- #1 Change Right Now — populated by analyzer.js -->
-                    <div id="whatToChangeNow" class="hidden"></div>
+                    <!-- #1 Change Right Now — populated after analysis -->
+                    <div id="whatToChangeNow" style="display:none;"></div>
                 </div>
 
                 <div class="section">
@@ -2137,12 +2133,139 @@
         countrySelect.addEventListener('change', updateRegions);
         updateRegions();
 
+        // ── Staged loading messages ───────────────────────────
+        let _stageTimers = [];
+        function startStagedLoading() {
+            const el = document.getElementById('loadingStage');
+            if (!el) return;
+            const stages = [
+                { msg: '🔬 Fingerprinting ad content…',           delay: 0     },
+                { msg: '🧠 Analysing hook strength & clarity…',   delay: 4000  },
+                { msg: '👥 Simulating 5 audience personas…',      delay: 9000  },
+                { msg: '📊 Scoring credibility & emotion…',       delay: 14000 },
+                { msg: '🔍 Running critic review pass…',          delay: 20000 },
+                { msg: '💡 Building improvement recommendations…', delay: 26000 },
+                { msg: '⚡ Finalising your report…',              delay: 32000 },
+            ];
+            _stageTimers = stages.map(s => setTimeout(() => { el.textContent = s.msg; }, s.delay));
+        }
+        function stopStagedLoading() {
+            _stageTimers.forEach(t => clearTimeout(t));
+            _stageTimers = [];
+            const el = document.getElementById('loadingStage');
+            if (el) el.textContent = '';
+        }
+
+        // ── Analysis History (localStorage) ──────────────────
+        function saveAnalysisToHistory(content, data) {
+            try {
+                const history = getAnalysisHistory();
+                const scores  = data.scores || {};
+                const entry   = {
+                    id:        Date.now(),
+                    timestamp: new Date().toISOString(),
+                    snippet:   content.trim().slice(0, 80) + (content.length > 80 ? '…' : ''),
+                    platform:  document.getElementById('platform')?.value  || 'unknown',
+                    industry:  document.getElementById('industry')?.value  || 'unknown',
+                    country:   document.getElementById('audienceCountry')?.value || 'unknown',
+                    scores: {
+                        overall:       scores.overall       || 0,
+                        hook_strength: scores.hook_strength || 0,
+                        credibility:   scores.credibility   || 0,
+                        cta_strength:  scores.cta_strength  || 0,
+                    }
+                };
+                history.unshift(entry);
+                localStorage.setItem('adlytics_history', JSON.stringify(history.slice(0, 10)));
+                renderAnalysisHistory();
+            } catch(e) { console.warn('History save failed:', e); }
+        }
+        function getAnalysisHistory() {
+            try { return JSON.parse(localStorage.getItem('adlytics_history') || '[]'); }
+            catch { return []; }
+        }
+        function renderAnalysisHistory() {
+            const container = document.getElementById('analysisHistory');
+            if (!container) return;
+            const history = getAnalysisHistory();
+            if (!history.length) {
+                container.innerHTML = '<p style="color:var(--gray-400);font-size:.85rem;padding:8px 0;">No analyses yet. Run your first analysis above.</p>';
+                return;
+            }
+            const scoreColor = s => s >= 70 ? '#10b981' : s >= 50 ? '#f59e0b' : '#ef4444';
+            container.innerHTML = history.map(h => `
+                <div style="
+                    display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+                    padding:12px 16px;background:white;border:1px solid var(--gray-200);
+                    border-radius:8px;margin-bottom:8px;cursor:default;transition:border-color .2s;"
+                    onmouseenter="this.style.borderColor='var(--primary)'"
+                    onmouseleave="this.style.borderColor='var(--gray-200)'">
+                    <div>
+                        <div style="font-size:.88rem;font-weight:500;color:var(--gray-800);margin-bottom:3px;
+                            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;">
+                            ${h.snippet}
+                        </div>
+                        <div style="font-size:.75rem;color:var(--gray-400);">
+                            ${(h.platform||'').toUpperCase()} · ${h.industry||''} · ${new Date(h.timestamp).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div style="text-align:center;flex-shrink:0;">
+                        <div style="font-size:1.3rem;font-weight:700;color:${scoreColor(h.scores.overall)};">${h.scores.overall}</div>
+                        <div style="font-size:.68rem;color:var(--gray-400);text-transform:uppercase;">Score</div>
+                    </div>
+                </div>`).join('');
+        }
+        window.clearAnalysisHistory = function() {
+            if (!confirm('Clear all analysis history?')) return;
+            localStorage.removeItem('adlytics_history');
+            renderAnalysisHistory();
+        };
+        // Render on page load
+        renderAnalysisHistory();
+
+        // ── What To Change Right Now renderer ─────────────────
+        function renderWhatToChangeNow(text) {
+            const el = document.getElementById('whatToChangeNow');
+            if (!el || !text) return;
+            el.innerHTML = `
+                <div style="
+                    background:linear-gradient(135deg,#fef3c7,#fde68a);
+                    border:2px solid #f59e0b;border-radius:12px;
+                    padding:18px 22px;margin:16px 0;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <span style="font-size:1.2rem;">⚡</span>
+                        <strong style="font-size:.9rem;text-transform:uppercase;letter-spacing:.5px;color:#92400e;">
+                            #1 Change Right Now
+                        </strong>
+                    </div>
+                    <p style="margin:0;color:#78350f;font-size:.95rem;line-height:1.6;">${text}</p>
+                </div>`;
+            el.classList.remove('hidden');
+            el.style.display = 'block';
+        }
+
+        // ── Currency helper (country-aware) ───────────────────
+        function getCurrencySymbol() {
+            const country = (document.getElementById('audienceCountry')?.value || 'us').toLowerCase();
+            if (country.includes('nigeria'))      return '₦';
+            if (country.includes('ghana'))        return 'GH₵';
+            if (country.includes('kenya'))        return 'KSh';
+            if (country.includes('south_africa')) return 'R';
+            if (country.includes('uk'))           return '£';
+            if (country.includes('india'))        return '₹';
+            if (country.includes('germany'))      return '€';
+            if (country.includes('australia'))    return 'A$';
+            if (country.includes('canada'))       return 'CA$';
+            return '$';
+        }
+
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             loading.classList.add('active');
             results.classList.remove('active');
             errorDisplay.classList.remove('active');
+            startStagedLoading();
 
             const formData = new FormData(form);
 
@@ -2169,7 +2292,18 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // Override currency symbol from selected country BEFORE rendering
+                    if (!result.data._metadata) result.data._metadata = {};
+                    if (!result.data._metadata.currency) {
+                        result.data._metadata.currency = { symbol: getCurrencySymbol() };
+                    }
                     renderAllResults(result.data);
+                    // Save to history
+                    const content = document.getElementById('videoScript')?.value?.trim()
+                                 || document.getElementById('adCopy')?.value?.trim() || '';
+                    saveAnalysisToHistory(content, result.data);
+                    // Show #1 change right now
+                    renderWhatToChangeNow(result.data.what_to_change_right_now);
                 } else {
                     throw new Error(result.error?.message || 'Analysis failed');
                 }
@@ -2179,6 +2313,7 @@
                 errorDisplay.classList.add('active');
             } finally {
                 loading.classList.remove('active');
+                stopStagedLoading();
             }
         });
 
@@ -2192,7 +2327,7 @@
                 toggleForm();
             }
 
-            // Extract currency from ANY available source, in priority order
+            // Extract currency — prefer API metadata, then derive from selected country
             const _currSrc = data._metadata?.currency
                           || (data.budget_optimization?.currency_symbol
                               ? { symbol: data.budget_optimization.currency_symbol,
@@ -2204,12 +2339,13 @@
                               : null);
             if (_currSrc) {
                 window._currencyData = _currSrc;
-                window._activeSym    = _currSrc.symbol || '$';
+                window._activeSym    = _currSrc.symbol || getCurrencySymbol();
             } else {
-                window._activeSym = '$';
+                // Derive from the country the user selected — not always $
+                window._activeSym = getCurrencySymbol();
             }
             // Helper used by all render fns
-            window._sym = () => window._activeSym || '$';
+            window._sym = () => window._activeSym || getCurrencySymbol();
 
             // Expose data globally so tier2_features.js can access it
             window._adlyticsData     = data;
@@ -2246,7 +2382,7 @@
             renderList('psychologicalGaps', data.neuro_response?.psychological_gaps);
 
             // Variants
-            renderVariants(data.ad_variants, data.winner_prediction);
+            renderVariants(data.ad_variants || data.variations, data.winner_prediction);
             renderWinnerPrediction(data.winner_prediction);
 
             // Objections
@@ -2273,6 +2409,14 @@
             // Comparison
             renderROIComparison(data.roi_comparison);
             renderCompetitorAdvantage(data.competitor_advantage);
+
+            // #1 Change Right Now
+            renderWhatToChangeNow(data.what_to_change_right_now);
+
+            // Save to localStorage history
+            const _histContent = (document.getElementById('videoScript')?.value?.trim()
+                               || document.getElementById('adCopy')?.value?.trim() || '');
+            saveAnalysisToHistory(_histContent, data);
         }
 
         // SCORES
