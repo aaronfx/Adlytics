@@ -1,15 +1,22 @@
 services:
   - type: web
-    name: adlytics
+    name: adlytics-api
     runtime: python
-    region: oregon
-    plan: starter
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port 10000"
+    buildCommand: pip install -r requirements.txt && apt-get update && apt-get install -y ffmpeg
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: OPENROUTER_API_KEY
         sync: false
-    healthCheckPath: /health
-    autoDeploy: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.6
+
+  - type: web
+    name: adlytics-frontend
+    buildCommand: echo 'Static site ready'
+    staticPublishPath: ./frontend
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: /app.html
