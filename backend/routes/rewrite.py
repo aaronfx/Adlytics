@@ -153,7 +153,7 @@ def _prepare_voiceover_script(rewritten_ad: str, voice_style: str = "professiona
     }
 
 
-@router.post("/")
+@router.post("")
 async def rewrite_ad(
     original_ad: str = Form(..., description="The original ad copy to rewrite"),
     platform: str = Form("tiktok"),
