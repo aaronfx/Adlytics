@@ -37,9 +37,9 @@ app.add_middleware(
 
 # Import routers
 try:
-    from routes.analyze import router as analyze_router
-    from routes.rewrite import router as rewrite_router
-    from routes.video_funnel import router as video_funnel_router
+    from backend.routes.analyze import router as analyze_router
+    from backend.routes.rewrite import router as rewrite_router
+    from backend.routes.video_funnel import router as video_funnel_router
     logger.info("Successfully imported all routers")
 except ImportError as e:
     logger.warning(f"Failed to import routers: {e}")
