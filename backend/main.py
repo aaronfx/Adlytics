@@ -1,130 +1,123 @@
 """
-ADLYTICS v6.1 main.py — mounts ALL routers
-Drop-in replacement for your existing main.py.
-"""
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
-import os, logging
-from datetime import datetime
+ADLYTICS Backend API
+Version: 8.0.0
 
-logging.basicConfig(level=logging.INFO)
+Main FastAPI application with routers for ad analysis, rewriting, and video funnel analysis.
+"""
+
+import logging
+import os
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ADLYTICS", version="6.1.0")
+# Initialize FastAPI app
+app = FastAPI(
+    title="ADLYTICS",
+    version="8.0.0",
+    description="AI-powered ad analysis, rewriting, and video funnel analysis platform"
+)
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
 )
 
-# ── Health ─────────────────────────────────────────────────────
+# Import routers
+try:
+    from routes.analyze import router as analyze_router
+    from routes.rewrite import router as rewrite_router
+    from routes.video_funnel import router as video_funnel_router
+    logger.info("Successfully imported all routers")
+except ImportError as e:
+    logger.warning(f"Failed to import routers: {e}")
+    analyze_router = None
+    rewrite_router = None
+    video_funnel_router = None
+
+# Mount routers
+if analyze_router:
+    app.include_router(analyze_router, prefix="/api")
+if rewrite_router:
+    app.include_router(rewrite_router, prefix="/api")
+if video_funnel_router:
+    app.include_router(video_funnel_router, prefix="/api")
+
+# Health endpoint
 @app.get("/health")
-async def health():
-    return {"status": "healthy", "version": "6.1.0", "timestamp": datetime.now().isoformat()}
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "version": "8.0.0",
+        "service": "ADLYTICS"
+    }
 
+# Test endpoint
 @app.get("/api/test")
-async def api_test():
-    return {"message": "API working", "version": "6.1.0"}
+async def test_endpoint():
+    """Test endpoint for API connectivity"""
+    return {
+        "message": "API is working correctly",
+        "version": "8.0.0"
+    }
 
+# OPTIONS handler for analyze endpoint
 @app.options("/api/analyze")
 async def analyze_options():
-    return JSONResponse(
-        content={"message": "OK"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
-    )
+    """CORS preflight handler for analyze endpoint"""
+    return {"status": "ok"}
 
-# ── Core analysis router ───────────────────────────────────────
-try:
-    from backend.routes.analyze import router as analyze_router
-    app.include_router(analyze_router, prefix="/api")
-    logger.info("✅ analyze router mounted")
-except Exception as e:
-    logger.error(f"❌ analyze router failed: {e}")
-    @app.post("/api/analyze")
-    async def analyze_fallback():
-        raise HTTPException(status_code=503, detail=f"Analyze router unavailable: {e}")
+# Determine static files path
+# Assume frontend directory is at the same level as backend
+backend_dir = Path(__file__).parent
+project_root = backend_dir.parent
+frontend_dir = project_root / "frontend"
 
-# ── Rewrite engine ─────────────────────────────────────────────
-try:
-    from backend.routes.rewrite_engine import router as rewrite_router
-    app.include_router(rewrite_router, prefix="/api")
-    logger.info("✅ rewrite router mounted")
-except Exception as e:
-    logger.warning(f"⚠️ rewrite router: {e}")
-
-# ── Hook library ───────────────────────────────────────────────
-try:
-    from backend.routes.hooks_library import router as hooks_router
-    app.include_router(hooks_router, prefix="/api")
-    logger.info("✅ hooks router mounted")
-except Exception as e:
-    logger.warning(f"⚠️ hooks router: {e}")
-
-# ── Tier 2 (compliance, psychographic, storyboard, benchmarks, AB, landing) ──
-try:
-    from backend.routes.tier2_routes import router as tier2_router
-    app.include_router(tier2_router, prefix="/api")
-    logger.info("✅ tier2 router mounted")
-except Exception as e:
-    logger.warning(f"⚠️ tier2 router: {e}")
-
-# ── Static files / SPA ─────────────────────────────────────────
-frontend_paths = [
-    os.path.join(os.path.dirname(__file__), "..", "frontend"),
-    os.path.join(os.path.dirname(__file__), "..", "..", "frontend"),
-    os.path.join(os.getcwd(), "frontend"),
-    "/opt/render/project/src/frontend",
-]
-frontend_path = next((p for p in frontend_paths if os.path.exists(p)), None)
-
-if frontend_path:
-    logger.info(f"✅ Static files from: {frontend_path}")
-    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
-
-    @app.get("/", response_class=HTMLResponse)
-    async def serve_root():
-        try:
-            with open(os.path.join(frontend_path, "app.html")) as f:
-                return f.read()
-        except Exception:
-            return "<h1>ADLYTICS v6.1</h1>"
-
-    @app.get("/app.html", response_class=HTMLResponse)
-    async def serve_app():
-        try:
-            with open(os.path.join(frontend_path, "app.html")) as f:
-                return f.read()
-        except Exception:
-            return "<h1>Frontend not found</h1>"
-
-    @app.get("/{path:path}", response_class=HTMLResponse)
-    async def serve_spa(path: str):
-        # Block diagnostic tool from public access
-        if path in ["diagnostic.html", "diagnostic"]:
-            raise HTTPException(status_code=404, detail="Not found")
-        if path.startswith("api/") or path in ["docs", "redoc", "openapi.json", "health"]:
-            raise HTTPException(status_code=404, detail="Not found")
-        try:
-            with open(os.path.join(frontend_path, "app.html")) as f:
-                return f.read()
-        except Exception:
-            return f"<h1>{path} — not found</h1>"
+# Mount static files if frontend directory exists
+if frontend_dir.exists():
+    logger.info(f"Mounting static files from: {frontend_dir}")
+    app.mount("/assets", StaticFiles(directory=frontend_dir / "assets"), name="assets")
 else:
-    logger.warning("⚠️ No frontend directory found")
+    logger.warning(f"Frontend directory not found at {frontend_dir}")
 
-    @app.get("/")
-    async def root():
-        return {"message": "ADLYTICS API v6.1", "status": "running"}
+# Root endpoint - serve app.html
+@app.get("/")
+async def root():
+    """Serve the main app.html"""
+    app_html = frontend_dir / "app.html"
+    if app_html.exists():
+        return FileResponse(app_html)
+    return {"message": "ADLYTICS API v8.0.0"}
 
-logger.info("🚀 ADLYTICS v6.1 startup complete")
+# SPA catch-all - serve app.html for any unmatched routes
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    """Catch-all handler for SPA routing - serves app.html"""
+    app_html = frontend_dir / "app.html"
+    if app_html.exists() and not full_path.startswith("api/"):
+        return FileResponse(app_html)
+    return {"error": "Not found", "path": full_path}, 404
+
+if __name__ == "__main__":
+    logger.info("Starting ADLYTICS Backend API v8.0.0")
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
+    )
