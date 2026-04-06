@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Optional, Dict, Any
+
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
 from backend.services.ai_engine import AIEngine
 
@@ -25,7 +26,7 @@ async def get_industries():
     return {"success": True, "industries": INDUSTRIES}
 
 
-@router.post("/")
+@router.post("")
 async def analyze_ad(
     ad_copy: str = Form(..., description="The ad text to analyze"),
     video_script: Optional[str] = Form(None),
@@ -45,8 +46,10 @@ async def analyze_ad(
 
         if platform not in PLATFORMS:
             raise HTTPException(status_code=400, detail=f"Invalid platform. Must be one of: {', '.join(PLATFORMS)}")
+
         if industry not in INDUSTRIES:
             raise HTTPException(status_code=400, detail=f"Invalid industry. Must be one of: {', '.join(INDUSTRIES)}")
+
         if not ad_copy or not ad_copy.strip():
             raise HTTPException(status_code=400, detail="ad_copy is required and cannot be empty")
 
