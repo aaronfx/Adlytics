@@ -2,8 +2,11 @@ import logging
 import os
 import json
 import httpx
+import re
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Form, HTTPException
+
+from backend.services.benchmarks import get_benchmarks, calculate_percentile, build_benchmark_context
 
 logger = logging.getLogger(__name__)
 
@@ -14,39 +17,170 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MODEL_ID = "openai/gpt-4o"
 
-# Focus-specific instructions for rewrites
-FOCUS_INSTRUCTIONS = {
-    "full": "Completely rewrite the entire ad from scratch while maintaining the core value proposition. Create a fresh angle, new hook, and compelling CTA.",
-    "hook": "Rewrite only the opening hook to make it more attention-grabbing and relevant to the target audience. Keep the rest of the ad body and CTA unchanged.",
-    "cta": "Rewrite only the Call-To-Action to make it more compelling, urgent, and conversion-focused. Keep the hook and body unchanged.",
-    "credibility": "Add proof elements, testimonials, statistics, or credibility markers to the body of the ad to build trust. Rewrite relevant sections to incorporate these elements.",
-    "emotional": "Amplify the emotional resonance of the ad. Strengthen emotional triggers, make the message more relatable and impactful. Enhance both hook and body."
+# ─── REWRITE MODES ────────────────────────────────────────────────────────
+# Full-ad rewrite modes
+REWRITE_MODE_MODES = {
+    "engaging": {
+        "label": "More Engaging",
+        "description": "Increase emotional hooks, relatability, conversational tone"
+    },
+    "hard_sell": {
+        "label": "Hard Sell",
+        "description": "Direct, benefit-heavy, urgency, scarcity tactics"
+    },
+    "social_proof": {
+        "label": "Social Proof Heavy",
+        "description": "Testimonials, numbers, trust signals, authority markers"
+    },
+    "urgency": {
+        "label": "Urgency/Scarcity",
+        "description": "Time limits, limited availability, FOMO triggers"
+    },
+    "storytelling": {
+        "label": "Storytelling",
+        "description": "Narrative arc, relatable character, problem-solution journey"
+    },
+    "playful": {
+        "label": "Playful/Casual",
+        "description": "Fun tone, humor, Gen-Z/millennial friendly, informal"
+    }
 }
 
-# Score boost multipliers for focus areas
-FOCUS_SCORE_BOOSTS = {
-    "full": 1.15,
-    "hook": 1.08,
-    "cta": 1.10,
-    "credibility": 1.12,
-    "emotional": 1.10
+# Element-level rewrite modes
+ELEMENT_MODES = {
+    "hook_only": {
+        "label": "Hook/Opening Only",
+        "description": "Rewrite just the hook/opening for attention"
+    },
+    "cta_only": {
+        "label": "CTA Only",
+        "description": "Rewrite just the Call-To-Action"
+    },
+    "body_only": {
+        "label": "Body/Middle Only",
+        "description": "Rewrite just the body/middle section"
+    }
 }
 
+# All valid modes
+ALL_REWRITE_MODES = {**REWRITE_MODE_MODES, **ELEMENT_MODES}
 
-def _enforce_score_minimums(original_scores, rewritten_scores, rewrite_focus):
-    """Enforce that rewritten ad scores never fall below original scores."""
-    adjusted_scores = rewritten_scores.copy()
-    focus_boost = FOCUS_SCORE_BOOSTS.get(rewrite_focus, 1.0)
 
-    for metric in original_scores:
-        if metric in adjusted_scores:
-            original_score = original_scores[metric]
-            rewritten_score = adjusted_scores[metric]
-            boosted_score = rewritten_score * focus_boost
-            minimum_score = max(original_score, rewritten_score)
-            adjusted_scores[metric] = max(boosted_score, minimum_score)
+def _build_rewrite_prompt(
+    original_ad: str,
+    platform: str,
+    industry: str,
+    audience_country: str,
+    original_scores_dict: Dict[str, Any],
+    weaknesses_list: List[str],
+    rewrite_mode: str,
+    target_age: Optional[str],
+    target_tone: Optional[str],
+    brand_voice_context: str,
+    benchmark_context: str
+) -> str:
+    """Build the prompt for GPT-4o to rewrite the ad."""
 
-    return adjusted_scores
+    weaknesses_text = "\n".join(f"- {w}" for w in weaknesses_list) if weaknesses_list else "None identified"
+
+    # Determine mode-specific instruction
+    if rewrite_mode in ELEMENT_MODES:
+        if rewrite_mode == "hook_only":
+            mode_instruction = """REWRITE FOCUS: Hook/Opening Only
+Rewrite ONLY the opening hook/headline to make it more attention-grabbing and relevant to the target audience. Keep the rest of the ad body and CTA unchanged."""
+        elif rewrite_mode == "cta_only":
+            mode_instruction = """REWRITE FOCUS: CTA Only
+Rewrite ONLY the Call-To-Action to make it more compelling, urgent, and conversion-focused. Keep the hook and body unchanged."""
+        else:  # body_only
+            mode_instruction = """REWRITE FOCUS: Body/Middle Only
+Rewrite ONLY the body/middle section of the ad. Keep the hook and CTA unchanged."""
+    else:
+        # Full-ad rewrite mode
+        mode_data = REWRITE_MODE_MODES[rewrite_mode]
+        mode_instruction = f"""REWRITE MODE: {mode_data['label'].upper()}
+{mode_data['description']}
+
+Apply this mode throughout the entire ad copy."""
+
+    # Demographic targeting
+    demographic_context = ""
+    if target_age or target_tone:
+        demographic_context = "\nTARGET DEMOGRAPHICS:"
+        if target_age:
+            demographic_context += f"\n- Age Group: {target_age}"
+        if target_tone:
+            demographic_context += f"\n- Preferred Tone: {target_tone}"
+        demographic_context += "\n\nEnsure the rewrite resonates with this demographic profile."
+
+    prompt = f"""You are an expert ad copywriter specializing in high-converting ads for {platform.upper()} platform in the {industry.upper()} industry.
+
+ORIGINAL AD:
+{original_ad}
+
+CONTEXT:
+- Platform: {platform.upper()}
+- Industry: {industry.upper()}
+- Target Audience: {audience_country.upper()}
+- Current Scores: {json.dumps(original_scores_dict)}
+- Identified Weaknesses:
+{weaknesses_text}{demographic_context}
+
+{benchmark_context}
+
+{mode_instruction}{brand_voice_context}
+
+You will provide TWO rewrite variants. For each variant, respond with PURE JSON (no markdown, no extra text) in this exact format:
+
+{{
+  "variants": [
+    {{
+      "rewritten_ad": "...",
+      "changes_summary": ["change1", "change2", "change3"],
+      "why_it_works": "Explanation of why this rewrite works...",
+      "scores": {{
+        "overall_score": 75,
+        "emotion_score": 80,
+        "clarity_score": 76,
+        "cta_strength": 78,
+        "platform_fit": 74,
+        "pain_point_score": 72
+      }},
+      "predicted_ctr": 1.2
+    }},
+    {{
+      "rewritten_ad": "...",
+      "changes_summary": ["change1", "change2", "change3"],
+      "why_it_works": "Explanation of why this rewrite works...",
+      "scores": {{
+        "overall_score": 73,
+        "emotion_score": 78,
+        "clarity_score": 74,
+        "cta_strength": 75,
+        "platform_fit": 72,
+        "pain_point_score": 70
+      }},
+      "predicted_ctr": 1.1
+    }}
+  ]
+}}
+
+SCORING GUIDANCE:
+- overall_score (0-100): Combined quality of all factors
+- emotion_score (0-100): Emotional impact and resonance
+- clarity_score (0-100): Message clarity and comprehension
+- cta_strength (0-100): Call-to-action effectiveness
+- platform_fit (0-100): Optimization for {platform} platform
+- pain_point_score (0-100): How well it targets audience pain points
+- predicted_ctr: Estimated click-through rate based on quality
+
+IMPORTANT REQUIREMENTS:
+1. Each variant must be meaningfully different (different angle, tone, or focus)
+2. Scores must be realistic and based on industry benchmarks
+3. Respond with VALID JSON only — no markdown code blocks, no extra text
+4. Each score should be 0-100 inclusive
+5. predicted_ctr should be a realistic decimal (e.g., 0.8, 1.2, 2.5)"""
+
+    return prompt
 
 
 async def _call_gpt4o(prompt: str) -> str:
@@ -64,8 +198,8 @@ async def _call_gpt4o(prompt: str) -> str:
     payload = {
         "model": MODEL_ID,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 2000,
+        "temperature": 0.8,
+        "max_tokens": 4000,
         "top_p": 0.9
     }
 
@@ -79,7 +213,10 @@ async def _call_gpt4o(prompt: str) -> str:
 
             if response.status_code != 200:
                 logger.error(f"OpenRouter API error: {response.status_code} - {response.text}")
-                raise HTTPException(status_code=500, detail=f"Failed to call GPT-4o: {response.status_code}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to call GPT-4o: {response.status_code}"
+                )
 
             result = response.json()
             return result["choices"][0]["message"]["content"]
@@ -91,47 +228,39 @@ async def _call_gpt4o(prompt: str) -> str:
         raise HTTPException(status_code=500, detail=f"Error calling AI service: {str(e)}")
 
 
-def _parse_rewrite_response(response_text: str) -> Dict[str, Any]:
-    """Parse the rewrite response from GPT-4o."""
-    parsed = {"rewritten_ad": "", "changes_summary": [], "why_it_works": ""}
+def _extract_json_from_response(response_text: str) -> Dict[str, Any]:
+    """Extract JSON from GPT-4o response, handling markdown code blocks."""
+    response_text = response_text.strip()
 
-    lines = response_text.split("\n")
-    current_section = None
-    section_content = []
+    # Try to find JSON code block
+    json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*\})\s*```', response_text)
+    if json_match:
+        json_str = json_match.group(1)
+    else:
+        # Try direct JSON parsing (no code block)
+        json_str = response_text
 
-    for line in lines:
-        line = line.strip()
-        if "REWRITTEN AD" in line.upper():
-            if section_content and current_section:
-                parsed[current_section] = "\n".join(section_content).strip()
-            current_section = "rewritten_ad"
-            section_content = []
-        elif "CHANGES SUMMARY" in line.upper():
-            if section_content and current_section:
-                parsed[current_section] = "\n".join(section_content).strip()
-            current_section = "changes_summary"
-            section_content = []
-        elif "WHY IT WORKS" in line.upper():
-            if section_content and current_section == "changes_summary":
-                parsed["changes_summary"] = [
-                    item.strip() for item in section_content
-                    if item.strip() and not item.startswith("#")
-                ]
-            current_section = "why_it_works"
-            section_content = []
-        elif current_section and line:
-            section_content.append(line)
+    try:
+        data = json.loads(json_str)
+        return data
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON response: {str(e)}\nResponse: {response_text[:500]}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse AI response as JSON: {str(e)}"
+        )
 
-    if section_content and current_section:
-        if current_section == "changes_summary":
-            parsed[current_section] = [
-                item.strip() for item in section_content
-                if item.strip() and not item.startswith("#")
-            ]
+
+def _normalize_scores(scores: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure all scores are in valid 0-100 range."""
+    normalized = {}
+    for key, value in scores.items():
+        if isinstance(value, (int, float)):
+            # Clamp to 0-100
+            normalized[key] = max(0, min(100, int(value)))
         else:
-            parsed[current_section] = "\n".join(section_content).strip()
-
-    return parsed
+            normalized[key] = 0
+    return normalized
 
 
 def _prepare_voiceover_script(rewritten_ad: str, voice_style: str = "professional") -> Dict[str, Any]:
@@ -153,40 +282,71 @@ def _prepare_voiceover_script(rewritten_ad: str, voice_style: str = "professiona
     }
 
 
+def _calculate_original_scores(original_scores_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate normalized original scores."""
+    if not original_scores_dict:
+        return {"overall": 50}
+
+    scores = {}
+    for key, value in original_scores_dict.items():
+        if isinstance(value, (int, float)):
+            scores[key] = max(0, min(100, int(value)))
+        else:
+            scores[key] = 50
+
+    return scores
+
+
 @router.post("")
 async def rewrite_ad(
     original_ad: str = Form(..., description="The original ad copy to rewrite"),
-    platform: str = Form("tiktok"),
-    industry: str = Form("finance"),
-    audience_country: str = Form("nigeria"),
+    platform: str = Form("tiktok", description="Platform: tiktok, facebook, instagram, youtube, google"),
+    industry: str = Form("finance", description="Industry for benchmarking"),
+    audience_country: str = Form("nigeria", description="Target audience country"),
     original_scores: Optional[str] = Form('{"overall": 50}', description="JSON string of original ad scores"),
-    weaknesses: Optional[str] = Form('["General improvement needed"]', description="JSON string of identified weaknesses"),
-    rewrite_focus: str = Form("full", description="Focus area: full, hook, cta, credibility, emotional"),
-    prepare_voiceover: str = Form("false"),
-    voice_style: str = Form("professional"),
-    brand_voice: Optional[str] = Form(None),
+    weaknesses: Optional[str] = Form('["General improvement needed"]', description="JSON string of weaknesses"),
+    rewrite_mode: str = Form("engaging", description="Rewrite mode or element to focus on"),
+    target_age: Optional[str] = Form(None, description="Target age group (e.g., '18-24', '25-34')"),
+    target_tone: Optional[str] = Form(None, description="Target tone (e.g., 'authoritative', 'friendly')"),
+    prepare_voiceover: str = Form("false", description="Generate voiceover script"),
+    voice_style: str = Form("professional", description="Voice style for voiceover"),
+    brand_voice: Optional[str] = Form(None, description="JSON string with brand voice guidelines"),
 ):
-    """Rewrite ad copy based on analysis and focus area."""
+    """
+    Rewrite ad copy with multiple variants and AI-powered scoring.
+
+    Returns 2 rewrite variants with detailed score breakdown, predicted CTR, and benchmarking.
+    """
     try:
-        logger.info(f"Rewriting ad with focus: {rewrite_focus}")
+        logger.info(f"Starting ad rewrite with mode: {rewrite_mode}")
 
-        if rewrite_focus not in FOCUS_INSTRUCTIONS:
-            raise HTTPException(status_code=400, detail=f"Invalid rewrite_focus. Must be one of: {', '.join(FOCUS_INSTRUCTIONS.keys())}")
+        # Validate rewrite mode
+        if rewrite_mode not in ALL_REWRITE_MODES:
+            valid_modes = ", ".join(sorted(ALL_REWRITE_MODES.keys()))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid rewrite_mode. Must be one of: {valid_modes}"
+            )
 
+        # Parse JSON inputs
         try:
             original_scores_dict = json.loads(original_scores)
             weaknesses_list = json.loads(weaknesses)
         except json.JSONDecodeError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid JSON in scores or weaknesses: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid JSON in scores or weaknesses: {str(e)}"
+            )
 
         if not original_ad or not original_ad.strip():
             raise HTTPException(status_code=400, detail="original_ad is required and cannot be empty")
 
+        # Normalize original scores
+        original_scores_dict = _calculate_original_scores(original_scores_dict)
+
         prepare_vo = prepare_voiceover.lower() == "true"
 
-        weaknesses_text = "\n".join(f"- {w}" for w in weaknesses_list) if weaknesses_list else "None identified"
-
-        # Parse brand_voice if provided
+        # Build brand voice context
         brand_voice_context = ""
         if brand_voice and brand_voice.strip():
             try:
@@ -202,6 +362,7 @@ async def rewrite_ad(
                 avoid_lines = "\n".join(f"  - {w}" for w in words_to_avoid) if words_to_avoid else "  - Not specified"
 
                 brand_voice_context = f"""
+
 BRAND VOICE GUIDELINES:
 Brand Name: {brand_name}
 Tone Attributes:
@@ -213,68 +374,106 @@ Words to Avoid:
 Brand Guidelines:
 {brand_guidelines if brand_guidelines else "Not specified"}
 
-IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone and vocabulary.
-"""
+IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone and vocabulary."""
                 logger.info(f"Brand voice included in rewrite: {brand_name}")
             except json.JSONDecodeError as e:
                 logger.warning(f"Invalid brand_voice JSON: {str(e)}")
                 raise HTTPException(status_code=400, detail=f"Invalid brand_voice JSON: {str(e)}")
 
-        prompt = f"""You are an expert ad copywriter specializing in high-converting ads for {platform} platform.
+        # Get benchmark context
+        benchmark_context = build_benchmark_context(platform, industry)
+        benchmarks = get_benchmarks(platform, industry)
 
-ORIGINAL AD:
-{original_ad}
-
-INDUSTRY: {industry}
-AUDIENCE: {audience_country}
-CURRENT SCORES: {json.dumps(original_scores_dict)}
-IDENTIFIED WEAKNESSES:
-{weaknesses_text}
-
-REWRITE FOCUS: {rewrite_focus.upper()}
-{FOCUS_INSTRUCTIONS[rewrite_focus]}{brand_voice_context}
-
-Please provide your rewrite in this exact format:
-
-REWRITTEN AD:
-[Your rewritten ad copy here]
-
-CHANGES SUMMARY:
-- [Change 1]
-- [Change 2]
-- [Change 3]
-
-WHY IT WORKS:
-[Explain why this rewrite addresses the weaknesses and will perform better]
-
-Remember: The rewritten ad must be compelling, specific to {platform}, and suitable for {industry} industry targeting {audience_country}."""
+        # Build and call prompt
+        prompt = _build_rewrite_prompt(
+            original_ad=original_ad,
+            platform=platform,
+            industry=industry,
+            audience_country=audience_country,
+            original_scores_dict=original_scores_dict,
+            weaknesses_list=weaknesses_list,
+            rewrite_mode=rewrite_mode,
+            target_age=target_age,
+            target_tone=target_tone,
+            brand_voice_context=brand_voice_context,
+            benchmark_context=benchmark_context
+        )
 
         gpt_response = await _call_gpt4o(prompt)
         logger.info("GPT-4o rewrite completed")
 
-        parsed_rewrite = _parse_rewrite_response(gpt_response)
-        rewritten_ad_text = parsed_rewrite["rewritten_ad"]
+        # Extract and parse JSON response
+        parsed_data = _extract_json_from_response(gpt_response)
 
-        if not rewritten_ad_text:
-            raise HTTPException(status_code=500, detail="Failed to generate rewritten ad")
+        if "variants" not in parsed_data or not parsed_data["variants"]:
+            raise HTTPException(
+                status_code=500,
+                detail="AI response did not include variants"
+            )
 
-        after_scores = {metric: score * 1.1 for metric, score in original_scores_dict.items()}
-        final_scores = _enforce_score_minimums(original_scores_dict, after_scores, rewrite_focus)
-        score_delta = {metric: round(final_scores[metric] - original_scores_dict[metric], 2) for metric in original_scores_dict}
+        # Process variants
+        processed_variants = []
+        for variant in parsed_data["variants"]:
+            # Normalize and validate scores
+            if "scores" not in variant:
+                variant["scores"] = {}
 
+            variant["scores"] = _normalize_scores(variant["scores"])
+
+            # Ensure all required score fields exist
+            required_scores = [
+                "overall_score", "emotion_score", "clarity_score",
+                "cta_strength", "platform_fit", "pain_point_score"
+            ]
+            for score_key in required_scores:
+                if score_key not in variant["scores"]:
+                    variant["scores"][score_key] = 50
+
+            # Calculate percentile
+            overall = variant["scores"].get("overall_score", 50)
+            percentile = calculate_percentile(overall, platform, industry)
+
+            # Validate predicted_ctr
+            if "predicted_ctr" not in variant:
+                variant["predicted_ctr"] = benchmarks.get("ctr", 1.0)
+            else:
+                try:
+                    variant["predicted_ctr"] = float(variant["predicted_ctr"])
+                except (ValueError, TypeError):
+                    variant["predicted_ctr"] = benchmarks.get("ctr", 1.0)
+
+            # Build processed variant
+            processed_variant = {
+                "rewritten_ad": variant.get("rewritten_ad", ""),
+                "changes_summary": variant.get("changes_summary", []),
+                "why_it_works": variant.get("why_it_works", ""),
+                "scores": variant["scores"],
+                "predicted_ctr": variant["predicted_ctr"],
+                "predicted_percentile": percentile
+            }
+
+            processed_variants.append(processed_variant)
+
+        # Build response
         response_data = {
-            "rewritten_ad": rewritten_ad_text,
-            "changes_summary": parsed_rewrite["changes_summary"],
-            "why_it_works": parsed_rewrite["why_it_works"],
-            "before_scores": original_scores_dict,
-            "after_scores": final_scores,
-            "score_delta": score_delta,
-            "rewrite_focus": rewrite_focus,
+            "variants": processed_variants,
+            "original_scores": original_scores_dict,
+            "rewrite_mode": rewrite_mode,
+            "platform": platform,
+            "industry": industry,
+            "benchmarks": {
+                "avg_ctr": benchmarks.get("ctr"),
+                "avg_score": benchmarks.get("avg_score")
+            },
             "voiceover": None
         }
 
-        if prepare_vo:
-            response_data["voiceover"] = _prepare_voiceover_script(rewritten_ad_text, voice_style)
+        if prepare_vo and processed_variants:
+            # Use first variant for voiceover
+            response_data["voiceover"] = _prepare_voiceover_script(
+                processed_variants[0]["rewritten_ad"],
+                voice_style
+            )
 
         logger.info("Ad rewrite completed successfully")
         return {"success": True, "data": response_data}

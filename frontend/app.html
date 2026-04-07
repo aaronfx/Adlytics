@@ -283,6 +283,52 @@
             resize: vertical;
         }
 
+        /* ===== REWRITE MODE BUTTONS ===== */
+        .rewrite-mode-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 0.6rem 0.4rem; border-radius: 8px;
+            background: var(--bg-card); border: 1px solid var(--border-card);
+            color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+            font-size: 0.78rem; font-weight: 500; text-align: center;
+        }
+        .rewrite-mode-btn:hover { border-color: var(--accent-indigo); color: var(--text-primary); }
+        .rewrite-mode-btn.active {
+            border-color: var(--accent-indigo); background: rgba(99,102,241,0.12);
+            color: var(--text-primary); box-shadow: 0 0 12px rgba(99,102,241,0.15);
+        }
+        .element-btn {
+            padding: 0.45rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500;
+            background: var(--bg-card); border: 1px solid var(--border-card);
+            color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+        }
+        .element-btn:hover { border-color: var(--accent-orange); color: var(--text-primary); }
+        .element-btn.active {
+            border-color: var(--accent-orange); background: rgba(249,115,22,0.12);
+            color: var(--text-primary);
+        }
+
+        /* ===== VARIANT CARDS ===== */
+        .variant-card {
+            background: var(--bg-card); border: 1px solid var(--border-card);
+            border-radius: 12px; padding: 1.25rem; transition: all 0.2s;
+        }
+        .variant-card:hover { border-color: var(--accent-indigo); }
+        .variant-card.winner { border-color: #10B981; box-shadow: 0 0 20px rgba(16,185,129,0.1); }
+        .score-ring {
+            width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
+        }
+        .score-bar-track {
+            height: 6px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden;
+        }
+        .score-bar-fill {
+            height: 100%; border-radius: 99px; transition: width 0.6s ease;
+        }
+        .comparison-col {
+            padding: 1rem; border-radius: 8px; line-height: 1.7; white-space: pre-wrap;
+            font-size: 0.9rem;
+        }
+
         /* ===== BUTTONS ===== */
         .btn {
             padding: 0.75rem 1.5rem;
@@ -872,6 +918,10 @@
                 justify-content: center;
             }
 
+            #rewriteModeGrid { grid-template-columns: repeat(2, 1fr) !important; }
+            .variant-card .comparison-col { font-size: 0.8rem; }
+            #rewriteResults .card > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+
             .metric-value {
                 font-size: 1.5rem;
             }
@@ -951,7 +1001,7 @@
                     <span class="logo">
                         <span class="logo-accent">ADLYTICS</span>
                     </span>
-                    <span class="version-badge">v10.2</span>
+                    <span class="version-badge">v11.0</span>
                 </div>
             </div>
             <div class="tabs-container">
@@ -1165,11 +1215,11 @@
             <!-- ===== SMART REWRITE TAB ===== -->
             <div class="tab-panel" id="panel-rewrite">
                 <div class="card mb-4">
-                    <div class="card-title">✨ Smart Rewrite</div>
+                    <div class="card-title">✨ Smart Rewrite <span style="font-size:0.7rem; background:linear-gradient(135deg,#6366F1,#8B5CF6); padding:2px 8px; border-radius:99px; margin-left:8px; font-weight:500;">PRO</span></div>
                     <div class="empty-state" id="rewriteEmpty">
                         <div class="empty-state-icon">💡</div>
                         <div class="empty-state-title">No Ad to Rewrite</div>
-                        <div class="empty-state-message">Analyze an ad first to unlock AI-powered rewrites with targeted improvements.</div>
+                        <div class="empty-state-message">Analyze an ad first to unlock AI-powered rewrites with predictive scoring.</div>
                         <button type="button" class="btn btn-primary" onclick="switchTab('analysis')">
                             Go to Ad Analysis
                         </button>
@@ -1177,29 +1227,84 @@
                     <form id="rewriteForm" class="form-section hidden">
                         <div class="form-group">
                             <label class="form-label">Original Ad Copy</label>
-                            <textarea class="form-textarea" id="originalAdText" readonly></textarea>
+                            <textarea class="form-textarea" id="originalAdText" readonly style="min-height:80px;"></textarea>
                         </div>
 
+                        <!-- Rewrite Mode Grid -->
+                        <div class="form-group">
+                            <label class="form-label">Rewrite Mode</label>
+                            <div id="rewriteModeGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:0.5rem;">
+                                <button type="button" class="rewrite-mode-btn active" data-mode="engaging" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">🔥</span>
+                                    <span>More Engaging</span>
+                                </button>
+                                <button type="button" class="rewrite-mode-btn" data-mode="hard_sell" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">💰</span>
+                                    <span>Hard Sell</span>
+                                </button>
+                                <button type="button" class="rewrite-mode-btn" data-mode="social_proof" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">⭐</span>
+                                    <span>Social Proof</span>
+                                </button>
+                                <button type="button" class="rewrite-mode-btn" data-mode="urgency" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">⏰</span>
+                                    <span>Urgency</span>
+                                </button>
+                                <button type="button" class="rewrite-mode-btn" data-mode="storytelling" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">📖</span>
+                                    <span>Storytelling</span>
+                                </button>
+                                <button type="button" class="rewrite-mode-btn" data-mode="playful" onclick="selectRewriteMode(this)">
+                                    <span style="font-size:1.1rem;">😄</span>
+                                    <span>Playful</span>
+                                </button>
+                            </div>
+                            <input type="hidden" name="rewrite_mode" id="selectedRewriteMode" value="engaging">
+                        </div>
+
+                        <!-- Element-Level Rewrite -->
+                        <div class="form-group">
+                            <label class="form-label">Element-Level Rewrite <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">(optional — rewrite a specific part only)</span></label>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button type="button" class="element-btn" data-mode="hook_only" onclick="selectElementMode(this)">Hook Only</button>
+                                <button type="button" class="element-btn" data-mode="cta_only" onclick="selectElementMode(this)">CTA Only</button>
+                                <button type="button" class="element-btn" data-mode="body_only" onclick="selectElementMode(this)">Body Only</button>
+                            </div>
+                        </div>
+
+                        <!-- Targeting Row -->
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Rewrite Focus</label>
-                                <select class="form-select" name="rewrite_focus" required>
-                                    <option value="">Select focus...</option>
-                                    <option value="full">Full Rewrite</option>
-                                    <option value="hook">Hook Only</option>
-                                    <option value="cta">CTA Only</option>
-                                    <option value="credibility">Credibility & Social Proof</option>
-                                    <option value="emotional">Emotional Appeal</option>
+                                <label class="form-label">Target Age Group</label>
+                                <select class="form-select" name="target_age">
+                                    <option value="">Any age</option>
+                                    <option value="18-24">18-24 (Gen Z)</option>
+                                    <option value="25-34">25-34 (Millennials)</option>
+                                    <option value="35-44">35-44 (Gen X)</option>
+                                    <option value="45+">45+ (Boomers)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Brand Voice (Optional)</label>
-                                <input type="text" class="form-input" name="brand_voice" placeholder="Leave original if blank">
+                                <label class="form-label">Tone Override</label>
+                                <select class="form-select" name="target_tone">
+                                    <option value="">Default for mode</option>
+                                    <option value="authoritative">Authoritative</option>
+                                    <option value="friendly">Friendly</option>
+                                    <option value="provocative">Provocative</option>
+                                    <option value="empathetic">Empathetic</option>
+                                    <option value="inspirational">Inspirational</option>
+                                </select>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            <span id="rewriteButtonText">Generate Rewrite</span>
+                        <!-- Brand Voice -->
+                        <div class="form-group">
+                            <label class="form-label">Brand Voice <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">(optional)</span></label>
+                            <input type="text" class="form-input" name="brand_voice" placeholder="Select from Brand Voice Library or leave blank">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;">
+                            <span id="rewriteButtonText">Generate 2 AI Variants with Scoring</span>
                         </button>
                     </form>
                 </div>
@@ -2459,6 +2564,27 @@
             container.insertAdjacentHTML('beforeend', ctaHtml);
         }
 
+        function selectRewriteMode(btn) {
+            document.querySelectorAll('.rewrite-mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('selectedRewriteMode').value = btn.dataset.mode;
+        }
+
+        function selectElementMode(btn) {
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                // revert to the active rewrite mode
+                const activeMode = document.querySelector('.rewrite-mode-btn.active');
+                document.getElementById('selectedRewriteMode').value = activeMode ? activeMode.dataset.mode : 'engaging';
+            } else {
+                document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.rewrite-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('selectedRewriteMode').value = btn.dataset.mode;
+            }
+        }
+
         function unlockRewrite(adCopy, platform, industry, country, income, age) {
             document.getElementById('originalAdText').value = adCopy;
             document.getElementById('rewriteForm').classList.remove('hidden');
@@ -2472,32 +2598,32 @@
             clearError('rewriteError');
 
             const form = e.target;
-            const loadingState = showLoading(form.querySelector('button'));
+            const loadingState = showLoading(form.querySelector('button[type="submit"]'));
 
             try {
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData);
 
-                // Backend expects Form data, not JSON
                 const submitData = new FormData();
                 submitData.append('original_ad', document.getElementById('originalAdText').value);
-                submitData.append('platform', currentFormData.platform || data.platform || 'tiktok');
-                submitData.append('industry', currentFormData.industry || data.industry || 'finance');
-                submitData.append('audience_country', currentFormData.audience_country || data.audience_country || 'nigeria');
-                submitData.append('rewrite_focus', data.rewrite_focus || 'full');
+                submitData.append('platform', currentFormData.platform || 'tiktok');
+                submitData.append('industry', currentFormData.industry || 'finance');
+                submitData.append('audience_country', currentFormData.audience_country || 'nigeria');
+                submitData.append('rewrite_mode', document.getElementById('selectedRewriteMode').value || 'engaging');
                 submitData.append('original_scores', JSON.stringify(currentAnalysis?.scores || { overall: 50 }));
                 submitData.append('weaknesses', JSON.stringify(currentAnalysis?.critical_weaknesses || ['General improvement needed']));
+
+                if (data.target_age) submitData.append('target_age', data.target_age);
+                if (data.target_tone) submitData.append('target_tone', data.target_tone);
 
                 if (data.brand_voice && data.brand_voice.trim()) {
                     const savedVoices = JSON.parse(localStorage.getItem('adlytics_brand_voices') || '[]');
                     const match = savedVoices.find(v => v.brand_name.toLowerCase() === data.brand_voice.trim().toLowerCase());
-                    if (match) {
-                        submitData.append('brand_voice', JSON.stringify(match));
-                    }
+                    if (match) submitData.append('brand_voice', JSON.stringify(match));
                 }
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
+                const timeoutId = setTimeout(() => controller.abort(), 90000);
 
                 const response = await fetch(`${API_BASE}/api/rewrite`, {
                     method: 'POST',
@@ -2510,7 +2636,7 @@
                 hideLoading(loadingState);
 
                 if (!result.success) {
-                    showError('rewriteError', result.error || 'Rewrite failed. Please try again.');
+                    showError('rewriteError', result.error || result.detail || 'Rewrite failed. Please try again.');
                     return;
                 }
 
@@ -2518,72 +2644,135 @@
 
             } catch (error) {
                 hideLoading(loadingState);
-                showError('rewriteError', 'Network error. Please try again.');
+                if (error.name === 'AbortError') {
+                    showError('rewriteError', 'Request timed out. The AI is generating 2 variants — please try again.');
+                } else {
+                    showError('rewriteError', 'Network error. Please try again.');
+                }
                 console.error(error);
             }
         }
 
         function displayRewriteResults(data) {
             const container = document.getElementById('rewriteResults');
+            const variants = data.variants || [];
+            const originalAd = document.getElementById('originalAdText').value;
+            const origScore = data.original_scores?.overall || data.original_scores?.overall_score || Object.values(data.original_scores || {})[0] || 50;
+            const benchmarks = data.benchmarks || {};
 
-            let comparisonHtml = `
+            if (!variants.length) {
+                container.innerHTML = '<div class="card"><p style="color:var(--text-muted);">No variants generated. Please try again.</p></div>';
+                return;
+            }
+
+            // Determine winner
+            const winnerIdx = variants.length > 1
+                ? (variants[0].scores?.overall_score >= variants[1].scores?.overall_score ? 0 : 1)
+                : 0;
+
+            function scoreColor(s) {
+                if (s >= 75) return '#10B981';
+                if (s >= 55) return '#F59E0B';
+                return '#EF4444';
+            }
+
+            function buildScoreBar(label, val) {
+                const c = scoreColor(val);
+                return `<div style="margin-bottom:0.5rem;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                        <span style="font-size:0.78rem;color:var(--text-muted);text-transform:capitalize;">${label.replace(/_/g,' ').replace('score','').trim()}</span>
+                        <span style="font-size:0.78rem;font-weight:600;color:${c};">${val}</span>
+                    </div>
+                    <div class="score-bar-track"><div class="score-bar-fill" style="width:${val}%;background:${c};"></div></div>
+                </div>`;
+            }
+
+            function buildVariantCard(v, idx) {
+                const s = v.scores || {};
+                const overall = s.overall_score || 50;
+                const delta = overall - origScore;
+                const isWinner = idx === winnerIdx && variants.length > 1;
+                const pct = v.predicted_percentile || 50;
+                const ctr = v.predicted_ctr || benchmarks.avg_ctr || '—';
+
+                const changesHtml = (v.changes_summary || []).map(c =>
+                    `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;">
+                        <span style="color:#10B981;font-size:0.8rem;margin-top:2px;">✓</span>
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">${c}</span>
+                    </div>`
+                ).join('');
+
+                return `
+                <div class="variant-card ${isWinner ? 'winner' : ''}" style="animation:fadeInSlideUp 0.4s ease ${idx * 0.15}s both;">
+                    ${isWinner ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:0.75rem;"><span style="background:#10B981;color:#000;padding:2px 10px;border-radius:99px;font-size:0.72rem;font-weight:700;text-transform:uppercase;">Winner</span><span style="font-size:0.75rem;color:var(--text-muted);">AI recommends this variant</span></div>' : ''}
+
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                        <div class="score-ring" style="background:conic-gradient(${scoreColor(overall)} ${overall * 3.6}deg, rgba(255,255,255,0.06) 0deg);"><div style="width:44px;height:44px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;">${overall}</div></div>
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;">Variant ${idx + 1}</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">
+                                <span style="color:${delta >= 0 ? '#10B981' : '#EF4444'};font-weight:600;">${delta >= 0 ? '+' : ''}${delta}</span> vs original
+                                &nbsp;·&nbsp; Top ${100 - pct}% of ${data.platform || 'tiktok'} ads
+                                &nbsp;·&nbsp; Pred. CTR: ${typeof ctr === 'number' ? ctr.toFixed(2) : ctr}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Side-by-Side -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                        <div>
+                            <div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Original · ${origScore}</div>
+                            <div class="comparison-col" style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.1);">${originalAd}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Rewritten · ${overall}</div>
+                            <div class="comparison-col" style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.1);">${v.rewritten_ad}</div>
+                        </div>
+                    </div>
+
+                    <!-- Score Breakdown -->
+                    <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+                        <div style="font-size:0.78rem;font-weight:600;margin-bottom:0.6rem;color:var(--text-muted);text-transform:uppercase;">Score Breakdown</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                            ${buildScoreBar('Emotion', s.emotion_score || 0)}
+                            ${buildScoreBar('Clarity', s.clarity_score || 0)}
+                            ${buildScoreBar('CTA Strength', s.cta_strength || 0)}
+                            ${buildScoreBar('Platform Fit', s.platform_fit || 0)}
+                            ${buildScoreBar('Pain Points', s.pain_point_score || 0)}
+                            ${buildScoreBar('Overall', s.overall_score || 0)}
+                        </div>
+                    </div>
+
+                    <!-- Changes -->
+                    ${changesHtml ? `<div style="margin-bottom:0.75rem;"><div style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem;color:var(--text-muted);text-transform:uppercase;">Changes Made</div>${changesHtml}</div>` : ''}
+
+                    <!-- Why It Works -->
+                    ${v.why_it_works ? `<div style="padding:0.6rem 0.75rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:3px solid var(--accent-indigo);"><div style="font-size:0.72rem;font-weight:600;color:var(--accent-indigo);margin-bottom:4px;">WHY IT WORKS</div><div style="font-size:0.82rem;line-height:1.5;color:var(--text-secondary);">${v.why_it_works}</div></div>` : ''}
+
+                    <!-- Copy Button -->
+                    <button type="button" onclick="navigator.clipboard.writeText(this.closest('.variant-card').querySelector('.comparison-col:last-child')?.textContent || '${v.rewritten_ad.replace(/'/g, "\\'")}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Rewrite',1500);" style="margin-top:0.75rem;width:100%;padding:0.55rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:6px;color:var(--accent-indigo);font-weight:600;font-size:0.82rem;cursor:pointer;">Copy Rewrite</button>
+                </div>`;
+            }
+
+            // Benchmark context bar
+            const benchmarkBar = benchmarks.avg_ctr ? `
+                <div style="display:flex;gap:1.5rem;padding:0.75rem 1rem;background:rgba(99,102,241,0.06);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;">
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Platform: <span style="color:var(--text-primary);font-weight:600;">${(data.platform||'tiktok').toUpperCase()}</span></div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Industry: <span style="color:var(--text-primary);font-weight:600;">${(data.industry||'finance').toUpperCase()}</span></div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Avg CTR: <span style="color:var(--text-primary);font-weight:600;">${benchmarks.avg_ctr}%</span></div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Avg Score: <span style="color:var(--text-primary);font-weight:600;">${benchmarks.avg_score}/100</span></div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Mode: <span style="color:var(--accent-indigo);font-weight:600;">${(data.rewrite_mode||'engaging').replace(/_/g,' ').toUpperCase()}</span></div>
+                </div>` : '';
+
+            container.innerHTML = `
                 <div class="card mb-4">
-                    <div class="card-title">Before vs After</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                        <div>
-                            <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Original</div>
-                            <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px; line-height: 1.6;">Score: ${data.before_scores?.overall || '—'}</div>
-                        </div>
-                        <div>
-                            <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Rewritten</div>
-                            <div style="padding: 1rem; background: rgba(16, 185, 129, 0.05); border-radius: 8px; line-height: 1.6;">${data.rewritten_ad}</div>
-                        </div>
+                    <div class="card-title">AI Rewrite Variants</div>
+                    ${benchmarkBar}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        ${variants.map((v, i) => buildVariantCard(v, i)).join('')}
                     </div>
                 </div>
             `;
-
-            let improvementHtml = '';
-            if (data.score_delta && typeof data.score_delta === 'object') {
-                const overallDelta = data.score_delta.overall || Object.values(data.score_delta)[0] || 0;
-                const deltaRounded = Math.round(overallDelta * 10) / 10;
-                const deltaColor = deltaRounded >= 0 ? '#10B981' : '#EF4444';
-
-                let metricDeltas = '';
-                for (const [metric, delta] of Object.entries(data.score_delta)) {
-                    if (metric !== 'overall') {
-                        const d = Math.round(delta * 10) / 10;
-                        metricDeltas += `<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-card);">
-                            <span style="color: var(--text-muted); text-transform: capitalize;">${metric.replace(/_/g, ' ')}</span>
-                            <span style="color: ${d >= 0 ? '#10B981' : '#EF4444'}; font-weight: 600;">${d >= 0 ? '+' : ''}${d}</span>
-                        </div>`;
-                    }
-                }
-
-                improvementHtml = `
-                    <div class="card mb-4">
-                        <div class="card-title">Score Improvement</div>
-                        <div style="padding: 1.5rem; text-align: center; background: rgba(16, 185, 129, 0.05); border-radius: 8px; margin-bottom: 1rem;">
-                            <div style="font-size: 2rem; font-weight: 700; color: ${deltaColor}; margin-bottom: 0.5rem;">
-                                ${deltaRounded >= 0 ? '+' : ''}${deltaRounded}
-                            </div>
-                            <div style="color: var(--text-muted);">Overall Score Change</div>
-                        </div>
-                        ${metricDeltas ? `<div style="padding: 0 0.5rem;">${metricDeltas}</div>` : ''}
-                    </div>
-                `;
-            }
-
-            let whyHtml = '';
-            if (data.why_it_works) {
-                whyHtml = `
-                    <div class="card">
-                        <div class="card-title">Why This Works</div>
-                        <p style="line-height: 1.6; color: var(--text-secondary);">${data.why_it_works}</p>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = comparisonHtml + improvementHtml + whyHtml;
         }
 
         // ===== BRAND VOICE =====
