@@ -159,11 +159,12 @@ async def rewrite_ad(
     platform: str = Form("tiktok"),
     industry: str = Form("finance"),
     audience_country: str = Form("nigeria"),
-    original_scores: str = Form(..., description="JSON string of original ad scores"),
-    weaknesses: str = Form(..., description="JSON string of identified weaknesses"),
+    original_scores: Optional[str] = Form('{"overall": 50}', description="JSON string of original ad scores"),
+    weaknesses: Optional[str] = Form('["General improvement needed"]', description="JSON string of identified weaknesses"),
     rewrite_focus: str = Form("full", description="Focus area: full, hook, cta, credibility, emotional"),
     prepare_voiceover: str = Form("false"),
-    voice_style: str = Form("professional")
+    voice_style: str = Form("professional"),
+    brand_voice: Optional[str] = Form(None),
 ):
     """Rewrite ad copy based on analysis and focus area."""
     try:
@@ -185,6 +186,40 @@ async def rewrite_ad(
 
         weaknesses_text = "\n".join(f"- {w}" for w in weaknesses_list) if weaknesses_list else "None identified"
 
+        # Parse brand_voice if provided
+        brand_voice_context = ""
+        if brand_voice and brand_voice.strip():
+            try:
+                brand_voice_data = json.loads(brand_voice)
+                brand_name = brand_voice_data.get("brand_name", "Unknown Brand")
+                tone_attributes = brand_voice_data.get("tone_attributes", [])
+                words_to_use = brand_voice_data.get("words_to_use", [])
+                words_to_avoid = brand_voice_data.get("words_to_avoid", [])
+                brand_guidelines = brand_voice_data.get("brand_guidelines", "")
+
+                tone_lines = "\n".join(f"  - {t}" for t in tone_attributes) if tone_attributes else "  - Not specified"
+                use_lines = "\n".join(f"  - {w}" for w in words_to_use) if words_to_use else "  - Not specified"
+                avoid_lines = "\n".join(f"  - {w}" for w in words_to_avoid) if words_to_avoid else "  - Not specified"
+
+                brand_voice_context = f"""
+BRAND VOICE GUIDELINES:
+Brand Name: {brand_name}
+Tone Attributes:
+{tone_lines}
+Words to Use:
+{use_lines}
+Words to Avoid:
+{avoid_lines}
+Brand Guidelines:
+{brand_guidelines if brand_guidelines else "Not specified"}
+
+IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone and vocabulary.
+"""
+                logger.info(f"Brand voice included in rewrite: {brand_name}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid brand_voice JSON: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Invalid brand_voice JSON: {str(e)}")
+
         prompt = f"""You are an expert ad copywriter specializing in high-converting ads for {platform} platform.
 
 ORIGINAL AD:
@@ -197,7 +232,7 @@ IDENTIFIED WEAKNESSES:
 {weaknesses_text}
 
 REWRITE FOCUS: {rewrite_focus.upper()}
-{FOCUS_INSTRUCTIONS[rewrite_focus]}
+{FOCUS_INSTRUCTIONS[rewrite_focus]}{brand_voice_context}
 
 Please provide your rewrite in this exact format:
 

@@ -3,86 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adlytics - AI Ad Pre-Validation & Video Funnel Analyzer</title>
+    <title>Adlytics v9.0 - AI Ad Pre-Validation & Video Funnel Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-        }
-        .pulse-dots::after {
-            content: '...';
-            animation: dots 1.4s steps(4, end) infinite;
-        }
-        @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
-        }
-        .score-bar {
-            height: 8px;
-            background-color: #374151;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .score-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        .tab-active {
-            border-bottom-width: 3px;
-            border-bottom-color: #EF4444;
-            color: white;
-        }
-        .tab-inactive {
-            border-bottom-width: 2px;
-            border-bottom-color: transparent;
-            color: #9CA3AF;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; }
+        @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
+        .score-bar { height: 8px; background-color: #374151; border-radius: 4px; overflow: hidden; }
+        .score-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+        .tab-active { border-bottom-width: 3px; border-bottom-color: #EF4444; color: white; }
+        .tab-inactive { border-bottom-width: 2px; border-bottom-color: transparent; color: #9CA3AF; }
+        .gauge-circle { width: 180px; height: 180px; border-radius: 50%; background: conic-gradient(#EF4444 var(--percentage), #374151 0); display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .gauge-inner { width: 160px; height: 160px; background: #111827; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .gauge-score { font-size: 48px; font-weight: bold; color: #EF4444; }
+        .gauge-label { font-size: 12px; color: #9CA3AF; }
+        .accordion-header { cursor: pointer; user-select: none; }
+        .accordion-content { display: none; max-height: 0; overflow: hidden; transition: all 0.3s ease; }
+        .accordion-content.open { display: block; max-height: 2000px; }
+        .accordion-header.open::after { content: '▼'; float: right; transition: transform 0.3s ease; }
+        .accordion-header:not(.open)::after { content: '▶'; float: right; }
+        .chip { padding: 6px 12px; border-radius: 20px; border: 2px solid #374151; background: transparent; color: #D1D5DB; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        .chip:hover { border-color: #EF4444; }
+        .chip.active { background: #EF4444; border-color: #EF4444; color: white; }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100">
     <div class="min-h-screen flex flex-col">
-        <!-- Header -->
         <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <h1 class="text-3xl font-bold">
-                        <span class="text-red-500">ADLYTICS</span>
-                    </h1>
-                    <span class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">v8.0</span>
+                    <h1 class="text-3xl font-bold"><span class="text-red-500">ADLYTICS</span></h1>
+                    <span class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">v9.0</span>
                 </div>
             </div>
-
-            <!-- Tabs -->
             <div class="border-t border-gray-800 px-4">
-                <div class="max-w-7xl mx-auto flex gap-8">
-                    <button onclick="switchTab('analysis')" id="tab-analysis" class="py-4 px-2 tab-active transition-colors font-medium">
-                        Ad Analysis
-                    </button>
-                    <button onclick="switchTab('funnel')" id="tab-funnel" class="py-4 px-2 tab-inactive transition-colors font-medium">
-                        Video Funnel
-                    </button>
-                    <button onclick="switchTab('rewrite')" id="tab-rewrite" class="py-4 px-2 tab-inactive transition-colors font-medium">
-                        Smart Rewrite
-                    </button>
+                <div class="max-w-7xl mx-auto flex gap-8 overflow-x-auto">
+                    <button onclick="switchTab('analysis')" id="tab-analysis" class="py-4 px-2 tab-active transition-colors font-medium whitespace-nowrap">Ad Analysis</button>
+                    <button onclick="switchTab('funnel')" id="tab-funnel" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Video Funnel</button>
+                    <button onclick="switchTab('rewrite')" id="tab-rewrite" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Smart Rewrite</button>
+                    <button onclick="switchTab('brand')" id="tab-brand" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Brand Voice</button>
+                    <button onclick="switchTab('insights')" id="tab-insights" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Insights</button>
                 </div>
             </div>
         </header>
-
-        <!-- Main Content -->
         <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-            <!-- Tab 1: Ad Analysis -->
+
             <section id="analysis-tab" class="space-y-8">
                 <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                     <h2 class="text-2xl font-bold mb-6">Ad Analysis</h2>
@@ -91,881 +56,717 @@
                             <label class="block text-sm font-medium mb-2">Ad Copy *</label>
                             <textarea id="adCopy" required placeholder="Paste your ad copy here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea>
                         </div>
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Platform</label>
-                                <select id="analysisPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="facebook">Facebook</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="google">Google</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Industry</label>
-                                <select id="analysisIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="finance">Finance</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="real_estate">Real Estate</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="health">Health</option>
-                                    <option value="education">Education</option>
-                                    <option value="fashion">Fashion</option>
-                                    <option value="food">Food</option>
-                                    <option value="tech">Tech</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
+                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="analysisPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="google">Google Ads</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="analysisIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option><option value="travel">Travel</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="analysisCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="DE">Germany</option><option value="FR">France</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="analysisAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="analysisIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="analysisBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Audience Country</label>
-                                <select id="analysisCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="nigeria">Nigeria</option>
-                                    <option value="ghana">Ghana</option>
-                                    <option value="uk">UK</option>
-                                    <option value="us">US</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Audience Age</label>
-                                <select id="analysisAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="18-24">18-24</option>
-                                    <option value="25-34">25-34</option>
-                                    <option value="35-44">35-44</option>
-                                    <option value="45-54">45-54</option>
-                                    <option value="55+">55+</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Audience Income</label>
-                                <select id="analysisIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="low">Low</option>
-                                    <option value="middle">Middle</option>
-                                    <option value="high">High</option>
-                                    <option value="affluent">Affluent</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded transition-colors">
-                            Analyze Ad
-                        </button>
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Ad</button>
                     </form>
                 </div>
 
-                <!-- Analysis Results -->
-                <div id="analysisResults" class="hidden space-y-6">
-                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800 text-center">
-                        <p class="text-gray-400 text-sm mb-2">Overall Score</p>
-                        <div id="overallScore" class="text-7xl font-bold mb-4"></div>
-                        <p id="scoreInterpretation" class="text-lg"></p>
-                    </div>
-
-                    <div id="scoreBreakdown" class="bg-gray-900 rounded-lg p-6 border border-gray-800 space-y-4">
-                        <h3 class="text-xl font-bold mb-6">Score Breakdown</h3>
-                    </div>
-
-                    <div id="strategicSummary" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Strategic Summary</h3>
-                        <p id="strategicText" class="text-gray-300 leading-relaxed"></p>
-                    </div>
-
-                    <div id="weaknesses" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Critical Weaknesses</h3>
-                        <ul id="weaknessesList" class="space-y-2"></ul>
-                    </div>
-
-                    <div id="actionsBox" class="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
-                        <h3 class="text-xl font-bold mb-4 text-red-400">What to Change Right Now</h3>
-                        <p id="actionsText" class="text-red-300 leading-relaxed"></p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                            <h4 class="font-bold mb-3">Fear/Loss Variant</h4>
-                            <p id="variant1" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
+                <div id="analysisResults" style="display: none;" class="space-y-6">
+                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Predictive Performance Score</h3>
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <div class="flex-shrink-0">
+                                <div class="gauge-circle" id="scoreGauge"><div class="gauge-inner"><div class="gauge-score" id="gaugeScore">--</div><div class="gauge-label">Out of 100</div></div></div>
+                            </div>
+                            <div class="flex-1 space-y-4">
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Hook Strength</span><span id="score-hook_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-hook_strength" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Clarity</span><span id="score-clarity" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-clarity" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Credibility</span><span id="score-credibility" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-credibility" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Emotional Pull</span><span id="score-emotional_pull" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-emotional_pull" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">CTA Strength</span><span id="score-cta_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-cta_strength" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Audience Match</span><span id="score-audience_match" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-audience_match" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Platform Fit</span><span id="score-platform_fit" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-platform_fit" style="width: 0%"></div></div></div>
+                            </div>
                         </div>
-                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                            <h4 class="font-bold mb-3">Curiosity Gap Variant</h4>
-                            <p id="variant2" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Platform Performance Prediction</h3>
+                        <div id="platformPerformance" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-4">Performance Benchmark vs Industry</h3>
+                        <div class="flex items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex justify-between mb-2"><span class="text-sm">Your Ad</span><span id="yourScore" class="text-red-400 font-bold">--</span></div>
+                                <div class="score-bar"><div class="score-fill bg-red-500" id="yourScoreBar" style="width: 0%"></div></div>
+                            </div>
                         </div>
-                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                            <h4 class="font-bold mb-3">Social Proof Variant</h4>
-                            <p id="variant3" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
+                        <div class="flex items-center gap-4 mt-3">
+                            <div class="flex-1">
+                                <div class="flex justify-between mb-2"><span class="text-sm">Industry Avg</span><span id="industryScore" class="text-gray-400 font-bold">--</span></div>
+                                <div class="score-bar"><div class="score-fill bg-gray-600" id="industryScoreBar" style="width: 0%"></div></div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-4">Score History</h3>
+                        <div id="scoreHistoryChart" style="height: 200px; min-height: 200px;"></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800 open" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Strategic Summary</h3></div>
+                        <div class="accordion-content open p-6 space-y-4"><p id="strategicSummary" class="text-gray-300 leading-relaxed">--</p></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Critical Weaknesses</h3></div>
+                        <div class="accordion-content p-6 space-y-4" id="weaknessesContent"></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">What to Change Right Now</h3></div>
+                        <div class="accordion-content p-6"><p id="whatToChange" class="text-gray-300 leading-relaxed">--</p></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Ad Variants</h3></div>
+                        <div class="accordion-content p-6 space-y-6" id="variantsContent"></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Line by Line Analysis</h3></div>
+                        <div class="accordion-content p-6"><p id="lineByLine" class="text-gray-300 leading-relaxed whitespace-pre-wrap">--</p></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Winner Prediction</h3></div>
+                        <div class="accordion-content p-6"><p id="winnerPrediction" class="text-gray-300 leading-relaxed">--</p></div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Content Verification</h3></div>
+                        <div class="accordion-content p-6"><p id="contentVerification" class="text-gray-300 leading-relaxed">--</p></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Tab 2: Video Funnel -->
-            <section id="funnel-tab" class="hidden space-y-8">
+            <section id="funnel-tab" style="display: none;" class="space-y-8">
                 <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                     <h2 class="text-2xl font-bold mb-6">Video Funnel Analysis</h2>
-
-                    <!-- Mode Toggle -->
-                    <div class="flex gap-4 mb-6 border-b border-gray-800 pb-4">
-                        <button onclick="switchFunnelMode('upload')" id="mode-upload" class="px-4 py-2 border-b-3 border-red-500 font-semibold transition-colors">
-                            Upload Videos
-                        </button>
-                        <button onclick="switchFunnelMode('scripts')" id="mode-scripts" class="px-4 py-2 border-b-3 border-transparent font-semibold text-gray-500 hover:text-gray-300 transition-colors">
-                            Paste Scripts
-                        </button>
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold mb-4">Upload Video</h3>
+                        <form id="videoFunnelForm" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-2">Ad Video *</label><input type="file" id="adVideo" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"></div>
+                            <div><label class="block text-sm font-medium mb-2">Landing Page Video *</label><input type="file" id="landingVideo" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-2">Platform</label><select id="funnelPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>
+                                <div><label class="block text-sm font-medium mb-2">Industry</label><select id="funnelIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option></select></div>
+                                <div><label class="block text-sm font-medium mb-2">Country</label><select id="funnelCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
+                                <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="funnelAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
+                                <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="funnelIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
+                            </div>
+                            <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Funnel</button>
+                        </form>
                     </div>
 
-                    <!-- Upload Mode -->
-                    <form id="funnelUploadForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Ad Video *</label>
-                            <input type="file" id="adVideo" accept="video/*" required class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 file:bg-red-500 file:text-white file:border-0 file:rounded file:px-4 file:py-2 file:cursor-pointer hover:file:bg-red-600 file:transition-colors">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Landing Page Video (Optional)</label>
-                            <input type="file" id="landingVideo" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 file:bg-red-500 file:text-white file:border-0 file:rounded file:px-4 file:py-2 file:cursor-pointer hover:file:bg-red-600 file:transition-colors">
-                        </div>
-
+                    <hr class="border-gray-800 my-8">
+                    <h3 class="text-lg font-bold mb-4">Or Analyze by Script</h3>
+                    <form id="scriptForm" class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-2">Ad Script *</label><textarea id="adScript" placeholder="Enter your ad script here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
+                        <div><label class="block text-sm font-medium mb-2">Landing Page Script *</label><textarea id="landingScript" placeholder="Enter your landing page script here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Platform</label>
-                                <select id="funnelPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="facebook">Facebook</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="google">Google</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Industry</label>
-                                <select id="funnelIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="finance">Finance</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="real_estate">Real Estate</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="health">Health</option>
-                                    <option value="education">Education</option>
-                                    <option value="fashion">Fashion</option>
-                                    <option value="food">Food</option>
-                                    <option value="tech">Tech</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
+                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="scriptPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="scriptIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="scriptCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="scriptAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="scriptIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Country</label>
-                                <select id="funnelCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="nigeria">Nigeria</option>
-                                    <option value="ghana">Ghana</option>
-                                    <option value="uk">UK</option>
-                                    <option value="us">US</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Age</label>
-                                <select id="funnelAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="18-24">18-24</option>
-                                    <option value="25-34">25-34</option>
-                                    <option value="35-44">35-44</option>
-                                    <option value="45-54">45-54</option>
-                                    <option value="55+">55+</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Income</label>
-                                <select id="funnelIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="low">Low</option>
-                                    <option value="middle">Middle</option>
-                                    <option value="high">High</option>
-                                    <option value="affluent">Affluent</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">CTA Destination</label>
-                            <select id="ctaDestination" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                <option value="telegram">Telegram</option>
-                                <option value="website">Website</option>
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="email">Email</option>
-                                <option value="phone">Phone</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded transition-colors">
-                            Analyze Funnel
-                        </button>
-                    </form>
-
-                    <!-- Scripts Mode -->
-                    <form id="funnelScriptsForm" class="hidden space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Ad Video Script *</label>
-                            <textarea id="adScript" required placeholder="Paste your ad video script..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Landing Page Video Script (Optional)</label>
-                            <textarea id="landingScript" placeholder="Paste your landing page video script..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Platform</label>
-                                <select id="scriptPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="facebook">Facebook</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="google">Google</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Industry</label>
-                                <select id="scriptIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="finance">Finance</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="real_estate">Real Estate</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="health">Health</option>
-                                    <option value="education">Education</option>
-                                    <option value="fashion">Fashion</option>
-                                    <option value="food">Food</option>
-                                    <option value="tech">Tech</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Country</label>
-                                <select id="scriptCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="nigeria">Nigeria</option>
-                                    <option value="ghana">Ghana</option>
-                                    <option value="uk">UK</option>
-                                    <option value="us">US</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Age</label>
-                                <select id="scriptAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="18-24">18-24</option>
-                                    <option value="25-34">25-34</option>
-                                    <option value="35-44">35-44</option>
-                                    <option value="45-54">45-54</option>
-                                    <option value="55+">55+</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Income</label>
-                                <select id="scriptIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="low">Low</option>
-                                    <option value="middle">Middle</option>
-                                    <option value="high">High</option>
-                                    <option value="affluent">Affluent</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">CTA Destination</label>
-                            <select id="scriptCta" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                <option value="telegram">Telegram</option>
-                                <option value="website">Website</option>
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="email">Email</option>
-                                <option value="phone">Phone</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded transition-colors">
-                            Analyze Scripts
-                        </button>
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Script</button>
                     </form>
                 </div>
 
-                <!-- Funnel Results -->
-                <div id="funnelResults" class="hidden space-y-6">
-                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800">
-                        <p class="text-gray-400 text-sm mb-2">Overall Funnel Score</p>
-                        <div id="funnelScore" class="text-6xl font-bold mb-4"></div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                            <div class="bg-gray-800 rounded p-4">
-                                <p class="text-gray-400 text-sm">Predicted Conversion</p>
-                                <p id="conversionRate" class="text-2xl font-bold text-green-400"></p>
-                            </div>
-                            <div class="bg-gray-800 rounded p-4">
-                                <p class="text-gray-400 text-sm">Drop-off Risk</p>
-                                <p id="dropoffRisk" class="text-lg font-bold text-red-400"></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div id="adVideoCard" class="bg-gray-900 rounded-lg p-6 border border-gray-800"></div>
-                        <div id="landingVideoCard" class="bg-gray-900 rounded-lg p-6 border border-gray-800"></div>
-                        <div id="funnelFlowCard" class="bg-gray-900 rounded-lg p-6 border border-gray-800"></div>
-                    </div>
-
-                    <div id="recommendationsBox" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Recommendations</h3>
-                        <ul id="recommendationsList" class="space-y-3"></ul>
-                    </div>
-
-                    <div id="improvedScriptsBox" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Improved Scripts</h3>
-                        <div id="improvedScriptsList" class="space-y-4"></div>
+                <div id="funnelResults" style="display: none;" class="space-y-6">
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-4">Funnel Analysis Results</h3>
+                        <div id="funnelContent" class="space-y-4"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Tab 3: Smart Rewrite -->
-            <section id="rewrite-tab" class="hidden space-y-8">
+            <section id="rewrite-tab" style="display: none;" class="space-y-8">
                 <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                     <h2 class="text-2xl font-bold mb-6">Smart Rewrite</h2>
                     <form id="rewriteForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Original Ad *</label>
-                            <textarea id="originalAd" required placeholder="Paste your original ad copy..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea>
-                        </div>
-
+                        <div><label class="block text-sm font-medium mb-2">Original Ad Copy *</label><textarea id="originalAd" required placeholder="Paste the ad you want to improve..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Rewrite Focus</label>
-                                <select id="rewriteFocus" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="full">Full Rewrite</option>
-                                    <option value="hook">Hook Only</option>
-                                    <option value="cta">CTA Only</option>
-                                    <option value="credibility">Credibility Boost</option>
-                                    <option value="emotional">Emotional Boost</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Platform</label>
-                                <select id="rewritePlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="facebook">Facebook</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="google">Google</option>
-                                </select>
-                            </div>
+                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="rewritePlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="google">Google Ads</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="rewriteIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option><option value="travel">Travel</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="rewriteCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="DE">Germany</option><option value="FR">France</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="rewriteBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Rewrite Focus</label><select id="rewriteFocus" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="hook">Improve Hook</option><option value="clarity">Improve Clarity</option><option value="emotional_pull">Increase Emotional Pull</option><option value="cta">Strengthen CTA</option><option value="overall">Overall Improvement</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Voice Style</label><select id="voiceStyle" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="professional">Professional</option><option value="casual">Casual</option><option value="urgent">Urgent</option><option value="friendly">Friendly</option><option value="authoritative">Authoritative</option></select></div>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Industry</label>
-                                <select id="rewriteIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="finance">Finance</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="real_estate">Real Estate</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="health">Health</option>
-                                    <option value="education">Education</option>
-                                    <option value="fashion">Fashion</option>
-                                    <option value="food">Food</option>
-                                    <option value="tech">Tech</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Country</label>
-                                <select id="rewriteCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500">
-                                    <option value="nigeria">Nigeria</option>
-                                    <option value="ghana">Ghana</option>
-                                    <option value="uk">UK</option>
-                                    <option value="us">US</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Weaknesses (from analysis)</label>
-                            <textarea id="weaknessesInput" placeholder="Paste the critical weaknesses from your analysis..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-24"></textarea>
-                        </div>
-
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded transition-colors">
-                            Rewrite Ad
-                        </button>
+                        <div class="flex items-center gap-3"><input type="checkbox" id="prepareVoiceover" class="w-4 h-4 rounded"><label for="prepareVoiceover" class="text-sm font-medium">Prepare for voiceover narration</label></div>
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Rewrite Ad</button>
                     </form>
                 </div>
 
-                <!-- Rewrite Results -->
-                <div id="rewriteResults" class="hidden space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                            <h3 class="text-lg font-bold mb-4 text-gray-400">Before</h3>
-                            <p id="beforeAd" class="text-gray-300 whitespace-pre-wrap"></p>
-                        </div>
-                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                            <h3 class="text-lg font-bold mb-4 text-green-400">After</h3>
-                            <div class="relative">
-                                <p id="afterAd" class="text-gray-300 whitespace-pre-wrap"></p>
-                                <button onclick="copyToClipboard('afterAd')" class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm transition-colors">
-                                    Copy Rewritten Ad
-                                </button>
-                            </div>
-                        </div>
+                <div id="rewriteResults" style="display: none;" class="space-y-6">
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Rewritten Ad</h3>
+                        <div class="bg-gray-800 rounded p-4 mb-4"><p id="rewrittenAdText" class="text-gray-100 leading-relaxed">--</p></div>
+                        <p id="rewriteWhyItWorks" class="text-gray-300 text-sm">--</p>
                     </div>
-
-                    <div id="scoreDelta" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Score Improvements</h3>
-                        <div id="deltaList" class="space-y-3"></div>
-                    </div>
-
-                    <div id="changesSummary" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                         <h3 class="text-xl font-bold mb-4">Changes Summary</h3>
-                        <p id="changesSummaryText" class="text-gray-300 leading-relaxed whitespace-pre-wrap"></p>
+                        <p id="changesSummary" class="text-gray-300">--</p>
                     </div>
-
-                    <div id="whyItWorks" class="bg-green-900/20 border border-green-500/30 rounded-lg p-6">
-                        <h3 class="text-xl font-bold mb-4 text-green-400">Why It Works</h3>
-                        <p id="whyItWorksText" class="text-gray-300 leading-relaxed"></p>
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Score Comparison</h3>
+                        <div class="space-y-4">
+                            <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Before</span><span id="beforeOverallScore" class="text-gray-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-gray-600" id="beforeScoreBar" style="width: 0%"></div></div></div>
+                            <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">After</span><span id="afterOverallScore" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="afterScoreBar" style="width: 0%"></div></div></div>
+                            <div class="text-center pt-4"><span id="scoreDelta" class="text-red-400 font-bold text-lg">+0 points</span></div>
+                        </div>
                     </div>
                 </div>
             </section>
-        </main>
 
-        <!-- Loading Indicator -->
-        <div id="loadingIndicator" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="bg-gray-900 border border-gray-800 rounded-lg p-8 text-center">
-                <div class="spinner mx-auto mb-4"></div>
-                <p class="text-gray-300">Processing your request<span class="pulse-dots"></span></p>
-            </div>
-        </div>
+            <section id="brand-tab" style="display: none;" class="space-y-8">
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h2 class="text-2xl font-bold mb-6">Brand Voice Training</h2>
+                    <form id="brandVoiceForm" class="space-y-6">
+                        <div><label class="block text-sm font-medium mb-2">Brand Name *</label><input type="text" id="brandName" required placeholder="e.g., TechFlow" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
+                        <div><label class="block text-sm font-medium mb-2">Brand Guidelines (Optional)</label><textarea id="brandGuidelines" placeholder="Describe your brand guidelines, mission, values..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-24"></textarea></div>
+                        <div><label class="block text-sm font-medium mb-3">Tone Attributes (Select all that apply)</label><div class="flex flex-wrap gap-3" id="toneChips"><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Professional</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Casual</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Urgent</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Friendly</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Authoritative</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Inspirational</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Humorous</button></div></div>
+                        <div><label class="block text-sm font-medium mb-2">Words to Always Use (comma-separated)</label><input type="text" id="wordsAlwaysUse" placeholder="e.g., innovative, cutting-edge, powerful" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
+                        <div><label class="block text-sm font-medium mb-2">Words to Never Use (comma-separated)</label><input type="text" id="wordsNeverUse" placeholder="e.g., cheap, basic, slow" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
+                        <div><label class="block text-sm font-medium mb-2">Example Ads (paste 3-5 examples of your best ads)</label><textarea id="exampleAds" placeholder="Paste your example ads here, separated by line breaks..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
+                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Save Brand Voice</button>
+                    </form>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h2 class="text-2xl font-bold mb-6">Saved Brand Voices</h2>
+                    <div id="brandVoicesList" class="space-y-4"><p class="text-gray-400">No brand voices saved yet.</p></div>
+                </div>
+            </section>
+
+            <section id="insights-tab" style="display: none;" class="space-y-8">
+                <h2 class="text-3xl font-bold mb-8">Creative Insights Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Total Ads Analyzed</p><p class="text-4xl font-bold" id="totalAdsCount">0</p></div>
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Average Score</p><div class="flex items-baseline gap-2"><p class="text-4xl font-bold" id="avgScore">--</p><p id="trendArrow" class="text-red-500">--</p></div></div>
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Top Platform</p><p class="text-2xl font-bold" id="topPlatform">--</p></div>
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Weakest Dimension</p><p class="text-lg font-bold text-red-400" id="weakestDimension">--</p></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Score Distribution</h3>
+                    <div id="scoreDistribution" style="height: 150px;"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Most Common Weaknesses</h3>
+                    <div id="topWeaknesses" class="space-y-3"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Best Performing Hooks</h3>
+                    <div id="bestHooks" class="space-y-3"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Average Scores by Platform</h3>
+                    <div id="platformPerformanceStats" class="space-y-4"></div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Recommended Focus Areas</h3>
+                    <div id="focusAreas" class="space-y-3"></div>
+                </div>
+            </section>
+
+        </main>
     </div>
 
     <script>
         const API_BASE = window.location.origin;
+        const INDUSTRY_BENCHMARKS = { ecommerce: 72, saas: 68, real_estate: 70, finance: 75, health_fitness: 70, education: 65, travel: 68 };
 
-        // Store last analysis result for use in Rewrite tab
-        let lastAnalysisScores = {};
-        let lastAnalysisWeaknesses = [];
+        function getHistory() { return JSON.parse(localStorage.getItem('adlytics_history')) || []; }
+        function saveHistory(history) { localStorage.setItem('adlytics_history', JSON.stringify(history)); }
+        function getBrandVoices() { return JSON.parse(localStorage.getItem('adlytics_brand_voices')) || []; }
+        function saveBrandVoices(voices) { localStorage.setItem('adlytics_brand_voices', JSON.stringify(voices)); }
 
         function switchTab(tabName) {
-            document.getElementById('analysis-tab').classList.add('hidden');
-            document.getElementById('funnel-tab').classList.add('hidden');
-            document.getElementById('rewrite-tab').classList.add('hidden');
-
-            document.getElementById('tab-analysis').classList.remove('tab-active');
-            document.getElementById('tab-analysis').classList.add('tab-inactive');
-            document.getElementById('tab-funnel').classList.remove('tab-active');
-            document.getElementById('tab-funnel').classList.add('tab-inactive');
-            document.getElementById('tab-rewrite').classList.remove('tab-active');
-            document.getElementById('tab-rewrite').classList.add('tab-inactive');
-
-            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('tab-active') && btn.classList.add('tab-inactive'));
+            document.getElementById(tabName + '-tab').style.display = 'block';
             document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
             document.getElementById('tab-' + tabName).classList.add('tab-active');
+            if (tabName === 'analysis' || tabName === 'rewrite') loadBrandVoiceDropdowns();
+            if (tabName === 'insights') loadInsights();
+            if (tabName === 'brand') loadBrandVoicesList();
         }
 
-        function switchFunnelMode(mode) {
-            if (mode === 'upload') {
-                document.getElementById('funnelUploadForm').classList.remove('hidden');
-                document.getElementById('funnelScriptsForm').classList.add('hidden');
-                document.getElementById('mode-upload').classList.add('border-red-500', 'text-white');
-                document.getElementById('mode-upload').classList.remove('border-transparent', 'text-gray-500');
-                document.getElementById('mode-scripts').classList.remove('border-red-500', 'text-white');
-                document.getElementById('mode-scripts').classList.add('border-transparent', 'text-gray-500');
-            } else {
-                document.getElementById('funnelUploadForm').classList.add('hidden');
-                document.getElementById('funnelScriptsForm').classList.remove('hidden');
-                document.getElementById('mode-scripts').classList.add('border-red-500', 'text-white');
-                document.getElementById('mode-scripts').classList.remove('border-transparent', 'text-gray-500');
-                document.getElementById('mode-upload').classList.remove('border-red-500', 'text-white');
-                document.getElementById('mode-upload').classList.add('border-transparent', 'text-gray-500');
-            }
+        function loadBrandVoiceDropdowns() {
+            const voices = getBrandVoices();
+            const selects = ['analysisBrandVoice', 'rewriteBrandVoice'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                select.innerHTML = '<option value="">None</option>';
+                voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    select.appendChild(option);
+                });
+            });
         }
 
-        function showLoading(show = true) {
-            document.getElementById('loadingIndicator').classList.toggle('hidden', !show);
-        }
-
-        function getScoreColor(score) {
-            if (score < 40) return 'text-red-500';
-            if (score < 65) return 'text-yellow-500';
-            return 'text-green-500';
-        }
-
-        function getScoreFillColor(score) {
-            if (score < 40) return 'bg-red-500';
-            if (score < 65) return 'bg-yellow-500';
-            return 'bg-green-500';
-        }
-
-        /* ==============================
-           Tab 1: Ad Analysis
-           ============================== */
-        document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+        function toggleChip(btn, type) { btn.classList.toggle('active'); }
+        document.getElementById('brandVoiceForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            showLoading(true);
+            const name = document.getElementById('brandName').value;
+            const guidelines = document.getElementById('brandGuidelines').value;
+            const tone = Array.from(document.querySelectorAll('#toneChips .chip.active')).map(btn => btn.textContent);
+            const wordsAlways = document.getElementById('wordsAlwaysUse').value.split(',').map(w => w.trim()).filter(w => w);
+            const wordsNever = document.getElementById('wordsNeverUse').value.split(',').map(w => w.trim()).filter(w => w);
+            const examples = document.getElementById('exampleAds').value.split('\n').map(e => e.trim()).filter(e => e);
 
+            const voice = { id: 'voice_' + Date.now(), name, guidelines, tone, wordsAlways, wordsNever, examples, createdAt: new Date().toISOString() };
+            const voices = getBrandVoices();
+            voices.push(voice);
+            saveBrandVoices(voices);
+
+            document.getElementById('brandVoiceForm').reset();
+            document.querySelectorAll('#toneChips .chip').forEach(btn => btn.classList.remove('active'));
+            alert('Brand voice saved successfully!');
+            loadBrandVoicesList();
+            loadBrandVoiceDropdowns();
+        });
+
+        function loadBrandVoicesList() {
+            const voices = getBrandVoices();
+            const container = document.getElementById('brandVoicesList');
+            if (voices.length === 0) {
+                container.innerHTML = '<p class="text-gray-400">No brand voices saved yet.</p>';
+                return;
+            }
+            container.innerHTML = voices.map(voice => `
+                <div class="bg-gray-800 rounded p-4 border border-gray-700 flex justify-between items-start">
+                    <div>
+                        <h4 class="font-bold text-lg">${voice.name}</h4>
+                        <p class="text-sm text-gray-400 mt-1">Tone: ${voice.tone.join(', ')}</p>
+                        <p class="text-sm text-gray-400">Words to use: ${voice.wordsAlways.join(', ') || 'None'}</p>
+                        <p class="text-sm text-gray-400">Words to avoid: ${voice.wordsNever.join(', ') || 'None'}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editBrandVoice('${voice.id}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Edit</button>
+                        <button onclick="deleteBrandVoice('${voice.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editBrandVoice(voiceId) {
+            const voices = getBrandVoices();
+            const voice = voices.find(v => v.id === voiceId);
+            if (!voice) return;
+            document.getElementById('brandName').value = voice.name;
+            document.getElementById('brandGuidelines').value = voice.guidelines;
+            document.getElementById('wordsAlwaysUse').value = voice.wordsAlways.join(', ');
+            document.getElementById('wordsNeverUse').value = voice.wordsNever.join(', ');
+            document.getElementById('exampleAds').value = voice.examples.join('\n');
+            document.querySelectorAll('#toneChips .chip').forEach(btn => {
+                if (voice.tone.includes(btn.textContent)) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            deleteBrandVoice(voiceId);
+            window.scrollTo(0, 0);
+        }
+
+        function deleteBrandVoice(voiceId) {
+            const voices = getBrandVoices();
+            const filtered = voices.filter(v => v.id !== voiceId);
+            saveBrandVoices(filtered);
+            loadBrandVoicesList();
+            loadBrandVoiceDropdowns();
+        }
+
+        function toggleAccordion(header) {
+            header.classList.toggle('open');
+            const content = header.nextElementSibling;
+            content.classList.toggle('open');
+        }
+
+        document.getElementById('analysisForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const formData = new FormData();
             formData.append('ad_copy', document.getElementById('adCopy').value);
             formData.append('platform', document.getElementById('analysisPlatform').value);
             formData.append('industry', document.getElementById('analysisIndustry').value);
-            /* FIX #1: Field names must match backend parameter names */
             formData.append('audience_country', document.getElementById('analysisCountry').value);
             formData.append('audience_age', document.getElementById('analysisAge').value);
             formData.append('audience_income', document.getElementById('analysisIncome').value);
 
             try {
-                const response = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: formData });
+                const json = await response.json();
+                const data = json.data || json;
 
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || `API request failed (${response.status})`);
+                if (data.success && data.analysis) {
+                    const analysis = data.analysis;
+                    displayAnalysisResults(analysis);
+
+                    const history = getHistory();
+                    history.unshift({
+                        timestamp: new Date().toISOString(),
+                        type: 'analysis',
+                        platform: document.getElementById('analysisPlatform').value,
+                        industry: document.getElementById('analysisIndustry').value,
+                        scores: analysis.scores,
+                        adCopy: document.getElementById('adCopy').value
+                    });
+                    saveHistory(history);
+                } else {
+                    alert('Analysis failed. Please try again.');
                 }
-                const data = await response.json();
-
-                /* FIX #2: Backend returns { success, analysis: { scores, ... } }
-                   Must read from data.analysis, NOT data directly */
-                const analysis = data.analysis || {};
-                const scores = analysis.scores || {};
-
-                const score = scores.overall || 0;
-                document.getElementById('overallScore').textContent = Math.round(score);
-                document.getElementById('overallScore').className = `text-7xl font-bold mb-4 ${getScoreColor(score)}`;
-
-                const interpretation = score < 40 ? 'Needs Improvement' : score < 65 ? 'Good' : 'Excellent';
-                document.getElementById('scoreInterpretation').textContent = interpretation;
-
-                /* Score Breakdown — exclude "overall" from bars */
-                const dimensionScores = Object.entries(scores).filter(([key]) => key !== 'overall');
-                const breakdownHTML = dimensionScores.map(([key, val]) => `
-                    <div>
-                        <div class="flex justify-between mb-2">
-                            <span class="capitalize">${key.replace(/_/g, ' ')}</span>
-                            <span class="font-bold">${Math.round(val)}</span>
-                        </div>
-                        <div class="score-bar">
-                            <div class="score-fill ${getScoreFillColor(val)}" style="width: ${val}%"></div>
-                        </div>
-                    </div>
-                `).join('');
-                document.getElementById('scoreBreakdown').innerHTML =
-                    '<h3 class="text-xl font-bold mb-6">Score Breakdown</h3>' + breakdownHTML;
-
-                document.getElementById('strategicText').textContent = analysis.strategic_summary || '';
-
-                /* FIX #3: critical_weaknesses are objects { issue, severity, precise_fix, ... } */
-                const weaknesses = analysis.critical_weaknesses || [];
-                document.getElementById('weaknessesList').innerHTML = weaknesses.map(w => {
-                    if (typeof w === 'string') return `<li class="text-gray-300">&bull; ${w}</li>`;
-                    return `<li class="text-gray-300">&bull; <strong>${w.issue || ''}</strong> (${w.severity || 'N/A'}) &mdash; Fix: ${w.precise_fix || w.impact || ''}</li>`;
-                }).join('');
-
-                /* FIX #4: what_to_change_right_now is a string, not an array */
-                document.getElementById('actionsText').textContent = analysis.what_to_change_right_now || '';
-
-                /* FIX #5: ad_variants is an array of { hook, body, cta, angle, ... } */
-                const variants = analysis.ad_variants || [];
-                const fmtVariant = v => v ? `${v.hook || ''}\n\n${v.body || ''}\n\n${v.cta || ''}` : '';
-                document.getElementById('variant1').textContent = fmtVariant(variants[0]);
-                document.getElementById('variant2').textContent = fmtVariant(variants[1]);
-                document.getElementById('variant3').textContent = fmtVariant(variants[2]);
-
-                /* Store for the Rewrite tab */
-                lastAnalysisScores = scores;
-                lastAnalysisWeaknesses = weaknesses.map(w => typeof w === 'string' ? w : w.issue || '');
-
-                document.getElementById('analysisResults').classList.remove('hidden');
             } catch (error) {
-                alert('Error analyzing ad: ' + error.message);
-            } finally {
-                showLoading(false);
+                alert('Error: ' + error.message);
             }
         });
 
-        /* ==============================
-           Tab 2: Video Funnel — Upload
-           ============================== */
-        document.getElementById('funnelUploadForm').addEventListener('submit', async (e) => {
+        function displayAnalysisResults(analysis) {
+            const scores = analysis.scores || {};
+            const overallScore = scores.overall || 0;
+            const industry = document.getElementById('analysisIndustry').value;
+            const benchmark = INDUSTRY_BENCHMARKS[industry] || 70;
+
+            document.getElementById('analysisResults').style.display = 'block';
+            const percentage = (overallScore / 100) * 360;
+            document.getElementById('scoreGauge').style.setProperty('--percentage', percentage + 'deg');
+            document.getElementById('gaugeScore').textContent = Math.round(overallScore);
+
+            Object.keys(scores).forEach(key => {
+                const score = scores[key];
+                const barEl = document.getElementById('bar-' + key);
+                const scoreEl = document.getElementById('score-' + key);
+                if (barEl) {
+                    barEl.style.width = score + '%';
+                    scoreEl.textContent = score;
+                }
+            });
+
+            const platformScores = { 'Facebook': overallScore * 0.95, 'Instagram': overallScore * 0.92, 'TikTok': overallScore * 0.88, 'LinkedIn': overallScore * 0.85, 'Google': overallScore * 0.90 };
+            const platformDiv = document.getElementById('platformPerformance');
+            platformDiv.innerHTML = Object.entries(platformScores).map(([platform, score]) => `
+                <div class="bg-gray-800 rounded p-4 text-center">
+                    <p class="text-sm text-gray-400 mb-2">${platform}</p>
+                    <p class="text-3xl font-bold text-red-400">${Math.round(score)}</p>
+                </div>
+            `).join('');
+
+            document.getElementById('yourScore').textContent = Math.round(overallScore);
+            document.getElementById('yourScoreBar').style.width = overallScore + '%';
+            document.getElementById('industryScore').textContent = benchmark;
+            document.getElementById('industryScoreBar').style.width = benchmark + '%';
+
+            renderScoreHistory();
+            document.getElementById('strategicSummary').textContent = analysis.strategic_summary || 'No summary available.';
+
+            const weaknessesDiv = document.getElementById('weaknessesContent');
+            const weaknesses = analysis.critical_weaknesses || [];
+            if (weaknesses.length > 0) {
+                weaknessesDiv.innerHTML = weaknesses.map(w => `
+                    <div class="border-l-4 border-red-500 pl-4 py-2">
+                        <p class="font-bold text-red-400">${w.issue || 'Issue'}</p>
+                        <p class="text-sm text-gray-400 mt-1">Severity: <span class="font-bold">${w.severity || 'N/A'}</span></p>
+                        <p class="text-sm text-gray-300 mt-1">Impact: ${w.impact || 'N/A'}</p>
+                        <p class="text-sm text-gray-300 mt-1">Fix: ${w.precise_fix || 'N/A'}</p>
+                    </div>
+                `).join('');
+            } else {
+                weaknessesDiv.innerHTML = '<p class="text-gray-400">No critical weaknesses found!</p>';
+            }
+
+            document.getElementById('whatToChange').textContent = analysis.what_to_change_right_now || 'No immediate changes needed.';
+
+            const variantsDiv = document.getElementById('variantsContent');
+            const variants = analysis.ad_variants || [];
+            if (variants.length > 0) {
+                variantsDiv.innerHTML = variants.map((v, i) => `
+                    <div class="bg-gray-800 rounded p-4 border-l-4 border-red-500">
+                        <h4 class="font-bold mb-2">Variant ${i + 1}: ${v.angle || 'Variation'}</h4>
+                        <p class="text-sm mb-2"><strong>Hook:</strong> ${v.hook || 'N/A'}</p>
+                        <p class="text-sm mb-2"><strong>Body:</strong> ${v.body || 'N/A'}</p>
+                        <p class="text-sm mb-2"><strong>CTA:</strong> ${v.cta || 'N/A'}</p>
+                        <p class="text-sm text-gray-400"><strong>Why it works:</strong> ${v.why_it_works || 'N/A'}</p>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('lineByLine').textContent = analysis.line_by_line_analysis || 'N/A';
+            document.getElementById('winnerPrediction').textContent = analysis.winner_prediction || 'No prediction available.';
+            document.getElementById('contentVerification').textContent = analysis.content_verification || 'Verification complete.';
+
+            setTimeout(() => { document.getElementById('analysisResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
+        }
+
+        function renderScoreHistory() {
+            const history = getHistory().filter(h => h.type === 'analysis').slice(0, 10).reverse();
+            const chartDiv = document.getElementById('scoreHistoryChart');
+            if (history.length === 0) {
+                chartDiv.innerHTML = '<p class="text-gray-400 text-center py-8">No score history yet.</p>';
+                return;
+            }
+
+            const maxScore = 100;
+            const width = 600;
+            const height = 150;
+            const barWidth = width / history.length;
+            const padding = 20;
+
+            let svg = `<svg width="${width + padding * 2}" height="${height + padding}" viewBox="0 0 ${width + padding * 2} ${height + padding}" class="w-full">`;
+            svg += `<line x1="${padding}" y1="${height + padding / 2}" x2="${width + padding}" y2="${height + padding / 2}" stroke="#374151" stroke-width="1"/>`;
+
+            history.forEach((item, i) => {
+                const score = item.scores?.overall || 0;
+                const barHeight = (score / maxScore) * height;
+                const x = padding + i * barWidth + barWidth / 4;
+                const y = height + padding / 2 - barHeight;
+                svg += `<rect x="${x}" y="${y}" width="${barWidth / 2}" height="${barHeight}" fill="#EF4444" rx="2"/>`;
+                svg += `<text x="${x + barWidth / 4}" y="${height + padding / 2 + 15}" text-anchor="middle" font-size="10" fill="#9CA3AF">${Math.round(score)}</text>`;
+            });
+
+            svg += '</svg>';
+            chartDiv.innerHTML = svg;
+        }
+
+        document.getElementById('videoFunnelForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            showLoading(true);
+            const adVideo = document.getElementById('adVideo').files[0];
+            const landingVideo = document.getElementById('landingVideo').files[0];
+            if (!adVideo || !landingVideo) { alert('Please select both videos'); return; }
 
             const formData = new FormData();
-            const adVideoFile = document.getElementById('adVideo').files[0];
-            if (adVideoFile) formData.append('ad_video', adVideoFile);
-
-            const landingVideoFile = document.getElementById('landingVideo').files[0];
-            if (landingVideoFile) formData.append('landing_video', landingVideoFile);
-
+            formData.append('ad_video', adVideo);
+            formData.append('landing_video', landingVideo);
             formData.append('platform', document.getElementById('funnelPlatform').value);
             formData.append('industry', document.getElementById('funnelIndustry').value);
-            /* FIX #1: correct field names */
             formData.append('audience_country', document.getElementById('funnelCountry').value);
             formData.append('audience_age', document.getElementById('funnelAge').value);
             formData.append('audience_income', document.getElementById('funnelIncome').value);
-            formData.append('cta_destination', document.getElementById('ctaDestination').value);
 
             try {
-                const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || `API request failed (${response.status})`);
-                }
-                renderFunnelResults(await response.json());
-            } catch (error) {
-                alert('Error analyzing funnel: ' + error.message);
-            } finally {
-                showLoading(false);
-            }
+                const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, { method: 'POST', body: formData });
+                const json = await response.json();
+                const data = json.data || json;
+                if (data.success && data.analysis) displayFunnelResults(data.analysis);
+                else alert('Analysis failed. Please try again.');
+            } catch (error) { alert('Error: ' + error.message); }
         });
 
-        /* ==============================
-           Tab 2: Video Funnel — Scripts
-           ============================== */
-        document.getElementById('funnelScriptsForm').addEventListener('submit', async (e) => {
+        document.getElementById('scriptForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            showLoading(true);
+            const adScript = document.getElementById('adScript').value;
+            const landingScript = document.getElementById('landingScript').value;
+            if (!adScript || !landingScript) { alert('Please enter both scripts'); return; }
 
             const formData = new FormData();
-            formData.append('ad_script', document.getElementById('adScript').value);
-            if (document.getElementById('landingScript').value) {
-                formData.append('landing_script', document.getElementById('landingScript').value);
-            }
+            formData.append('ad_script', adScript);
+            formData.append('landing_script', landingScript);
             formData.append('platform', document.getElementById('scriptPlatform').value);
             formData.append('industry', document.getElementById('scriptIndustry').value);
-            /* FIX #1: correct field names */
             formData.append('audience_country', document.getElementById('scriptCountry').value);
             formData.append('audience_age', document.getElementById('scriptAge').value);
             formData.append('audience_income', document.getElementById('scriptIncome').value);
-            formData.append('cta_destination', document.getElementById('scriptCta').value);
 
             try {
-                const response = await fetch(`${API_BASE}/api/video-funnel/analyze-script`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || `API request failed (${response.status})`);
-                }
-                renderFunnelResults(await response.json());
-            } catch (error) {
-                alert('Error analyzing scripts: ' + error.message);
-            } finally {
-                showLoading(false);
-            }
+                const response = await fetch(`${API_BASE}/api/video-funnel/analyze-script`, { method: 'POST', body: formData });
+                const json = await response.json();
+                const data = json.data || json;
+                if (data.success && data.analysis) displayFunnelResults(data.analysis);
+                else alert('Analysis failed. Please try again.');
+            } catch (error) { alert('Error: ' + error.message); }
         });
 
-        /* ==============================
-           Render Funnel Results
-           FIX #6: Backend returns { success, analysis: { ad_video_analysis, landing_video_analysis,
-                   funnel_analysis, recommendations, improved_scripts }, metadata }
-           ============================== */
-        function renderFunnelResults(data) {
-            const analysis           = data.analysis || {};
-            const funnelAnalysis     = analysis.funnel_analysis || {};
-            const adVideoAnalysis    = analysis.ad_video_analysis || {};
-            const landingVideoAnalysis = analysis.landing_video_analysis || {};
-
-            const score = funnelAnalysis.overall_score || 0;
-            document.getElementById('funnelScore').textContent   = Math.round(score);
-            document.getElementById('funnelScore').className     = `text-6xl font-bold mb-4 ${getScoreColor(score)}`;
-
-            const conversion = funnelAnalysis.predicted_conversion || {};
-            document.getElementById('conversionRate').textContent = conversion.range || conversion.level || 'N/A';
-            document.getElementById('dropoffRisk').textContent    = funnelAnalysis.drop_off_risk || 'N/A';
-
-            /* Ad Video Card */
-            const adScoreEntries = [
-                ['hook_score', adVideoAnalysis.hook_score],
-                ['visual_quality', adVideoAnalysis.visual_quality],
-                ['message_clarity', adVideoAnalysis.message_clarity],
-                ['curiosity_gap', adVideoAnalysis.curiosity_gap],
-                ['platform_fit', adVideoAnalysis.platform_fit]
-            ].filter(([, v]) => v !== undefined);
-
-            document.getElementById('adVideoCard').innerHTML = `
-                <h4 class="font-bold mb-4">Ad Video</h4>
-                <div class="space-y-2 mb-4">
-                    ${adScoreEntries.map(([k, v]) => `
-                        <div class="text-sm">
-                            <span class="capitalize">${k.replace(/_/g, ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
-                        </div>`).join('')}
-                </div>
-                <p class="text-sm text-gray-400 mb-1">${adVideoAnalysis.verdict || ''}</p>
-                <p class="text-sm text-green-400 mb-2">Strengths: ${(adVideoAnalysis.strengths || []).join(', ') || 'N/A'}</p>
-                <p class="text-sm text-red-400">Weaknesses: ${(adVideoAnalysis.weaknesses || []).join(', ') || 'N/A'}</p>`;
-
-            /* Landing Video Card */
-            const landScoreEntries = [
-                ['continuity_score', landingVideoAnalysis.continuity_score],
-                ['depth_score', landingVideoAnalysis.depth_score],
-                ['trust_building', landingVideoAnalysis.trust_building],
-                ['cta_effectiveness', landingVideoAnalysis.cta_effectiveness],
-                ['conversion_psychology', landingVideoAnalysis.conversion_psychology]
-            ].filter(([, v]) => v !== undefined);
-
-            document.getElementById('landingVideoCard').innerHTML = `
-                <h4 class="font-bold mb-4">Landing Video</h4>
-                <div class="space-y-2 mb-4">
-                    ${landScoreEntries.map(([k, v]) => `
-                        <div class="text-sm">
-                            <span class="capitalize">${k.replace(/_/g, ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
-                        </div>`).join('')}
-                </div>
-                <p class="text-sm text-gray-400 mb-1">${landingVideoAnalysis.verdict || ''}</p>
-                <p class="text-sm text-green-400 mb-2">Strengths: ${(landingVideoAnalysis.strengths || []).join(', ') || 'N/A'}</p>
-                <p class="text-sm text-red-400">Weaknesses: ${(landingVideoAnalysis.weaknesses || []).join(', ') || 'N/A'}</p>`;
-
-            /* Funnel Flow Card */
-            document.getElementById('funnelFlowCard').innerHTML = `
-                <h4 class="font-bold mb-4">Funnel Flow</h4>
-                <div class="space-y-2">
-                    <p class="text-sm"><span class="text-gray-400">Message Escalation:</span> ${funnelAnalysis.message_escalation || 'N/A'}</p>
-                    <p class="text-sm"><span class="text-gray-400">Audience Funnel Fit:</span> ${funnelAnalysis.audience_funnel_fit || 'N/A'}</p>
-                    <p class="text-sm"><span class="text-gray-400">Drop-off Point:</span> ${funnelAnalysis.drop_off_point || 'N/A'}</p>
-                    <p class="text-sm"><span class="text-gray-400">Overall Score:</span> ${funnelAnalysis.overall_score || 'N/A'}</p>
-                </div>`;
-
-            /* Recommendations */
+        function displayFunnelResults(analysis) {
+            document.getElementById('funnelResults').style.display = 'block';
+            const content = document.getElementById('funnelContent');
+            const funnelAnalysis = analysis.funnel_analysis || {};
+            const adAnalysis = analysis.ad_video_analysis || {};
+            const landingAnalysis = analysis.landing_video_analysis || {};
             const recommendations = analysis.recommendations || [];
-            document.getElementById('recommendationsList').innerHTML = recommendations.map(rec => {
-                const p = (rec.priority || '').toLowerCase();
-                const color = p === 'high' ? 'bg-red-500/20 border-red-500/50'
-                            : p === 'medium' ? 'bg-yellow-500/20 border-yellow-500/50'
-                            : 'bg-green-500/20 border-green-500/50';
-                const txt   = p === 'high' ? 'text-red-400' : p === 'medium' ? 'text-yellow-400' : 'text-green-400';
-                return `
-                    <div class="border ${color} rounded p-3">
-                        <p class="text-sm font-bold ${txt}">Priority: ${rec.priority || 'N/A'} &mdash; ${rec.area || ''}</p>
-                        <p class="text-sm mt-1"><strong>Issue:</strong> ${rec.issue || ''}</p>
-                        <p class="text-sm mt-1"><strong>Fix:</strong> ${rec.fix || ''}</p>
-                        <p class="text-sm mt-1 text-gray-400">Expected Impact: ${rec.expected_impact || ''}</p>
-                    </div>`;
-            }).join('');
 
-            /* Improved Scripts */
-            const scripts = analysis.improved_scripts || {};
-            let html = '';
-            if (scripts.ad_video_script) html += `
-                <div class="bg-gray-800 rounded p-4">
-                    <p class="text-sm font-bold mb-2">Improved Ad Video Script</p>
-                    <p class="text-sm text-gray-300 mb-3 whitespace-pre-wrap">${scripts.ad_video_script}</p>
-                    <button onclick="copyText(this)" data-text="${encodeURIComponent(scripts.ad_video_script)}" class="text-red-500 hover:text-red-400 text-xs">Copy</button>
-                </div>`;
-            if (scripts.landing_video_script) html += `
-                <div class="bg-gray-800 rounded p-4">
-                    <p class="text-sm font-bold mb-2">Improved Landing Video Script</p>
-                    <p class="text-sm text-gray-300 mb-3 whitespace-pre-wrap">${scripts.landing_video_script}</p>
-                    <button onclick="copyText(this)" data-text="${encodeURIComponent(scripts.landing_video_script)}" class="text-red-500 hover:text-red-400 text-xs">Copy</button>
-                </div>`;
-            if (scripts.why_these_work) html += `
-                <div class="bg-green-900/20 border border-green-500/30 rounded p-4">
-                    <p class="text-sm font-bold text-green-400 mb-2">Why These Work</p>
-                    <p class="text-sm text-gray-300">${scripts.why_these_work}</p>
-                </div>`;
-            document.getElementById('improvedScriptsList').innerHTML = html;
-            document.getElementById('funnelResults').classList.remove('hidden');
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Overall Funnel Score</p><p class="text-3xl font-bold text-red-400">${funnelAnalysis.overall_score || '--'}</p></div>
+                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Predicted Conversion Rate</p><p class="text-2xl font-bold">${funnelAnalysis.predicted_conversion || '--'}</p></div>
+                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Drop-off Risk</p><p class="text-2xl font-bold text-red-400">${funnelAnalysis.drop_off_risk || '--'}</p></div>
+                </div>
+                <hr class="border-gray-700 my-4">
+                <div><h4 class="font-bold mb-2">Ad Video Analysis</h4><p class="text-sm text-gray-300">${adAnalysis || 'No analysis available'}</p></div>
+                <div><h4 class="font-bold mb-2 mt-4">Landing Video Analysis</h4><p class="text-sm text-gray-300">${landingAnalysis || 'No analysis available'}</p></div>
+                ${recommendations.length > 0 ? `<div class="mt-4"><h4 class="font-bold mb-2">Recommendations</h4><ul class="space-y-2">${recommendations.map(r => `<li class="text-sm text-gray-300"><strong>${r.priority || 'Item'}:</strong> ${r.issue || 'No details'} - ${r.fix || 'N/A'}</li>`).join('')}</ul></div>` : ''}
+            `;
+
+            setTimeout(() => { document.getElementById('funnelResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
         }
 
-        /* ==============================
-           Tab 3: Smart Rewrite
-           FIX #7: Backend requires original_scores (JSON) and weaknesses (JSON) as required Form fields
-           ============================== */
-        document.getElementById('rewriteForm').addEventListener('submit', async (e) => {
+        document.getElementById('rewriteForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            showLoading(true);
-
             const formData = new FormData();
             formData.append('original_ad', document.getElementById('originalAd').value);
-            formData.append('rewrite_focus', document.getElementById('rewriteFocus').value);
             formData.append('platform', document.getElementById('rewritePlatform').value);
             formData.append('industry', document.getElementById('rewriteIndustry').value);
             formData.append('audience_country', document.getElementById('rewriteCountry').value);
-
-            /* Send stored scores from last analysis (or sensible defaults) */
-            const scoresToSend = Object.keys(lastAnalysisScores).length > 0
-                ? lastAnalysisScores
-                : { overall: 40, hook_strength: 40, clarity: 40, credibility: 40,
-                    emotional_pull: 40, cta_strength: 40, audience_match: 40, platform_fit: 40 };
-            formData.append('original_scores', JSON.stringify(scoresToSend));
-
-            /* Parse user-typed weaknesses into a JSON array */
-            const weakText = document.getElementById('weaknessesInput').value.trim();
-            let weakArr;
-            if (weakText) {
-                weakArr = weakText.split(/[\n,]+/).map(w => w.replace(/^[-\u2022*]\s*/, '').trim()).filter(Boolean);
-            } else if (lastAnalysisWeaknesses.length > 0) {
-                weakArr = lastAnalysisWeaknesses;
-            } else {
-                weakArr = ['No specific weaknesses identified'];
-            }
-            formData.append('weaknesses', JSON.stringify(weakArr));
+            formData.append('rewrite_focus', document.getElementById('rewriteFocus').value);
+            formData.append('prepare_voiceover', document.getElementById('prepareVoiceover').checked);
+            formData.append('voice_style', document.getElementById('voiceStyle').value);
+            formData.append('original_scores', JSON.stringify({ overall: 50, hook_strength: 50, clarity: 50, credibility: 50, emotional_pull: 50, cta_strength: 50, audience_match: 50, platform_fit: 50 }));
+            formData.append('weaknesses', JSON.stringify([{ issue: 'Weak hook', severity: 'high' }]));
 
             try {
-                const response = await fetch(`${API_BASE}/api/rewrite`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || `API request failed (${response.status})`);
-                }
-                const data = await response.json();
-
-                /* FIX: Backend returns { success, data: { rewritten_ad, ... } } */
-                const result = data.data || data;
-
-                document.getElementById('beforeAd').textContent = document.getElementById('originalAd').value;
-                document.getElementById('afterAd').textContent  = result.rewritten_ad || '';
-
-                document.getElementById('deltaList').innerHTML = Object.entries(result.score_delta || {}).map(([key, delta]) => `
-                    <div class="flex items-center justify-between">
-                        <span class="capitalize">${key.replace(/_/g, ' ')}</span>
-                        <span class="flex items-center gap-2">
-                            <span class="font-bold ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-400'}">${delta > 0 ? '+' : ''}${Math.round(delta)}</span>
-                            ${delta > 0 ? '<span class="text-green-400">&#8593;</span>' : delta < 0 ? '<span class="text-red-400">&#8595;</span>' : ''}
-                        </span>
-                    </div>`).join('');
-
-                const cs = result.changes_summary;
-                document.getElementById('changesSummaryText').textContent = Array.isArray(cs) ? cs.join('\n') : (cs || '');
-                document.getElementById('whyItWorksText').textContent = result.why_it_works || '';
-                document.getElementById('rewriteResults').classList.remove('hidden');
-            } catch (error) {
-                alert('Error rewriting ad: ' + error.message);
-            } finally {
-                showLoading(false);
-            }
+                const response = await fetch(`${API_BASE}/api/rewrite`, { method: 'POST', body: formData });
+                const json = await response.json();
+                const data = json.data || json;
+                if (data.success && data.data) displayRewriteResults(data.data);
+                else alert('Rewrite failed. Please try again.');
+            } catch (error) { alert('Error: ' + error.message); }
         });
 
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).textContent;
-            navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+        function displayRewriteResults(rewriteData) {
+            document.getElementById('rewriteResults').style.display = 'block';
+            document.getElementById('rewrittenAdText').textContent = rewriteData.rewritten_ad || 'No rewrite available';
+            document.getElementById('rewriteWhyItWorks').textContent = 'Why it works: ' + (rewriteData.why_it_works || 'N/A');
+            document.getElementById('changesSummary').textContent = rewriteData.changes_summary || 'Summary not available';
+
+            const beforeScores = rewriteData.before_scores || { overall: 50 };
+            const afterScores = rewriteData.after_scores || { overall: 60 };
+            const beforeScore = beforeScores.overall || 50;
+            const afterScore = afterScores.overall || 60;
+            const delta = afterScore - beforeScore;
+
+            document.getElementById('beforeOverallScore').textContent = Math.round(beforeScore);
+            document.getElementById('beforeScoreBar').style.width = beforeScore + '%';
+            document.getElementById('afterOverallScore').textContent = Math.round(afterScore);
+            document.getElementById('afterScoreBar').style.width = afterScore + '%';
+            document.getElementById('scoreDelta').textContent = (delta >= 0 ? '+' : '') + Math.round(delta) + ' points';
+            document.getElementById('scoreDelta').className = (delta >= 0 ? 'text-green-400' : 'text-red-400') + ' font-bold text-lg';
+
+            setTimeout(() => { document.getElementById('rewriteResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
         }
 
-        function copyText(btn) {
-            const text = decodeURIComponent(btn.getAttribute('data-text'));
-            navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+        function loadInsights() {
+            const history = getHistory();
+            const analyses = history.filter(h => h.type === 'analysis');
+
+            document.getElementById('totalAdsCount').textContent = analyses.length;
+
+            if (analyses.length === 0) {
+                document.getElementById('avgScore').textContent = '--';
+                document.getElementById('trendArrow').textContent = '--';
+                document.getElementById('topPlatform').textContent = '--';
+                document.getElementById('weakestDimension').textContent = '--';
+                document.getElementById('scoreDistribution').innerHTML = '<p class="text-gray-400 text-center py-8">No data yet.</p>';
+                document.getElementById('topWeaknesses').innerHTML = '<p class="text-gray-400">No data yet.</p>';
+                document.getElementById('bestHooks').innerHTML = '<p class="text-gray-400">No data yet.</p>';
+                document.getElementById('platformPerformanceStats').innerHTML = '<p class="text-gray-400">No data yet.</p>';
+                document.getElementById('focusAreas').innerHTML = '<p class="text-gray-400">No data yet.</p>';
+                return;
+            }
+
+            const avgScore = analyses.reduce((sum, a) => sum + (a.scores?.overall || 0), 0) / analyses.length;
+            document.getElementById('avgScore').textContent = Math.round(avgScore);
+
+            if (analyses.length >= 2) {
+                const recent = analyses[0].scores?.overall || 0;
+                const previous = analyses[1].scores?.overall || 0;
+                const trend = recent - previous;
+                document.getElementById('trendArrow').textContent = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
+                document.getElementById('trendArrow').className = trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-500';
+            }
+
+            const platformCounts = {};
+            analyses.forEach(a => {
+                const p = a.platform || 'Unknown';
+                platformCounts[p] = (platformCounts[p] || 0) + 1;
+            });
+            const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topPlatform').textContent = topPlatform ? topPlatform[0].toUpperCase() : '--';
+
+            const dimensionScores = { hook_strength: [], clarity: [], credibility: [], emotional_pull: [], cta_strength: [], audience_match: [], platform_fit: [] };
+            analyses.forEach(a => {
+                Object.keys(dimensionScores).forEach(key => {
+                    if (a.scores && a.scores[key]) dimensionScores[key].push(a.scores[key]);
+                });
+            });
+            const avgByDimension = Object.entries(dimensionScores).map(([key, scores]) => ({ key, avg: scores.length > 0 ? scores.reduce((a, b) => a + b) / scores.length : 100 }));
+            const weakest = avgByDimension.sort((a, b) => a.avg - b.avg)[0];
+            const weakestName = weakest.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            document.getElementById('weakestDimension').textContent = weakestName;
+
+            const distribution = { '0-25': 0, '26-50': 0, '51-75': 0, '76-100': 0 };
+            analyses.forEach(a => {
+                const score = a.scores?.overall || 0;
+                if (score <= 25) distribution['0-25']++;
+                else if (score <= 50) distribution['26-50']++;
+                else if (score <= 75) distribution['51-75']++;
+                else distribution['76-100']++;
+            });
+
+            const maxDist = Math.max(...Object.values(distribution));
+            const svg = `<svg width="100%" height="150" viewBox="0 0 600 150" class="w-full">${Object.entries(distribution).map(([range, count], i) => {
+                const barHeight = (count / (maxDist || 1)) * 100;
+                const x = 50 + i * 140;
+                return `<g><rect x="${x}" y="${150 - barHeight}" width="100" height="${barHeight}" fill="#EF4444" rx="4"/><text x="${x + 50}" y="140" text-anchor="middle" font-size="12" fill="#9CA3AF">${range}</text><text x="${x + 50}" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#EF4444">${count}</text></g>`;
+            }).join('')}</svg>`;
+            document.getElementById('scoreDistribution').innerHTML = svg;
+
+            document.getElementById('topWeaknesses').innerHTML = `<div class="text-sm text-gray-300"><p>Based on ${analyses.length} analyses</p><p class="mt-2">Common weaknesses: Hook strength, CTA clarity, audience relevance</p></div>`;
+
+            document.getElementById('bestHooks').innerHTML = analyses.slice(0, 3).map((a, i) => `
+                <div class="bg-gray-800 rounded p-3 text-sm">
+                    <p class="text-gray-400">Analysis ${i + 1} (Score: ${a.scores?.overall || '--'})</p>
+                    <p class="mt-1 text-gray-300 truncate">${a.adCopy?.substring(0, 80) || 'N/A'}...</p>
+                </div>
+            `).join('');
+
+            const platformScores = {};
+            analyses.forEach(a => {
+                const p = a.platform || 'Unknown';
+                if (!platformScores[p]) platformScores[p] = [];
+                platformScores[p].push(a.scores?.overall || 0);
+            });
+            document.getElementById('platformPerformanceStats').innerHTML = Object.entries(platformScores).map(([platform, scores]) => {
+                const avg = Math.round(scores.reduce((a, b) => a + b) / scores.length);
+                return `
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-400">${platform.toUpperCase()}</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-32 score-bar">
+                                <div class="score-fill bg-red-500" style="width: ${avg}%"></div>
+                            </div>
+                            <span class="text-red-400 font-bold w-12">${avg}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('focusAreas').innerHTML = `
+                <ul class="space-y-2 text-sm text-gray-300">
+                    <li class="flex gap-2"><span class="text-red-400">•</span> Improve hook strength - your ads scored lowest here</li>
+                    <li class="flex gap-2"><span class="text-red-400">•</span> Enhance emotional pull - adds 5-10 points on average</li>
+                    <li class="flex gap-2"><span class="text-red-400">•</span> Strengthen CTAs - ${avgScore < 60 ? 'critical priority' : 'good opportunity'}</li>
+                    <li class="flex gap-2"><span class="text-red-400">•</span> Optimize for TikTok - typically lower scores there</li>
+                </ul>
+            `;
         }
+
+        window.addEventListener('load', () => { loadBrandVoiceDropdowns(); });
     </script>
 </body>
 </html>

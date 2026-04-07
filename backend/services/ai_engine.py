@@ -4,6 +4,7 @@ Three accuracy upgrades:
 1. Chain-of-thought scoring — model reasons line-by-line before scoring
 2. Full audience context injection — age, income, occupation, country shape every score
 3. Two-pass critic — a second call challenges inflated scores before returning
+4. Brand voice support — optional brand voice consistency scoring
 """
 
 import json
@@ -144,6 +145,54 @@ If the ad ignores these audience realities → audience_match ≤ 45.
 If the ad speaks their exact language and addresses their specific fears → audience_match ≥ 80.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
+
+def build_brand_voice_context(brand_voice: Dict[str, Any]) -> str:
+    """Build a brand voice context block for the prompt."""
+    brand_name = brand_voice.get("brand_name", "Unknown Brand")
+    tone_attributes = brand_voice.get("tone_attributes", [])
+    words_to_use = brand_voice.get("words_to_use", [])
+    words_to_avoid = brand_voice.get("words_to_avoid", [])
+    brand_guidelines = brand_voice.get("brand_guidelines", "")
+    example_ads = brand_voice.get("example_ads", [])
+
+    tone_lines = "\n".join(f"    • {t}" for t in tone_attributes) if tone_attributes else "    • Not specified"
+    use_lines = "\n".join(f"    • {w}" for w in words_to_use) if words_to_use else "    • Not specified"
+    avoid_lines = "\n".join(f"    • {w}" for w in words_to_avoid) if words_to_avoid else "    • Not specified"
+
+    example_section = ""
+    if example_ads:
+        example_section = "\n\nEXAMPLE ADS THAT MATCH THIS VOICE:\n"
+        for i, example in enumerate(example_ads[:3], 1):
+            example_section += f"  Example {i}:\n  \"\"\"{example}\"\"\"\n"
+
+    return f"""
+BRAND VOICE GUIDELINES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Brand: {brand_name}
+
+TONE ATTRIBUTES:
+{tone_lines}
+
+WORDS TO USE:
+{use_lines}
+
+WORDS TO AVOID:
+{avoid_lines}
+
+BRAND GUIDELINES:
+{brand_guidelines if brand_guidelines else "Not specified"}
+{example_section}
+
+BRAND VOICE SCORING:
+When evaluating this ad, assess how well it adheres to the brand voice:
+- Does it match the tone attributes?
+- Does it use the preferred vocabulary?
+- Does it avoid prohibited language?
+- Is it consistent with brand guidelines and examples?
+Include a "brand_voice_consistency" score (0-100) in your reasoning.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+
 def fingerprint_content(content: str) -> ContentFingerprint:
     cl = content.lower()
     emotional_words = [
@@ -201,7 +250,7 @@ def validate_scores(scores: Dict[str, int], fingerprint: ContentFingerprint) -> 
     return True, "Scores appear content-specific"
 
 class AIEngine:
-    """v7.0 — Chain-of-thought + audience injection + two-pass critic"""
+    """v7.0 — Chain-of-thought + audience injection + two-pass critic + brand voice support"""
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
@@ -347,9 +396,15 @@ class AIEngine:
         scores["overall"] = self._recalc_overall(scores)
         logger.info(f"Fallback scores generated: {scores}")
         return scores
+
     def _build_cot_prompt(self, content: str, fingerprint: ContentFingerprint, request_data: Dict[str, Any]) -> str:
         """Build chain-of-thought scoring prompt. This is long but essential for quality."""
         audience_block = build_audience_context(request_data)
+        brand_voice_block = ""
+
+        # Add brand voice context if provided
+        if "brand_voice" in request_data and request_data["brand_voice"]:
+            brand_voice_block = "\n" + build_brand_voice_context(request_data["brand_voice"])
 
         return f"""You are ADLYTICS v7.0 — the most rigorous ad scoring system for West African markets.
 
@@ -363,7 +418,7 @@ HAS SPECIFIC NUMBERS: {fingerprint.has_specific_numbers}
 HAS SOCIAL PROOF: {fingerprint.has_social_proof}
 HAS CTA: {fingerprint.has_cta}
 
-{audience_block}
+{audience_block}{brand_voice_block}
 
 AD CONTENT TO ANALYSE:
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -375,6 +430,7 @@ Read every sentence. For each, identify:
 a) What psychological trigger it activates (or fails to activate)
 b) Whether it would make this SPECIFIC audience stop scrolling, trust, or click
 c) Any weakness, vague claim, or missing proof element
+d) If brand voice is specified: how well this matches the brand's tone and style
 Only after completing this reasoning, move to Step 2.
 
 STEP 2 — SCORE EACH DIMENSION (0–100):
@@ -397,6 +453,7 @@ SCORING RULES:
 6. Every critical_weakness must include a precise_fix with EXACT rewrite
 7. ad_variants MUST be derived from ACTUAL ad content — not generic templates
 8. If the ad mentions a specific product → variants must reference it
+9. If brand voice is provided: ads deviating from brand guidelines should score lower overall
 
 OUTPUT STRICT JSON (no markdown, no preamble):
 {{
@@ -405,6 +462,7 @@ OUTPUT STRICT JSON (no markdown, no preamble):
         "hook_verdict": "Why the hook earns/loses its score",
         "credibility_verdict": "Specific proof elements found or missing",
         "audience_verdict": "How well it matches the audience profile",
+        "brand_voice_verdict": "How well it adheres to brand voice guidelines (if applicable)",
         "biggest_weakness": "The single change that would most improve performance"
     }},
     "content_verification": {{

@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException
@@ -39,6 +40,7 @@ async def analyze_ad(
     audience_income: str = Form("middle"),
     audience_occupation: Optional[str] = Form(None),
     media_file: Optional[UploadFile] = File(None),
+    brand_voice: Optional[str] = Form(None),
 ):
     """Analyze ad copy text for performance potential."""
     try:
@@ -80,6 +82,16 @@ async def analyze_ad(
                 }
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Error processing media file: {str(e)}")
+
+        # Parse and include brand_voice if provided
+        if brand_voice and brand_voice.strip():
+            try:
+                brand_voice_data = json.loads(brand_voice)
+                request_data["brand_voice"] = brand_voice_data
+                logger.info(f"Brand voice included: {brand_voice_data.get('brand_name', 'Unknown')}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid brand_voice JSON: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Invalid brand_voice JSON: {str(e)}")
 
         engine = AIEngine()
         analysis_result = await engine.analyze_ad(request_data)
