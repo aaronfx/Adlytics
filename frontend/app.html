@@ -951,7 +951,7 @@
                     <span class="logo">
                         <span class="logo-accent">ADLYTICS</span>
                     </span>
-                    <span class="version-badge">v10.0</span>
+                    <span class="version-badge">v10.2</span>
                 </div>
             </div>
             <div class="tabs-container">
@@ -1395,12 +1395,12 @@
                 }
             }, isVideoUpload ? 8000 : 2000);
 
-            // Safety timeout - auto-hide after 3 minutes for video, 90s for text
+            // Safety timeout - auto-hide after 5 minutes for video, 90s for text
             const safetyTimeout = setTimeout(() => {
                 hideLoading({ progressBar, statusMessage, buttonElement, originalText, statusInterval, safetyTimeout: null });
                 const errorTarget = isVideoUpload ? 'funnelError' : 'analysisError';
                 showError(errorTarget, 'Request timed out. The server may be busy — please try again.');
-            }, isVideoUpload ? 180000 : 90000);
+            }, isVideoUpload ? 300000 : 90000);
 
             return { progressBar, statusMessage, buttonElement, originalText, statusInterval, safetyTimeout };
         }
@@ -1715,9 +1715,9 @@
             try {
                 const formData = new FormData(form);
 
-                // Use AbortController for timeout (2.5 minutes for video uploads)
+                // Use AbortController for timeout (4 minutes for video uploads)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 150000);
+                const timeoutId = setTimeout(() => controller.abort(), 240000);
 
                 const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, {
                     method: 'POST',

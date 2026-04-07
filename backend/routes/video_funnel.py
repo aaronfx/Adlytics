@@ -32,7 +32,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 VISION_MODEL = "openai/gpt-4o"
 TEXT_MODEL = "openai/gpt-4o"
-REQUEST_TIMEOUT = 120.0
+REQUEST_TIMEOUT = 180.0
 
 AUDIENCE_PERSONAS = {
     "lagos_scroller": {
@@ -208,20 +208,23 @@ Return valid JSON:
 
         message_content = [{"type": "text", "text": prompt}]
 
+        # Limit frames to reduce payload size (max 3 per video)
         if ad_frames:
-            for frame in ad_frames:
+            selected_ad = ad_frames[:3]
+            for frame in selected_ad:
                 if "base64_image" in frame:
                     message_content.append({
-                        "type": "image",
-                        "source": {"type": "base64", "media_type": "image/png", "data": frame["base64_image"]}
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{frame['base64_image']}"}
                     })
 
         if landing_frames:
-            for frame in landing_frames:
+            selected_landing = landing_frames[:3]
+            for frame in selected_landing:
                 if "base64_image" in frame:
                     message_content.append({
-                        "type": "image",
-                        "source": {"type": "base64", "media_type": "image/png", "data": frame["base64_image"]}
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{frame['base64_image']}"}
                     })
 
         try:

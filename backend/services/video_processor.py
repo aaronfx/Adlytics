@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 SUPPORTED_FORMATS = {'mp4', 'mov', 'webm', 'mkv'}
-KEY_FRAME_TIMESTAMPS = [0, 1, 3, 5, 10, 15, 30]
+KEY_FRAME_TIMESTAMPS = [0, 3, 10]
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or os.getenv('OPENROUTER_API_KEY')
 WHISPER_API_URL = "https://api.openai.com/v1/audio/transcriptions"
@@ -99,28 +99,39 @@ class VideoProcessor:
             raise VideoProcessingError(f"Failed to extract audio: {str(e)}")
 
     def _transcribe_audio(self, audio_path: Path) -> str:
+        """Transcribe audio. Returns empty string on failure instead of crashing."""
         if not OPENAI_API_KEY:
-            raise VideoProcessingError("OpenAI API key not configured")
+            self.logger.warning("No OpenAI API key configured - skipping transcription")
+            return ""
 
         try:
+            # Check audio file size - skip if too large for Whisper (25MB limit)
+            audio_size = audio_path.stat().st_size
+            if audio_size > 25 * 1024 * 1024:
+                self.logger.warning(f"Audio file too large for Whisper ({audio_size / (1024*1024):.1f}MB), skipping transcription")
+                return ""
+
             with open(audio_path, 'rb') as audio_file:
                 files = {'file': ('audio.mp3', audio_file, 'audio/mpeg')}
                 data = {'model': 'whisper-1'}
                 headers = {'Authorization': f'Bearer {OPENAI_API_KEY}'}
 
-                with httpx.Client(timeout=300.0) as client:
+                with httpx.Client(timeout=120.0) as client:
                     response = client.post(WHISPER_API_URL, files=files, data=data, headers=headers)
                     if response.status_code != 200:
-                        raise VideoProcessingError(f"Whisper API error ({response.status_code}): {response.text}")
+                        self.logger.warning(f"Whisper API error ({response.status_code}): {response.text[:200]}")
+                        return ""
                     result = response.json()
                     transcript = result.get('text', '')
                     self.logger.info(f"Audio transcribed: {len(transcript)} characters")
                     return transcript
 
         except httpx.RequestError as e:
-            raise VideoProcessingError(f"Failed to connect to Whisper API: {str(e)}")
+            self.logger.warning(f"Whisper API connection failed (continuing without transcript): {str(e)}")
+            return ""
         except Exception as e:
-            raise VideoProcessingError(f"Transcription failed: {str(e)}")
+            self.logger.warning(f"Transcription failed (continuing without transcript): {str(e)}")
+            return ""
 
     def process_video(self, video_path: str) -> Dict:
         """Process video file: extract frames, audio, and transcription."""
