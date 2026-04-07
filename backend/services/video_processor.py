@@ -18,8 +18,12 @@ MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 SUPPORTED_FORMATS = {'mp4', 'mov', 'webm', 'mkv'}
 KEY_FRAME_TIMESTAMPS = [0, 3, 10]
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or os.getenv('OPENROUTER_API_KEY')
+# Only use a real OpenAI key for Whisper — OpenRouter keys won't work
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 WHISPER_API_URL = "https://api.openai.com/v1/audio/transcriptions"
+
+# Check if we actually have a valid OpenAI key (not OpenRouter)
+HAS_WHISPER = bool(OPENAI_API_KEY and not OPENAI_API_KEY.startswith('sk-or-'))
 
 
 class VideoProcessingError(Exception):
@@ -83,32 +87,33 @@ class VideoProcessor:
         except Exception as e:
             raise VideoProcessingError(f"Failed to extract frames: {str(e)}")
 
-
-    def _extract_audio(self, video_path: Path, temp_dir: Path) -> Path:
+    def _extract_audio(self, video_path: Path, temp_dir: Path) -> Optional[Path]:
         audio_path = temp_dir / "audio.mp3"
         try:
             cmd = ['ffmpeg', '-i', str(video_path), '-q:a', '0', '-map', 'a', '-y', str(audio_path)]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
-                raise VideoProcessingError(f"FFmpeg error: {result.stderr}")
+                self.logger.warning(f"Audio extraction failed: {result.stderr[:200]}")
+                return None
             self.logger.info(f"Audio extracted: {audio_path}")
             return audio_path
         except subprocess.TimeoutExpired:
-            raise VideoProcessingError("Audio extraction timed out")
+            self.logger.warning("Audio extraction timed out")
+            return None
         except Exception as e:
-            raise VideoProcessingError(f"Failed to extract audio: {str(e)}")
+            self.logger.warning(f"Failed to extract audio: {str(e)}")
+            return None
 
     def _transcribe_audio(self, audio_path: Path) -> str:
-        """Transcribe audio. Returns empty string on failure instead of crashing."""
-        if not OPENAI_API_KEY:
-            self.logger.warning("No OpenAI API key configured - skipping transcription")
+        """Transcribe audio using OpenAI Whisper. Returns empty string on failure."""
+        if not HAS_WHISPER:
+            self.logger.info("No valid OpenAI API key for Whisper — skipping transcription (frames-only analysis)")
             return ""
 
         try:
-            # Check audio file size - skip if too large for Whisper (25MB limit)
             audio_size = audio_path.stat().st_size
             if audio_size > 25 * 1024 * 1024:
-                self.logger.warning(f"Audio file too large for Whisper ({audio_size / (1024*1024):.1f}MB), skipping transcription")
+                self.logger.warning(f"Audio too large for Whisper ({audio_size / (1024*1024):.1f}MB), skipping")
                 return ""
 
             with open(audio_path, 'rb') as audio_file:
@@ -116,7 +121,7 @@ class VideoProcessor:
                 data = {'model': 'whisper-1'}
                 headers = {'Authorization': f'Bearer {OPENAI_API_KEY}'}
 
-                with httpx.Client(timeout=120.0) as client:
+                with httpx.Client(timeout=60.0) as client:
                     response = client.post(WHISPER_API_URL, files=files, data=data, headers=headers)
                     if response.status_code != 200:
                         self.logger.warning(f"Whisper API error ({response.status_code}): {response.text[:200]}")
@@ -126,15 +131,12 @@ class VideoProcessor:
                     self.logger.info(f"Audio transcribed: {len(transcript)} characters")
                     return transcript
 
-        except httpx.RequestError as e:
-            self.logger.warning(f"Whisper API connection failed (continuing without transcript): {str(e)}")
-            return ""
         except Exception as e:
-            self.logger.warning(f"Transcription failed (continuing without transcript): {str(e)}")
+            self.logger.warning(f"Transcription failed (continuing without): {str(e)}")
             return ""
 
     def process_video(self, video_path: str) -> Dict:
-        """Process video file: extract frames, audio, and transcription."""
+        """Process video file: extract frames and optionally transcribe audio."""
         video_path = Path(video_path)
         self._validate_video_file(video_path)
 
@@ -142,12 +144,19 @@ class VideoProcessor:
             temp_path = Path(temp_dir)
             try:
                 duration = self._get_video_duration(video_path)
+
                 self.logger.info("Extracting frames...")
                 frames = self._extract_frames(video_path, temp_path, duration)
-                self.logger.info("Extracting audio...")
-                audio_path = self._extract_audio(video_path, temp_path)
-                self.logger.info("Transcribing audio...")
-                transcript = self._transcribe_audio(audio_path)
+
+                transcript = ""
+                if HAS_WHISPER:
+                    self.logger.info("Extracting audio for transcription...")
+                    audio_path = self._extract_audio(video_path, temp_path)
+                    if audio_path:
+                        self.logger.info("Transcribing audio...")
+                        transcript = self._transcribe_audio(audio_path)
+                else:
+                    self.logger.info("Skipping audio extraction — no Whisper key available")
 
                 result = {
                     'frames': frames,
