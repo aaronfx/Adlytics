@@ -860,42 +860,106 @@
         /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
             .header-content {
-                padding: 0.75rem 1rem;
+                padding: 0.75rem 0.5rem;
             }
 
             .logo {
-                font-size: 1.25rem;
+                font-size: 1.15rem;
             }
 
             .version-badge {
-                font-size: 0.65rem;
-                padding: 0.15rem 0.5rem;
+                font-size: 0.6rem;
+                padding: 0.1rem 0.4rem;
             }
 
             .main-content {
-                padding: 0.75rem;
+                padding: 0.5rem;
             }
 
             .form-row {
                 grid-template-columns: 1fr;
-                gap: 1rem;
+                gap: 0.75rem;
             }
 
             .platform-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 0.75rem;
+                gap: 0.5rem;
             }
 
+            /* ===== MOBILE TABS - compact icon-first ===== */
             .tabs-container {
-                padding: 0 0.5rem;
+                padding: 0 0.25rem;
                 gap: 0;
+                justify-content: space-between;
+                -webkit-overflow-scrolling: touch;
             }
 
             .tab-button {
-                padding: 0.75rem 0.75rem;
-                font-size: 0.8rem;
-                gap: 0.35rem;
+                padding: 0.6rem 0.35rem;
+                font-size: 0.7rem;
+                gap: 0.15rem;
+                flex-direction: column;
+                align-items: center;
+                min-width: 0;
+                flex: 1;
+                border-bottom-width: 2px;
             }
+
+            .tab-icon {
+                font-size: 1.15rem;
+                line-height: 1;
+            }
+
+            .tab-label {
+                font-size: 0.65rem;
+                line-height: 1.1;
+            }
+
+            /* ===== MOBILE VARIANT CARDS ===== */
+            #rewriteModeGrid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.4rem !important; }
+            .rewrite-mode-btn { padding: 0.5rem 0.3rem; font-size: 0.72rem; }
+
+            .variant-card { padding: 0.9rem; }
+            .variant-card .comparison-col { font-size: 0.78rem; line-height: 1.5; }
+
+            /* Stack variant cards vertically */
+            #rewriteResults .card > div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            /* Stack side-by-side comparison inside variants */
+            .variant-card > div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Score breakdown inside variant: single column */
+            .variant-card div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* All inline 3-col grids → 1-col on mobile */
+            div[style*="grid-template-columns: repeat(3"] {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Predictive performance metrics wrap */
+            div[style*="grid-template-columns: repeat(3, 1fr)"] {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 0.4rem !important;
+            }
+            div[style*="grid-template-columns: repeat(3, 1fr)"] > div {
+                padding: 0.5rem !important;
+            }
+            div[style*="grid-template-columns: repeat(3, 1fr)"] > div > div:nth-child(2) {
+                font-size: 0.9rem !important;
+            }
+
+            /* Score ring smaller */
+            .score-ring { width: 46px; height: 46px; font-size: 0.95rem; }
+            .score-ring > div { width: 36px; height: 36px; }
 
             .gauge-svg {
                 width: 140px;
@@ -909,8 +973,8 @@
             .cta-card {
                 flex-direction: column;
                 text-align: center;
-                gap: 1rem;
-                padding: 1rem;
+                gap: 0.75rem;
+                padding: 0.75rem;
             }
 
             .cta-card .btn {
@@ -918,41 +982,37 @@
                 justify-content: center;
             }
 
-            #rewriteModeGrid { grid-template-columns: repeat(2, 1fr) !important; }
-            .variant-card .comparison-col { font-size: 0.8rem; }
-            #rewriteResults .card > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-
             .metric-value {
                 font-size: 1.5rem;
             }
 
             .metric-card {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .card {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .score-breakdown {
-                gap: 1rem;
+                gap: 0.75rem;
             }
 
             .accordion-content {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .accordion-trigger[aria-expanded="true"] + .accordion-content {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .chip-group {
-                gap: 0.5rem;
+                gap: 0.4rem;
             }
 
             .chip {
-                font-size: 0.8rem;
-                padding: 0.4rem 0.8rem;
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
             }
 
             .form-label {
@@ -966,17 +1026,32 @@
             }
 
             .header-content {
-                padding: 0.5rem 0.75rem;
+                padding: 0.4rem 0.5rem;
             }
 
             .tab-button {
-                padding: 0.6rem 0.5rem;
-                font-size: 0.75rem;
+                padding: 0.45rem 0.2rem;
+                gap: 0.1rem;
+            }
+
+            .tab-icon {
+                font-size: 1rem;
+            }
+
+            .tab-label {
+                font-size: 0.58rem;
             }
 
             .form-row {
                 grid-template-columns: 1fr;
             }
+
+            #rewriteModeGrid { grid-template-columns: repeat(2, 1fr) !important; }
+            .rewrite-mode-btn { padding: 0.4rem 0.2rem; font-size: 0.68rem; }
+            .element-btn { padding: 0.35rem 0.6rem; font-size: 0.72rem; }
+
+            .score-ring { width: 40px; height: 40px; font-size: 0.85rem; }
+            .score-ring > div { width: 32px; height: 32px; }
         }
 
         /* ===== UTILITIES ===== */
@@ -1006,19 +1081,19 @@
             </div>
             <div class="tabs-container">
                 <button class="tab-button active" data-tab="analysis" onclick="switchTab('analysis')">
-                    <span>📊</span> <span>Ad Analysis</span>
+                    <span class="tab-icon">📊</span> <span class="tab-label">Analysis</span>
                 </button>
                 <button class="tab-button" data-tab="funnel" onclick="switchTab('funnel')">
-                    <span>🎬</span> <span>Video Funnel</span>
+                    <span class="tab-icon">🎬</span> <span class="tab-label">Funnel</span>
                 </button>
                 <button class="tab-button" data-tab="rewrite" onclick="switchTab('rewrite')">
-                    <span>✨</span> <span>Smart Rewrite</span>
+                    <span class="tab-icon">✨</span> <span class="tab-label">Rewrite</span>
                 </button>
                 <button class="tab-button" data-tab="brand" onclick="switchTab('brand')">
-                    <span>🎨</span> <span>Brand Voice</span>
+                    <span class="tab-icon">🎨</span> <span class="tab-label">Brand</span>
                 </button>
                 <button class="tab-button" data-tab="insights" onclick="switchTab('insights')">
-                    <span>📈</span> <span>Insights</span>
+                    <span class="tab-icon">📈</span> <span class="tab-label">Insights</span>
                 </button>
             </div>
         </header>
