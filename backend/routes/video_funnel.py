@@ -19,6 +19,7 @@ import httpx
 
 from backend.services.video_processor import create_video_processor, VideoProcessingError
 from backend.services.ai_engine import build_brand_voice_context
+from backend.services.benchmarks import build_benchmark_context, build_element_scoring_context, get_benchmarks, calculate_percentile
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,11 @@ class VideoFunnelAnalyzer:
         if brand_voice:
             brand_voice_section = "\n" + build_brand_voice_context(brand_voice)
 
-        prompt = f"""You are an expert video funnel analyst for digital advertising. You are given actual frames extracted from real video ads. You MUST describe exactly what you see in the frames — the specific visuals, colors, text overlays, people, products, scenes, animations, branding elements, etc. NEVER give generic advice. Every observation and recommendation must reference specific elements visible in the frames.
+        benchmark_block = build_benchmark_context(platform, industry)
+        element_block = build_element_scoring_context()
+        benchmarks = get_benchmarks(platform, industry)
+
+        prompt = f"""You are ADLYTICS v8.0 — the most advanced video funnel analysis system, powered by real industry benchmark data. You are given actual frames extracted from real video ads. You MUST describe exactly what you see in the frames — the specific visuals, colors, text overlays, people, products, scenes, animations, branding elements, etc. NEVER give generic advice. Every observation and recommendation must reference specific elements visible in the frames.
 
 CONTEXT:
 - Platform: {platform}
@@ -125,6 +130,10 @@ CONTEXT:
 - Target Age: {audience_age}
 - Target Income Level: {audience_income}
 - CTA Destination: {cta_destination}
+
+{benchmark_block}
+
+{element_block}
 
 AUDIENCE PERSONAS:
 {json.dumps(AUDIENCE_PERSONAS, indent=2)}{brand_voice_section}
@@ -194,6 +203,27 @@ Return valid JSON:
       "youtube": {{"score": 0, "reason": ""}}
     }}
   }},
+  "element_breakdown": [
+    {{"element": "headline", "score": 0, "observation": "what you see in the text overlay or first spoken words", "impact": "high|medium|low", "fix": "specific improvement"}},
+    {{"element": "color_palette", "score": 0, "observation": "dominant colors, contrast, brand consistency", "impact": "medium", "fix": ""}},
+    {{"element": "logo_placement", "score": 0, "observation": "where and when logo appears", "impact": "low", "fix": ""}},
+    {{"element": "music_audio", "score": 0, "observation": "background music energy, trending sounds", "impact": "medium", "fix": ""}},
+    {{"element": "voiceover", "score": 0, "observation": "narration tone, pacing, persuasion", "impact": "high", "fix": ""}},
+    {{"element": "video_pacing", "score": 0, "observation": "cut frequency, transitions, energy", "impact": "medium", "fix": ""}},
+    {{"element": "cta_design", "score": 0, "observation": "CTA text, button, placement", "impact": "high", "fix": ""}},
+    {{"element": "text_overlays", "score": 0, "observation": "on-screen text readability", "impact": "medium", "fix": ""}},
+    {{"element": "social_proof", "score": 0, "observation": "testimonials, numbers, trust badges", "impact": "high", "fix": ""}}
+  ],
+  "predictive_performance": {{
+    "predicted_ctr": "X.X%-X.X%",
+    "predicted_cpa": "$XX-$XX",
+    "predicted_cvr": "X.X%-X.X%",
+    "percentile_rank": 0,
+    "benchmark_comparison": "above_average|average|below_average",
+    "confidence_level": "high|medium|low",
+    "key_driver": "The single element most responsible for predicted performance",
+    "vs_industry_avg": "Outperforms X% of {industry} ads on {platform}"
+  }},
   "recommendations": [{{"priority": "P1", "area": "", "issue": "Specific issue referencing actual video content", "fix": "Specific actionable fix", "expected_impact": "Estimated impact with reasoning"}}],
   "improved_scripts": {{"ad_video_script": "", "landing_video_script": "", "why_these_work": ""}}
 }}"""
@@ -243,7 +273,7 @@ Return valid JSON:
                         "model": VISION_MODEL,
                         "messages": [{"role": "user", "content": message_content}],
                         "temperature": 0.7,
-                        "max_tokens": 4000
+                        "max_tokens": 6000
                     }
                 )
 

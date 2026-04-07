@@ -16,6 +16,7 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
+from backend.services.benchmarks import build_benchmark_context, build_element_scoring_context, get_benchmarks, calculate_percentile, ELEMENT_WEIGHTS
 
 logger = logging.getLogger(__name__)
 
@@ -307,7 +308,7 @@ class AIEngine:
         # STAGE 1: Chain-of-thought scoring
         logger.info("Stage 1 — chain-of-thought analysis...")
         cot_prompt = self._build_cot_prompt(content, fp, request_data)
-        first_pass = await self._call_ai(cot_prompt, max_tokens=4500, temperature=0.25)
+        first_pass = await self._call_ai(cot_prompt, max_tokens=6000, temperature=0.25)
         first_scores = first_pass.get("scores", {})
         logger.info(f"Stage 1 scores: {first_scores}")
 
@@ -363,6 +364,12 @@ class AIEngine:
             dims_adjusted = ", ".join(a.get("dimension", "") for a in adjustments[:2])
             summary += f" (Critic adjusted {dims_adjusted} for accuracy.)"
 
+        # Calculate percentile from benchmarks
+        platform = request_data.get("platform", "facebook")
+        industry = request_data.get("industry", "finance")
+        percentile = calculate_percentile(final_scores.get("overall", 50), platform, industry)
+        benchmarks = get_benchmarks(platform, industry)
+
         analysis = {
             "scores": final_scores,
             "strategic_summary": summary,
@@ -372,6 +379,19 @@ class AIEngine:
             "ad_variants": first_pass.get("ad_variants", []),
             "winner_prediction": first_pass.get("winner_prediction", {}),
             "content_verification": first_pass.get("content_verification", {}),
+            "element_breakdown": first_pass.get("element_breakdown", []),
+            "predictive_performance": first_pass.get("predictive_performance", {}),
+            "industry_benchmarks": {
+                **(first_pass.get("industry_benchmarks", {})),
+                "avg_ctr": benchmarks["ctr"],
+                "avg_cpa": benchmarks["cpa"],
+                "avg_cvr": benchmarks["cvr"],
+                "avg_cpm": benchmarks["cpm"],
+                "avg_score": benchmarks["avg_score"],
+                "your_percentile": percentile,
+                "platform": platform,
+                "industry": industry,
+            },
         }
 
         logger.info(f"v7.0 complete — overall: {final_scores['overall']} "
@@ -406,7 +426,13 @@ class AIEngine:
         if "brand_voice" in request_data and request_data["brand_voice"]:
             brand_voice_block = "\n" + build_brand_voice_context(request_data["brand_voice"])
 
-        return f"""You are ADLYTICS v7.0 — the most rigorous ad scoring system for West African markets.
+        platform = request_data.get("platform", "facebook")
+        industry = request_data.get("industry", "finance")
+        benchmark_block = build_benchmark_context(platform, industry)
+        element_block = build_element_scoring_context()
+        benchmarks = get_benchmarks(platform, industry)
+
+        return f"""You are ADLYTICS v8.0 — the most rigorous ad scoring and prediction system, powered by real industry benchmark data.
 
 CONTENT FINGERPRINT: {fingerprint.content_hash}
 FIRST WORDS: "{fingerprint.first_20_chars}"
@@ -419,6 +445,10 @@ HAS SOCIAL PROOF: {fingerprint.has_social_proof}
 HAS CTA: {fingerprint.has_cta}
 
 {audience_block}{brand_voice_block}
+
+{benchmark_block}
+
+{element_block}
 
 AD CONTENT TO ANALYSE:
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -444,6 +474,24 @@ audience_match — Does it speak THIS specific audience's language? Generic = ma
 platform_fit — Is format and tone native to the platform?
 overall — Weighted: hook(25%) + credibility(20%) + emotional(20%) + cta(15%) + clarity(10%) + audience(5%) + platform(5%)
 
+STEP 3 — ELEMENT-LEVEL BREAKDOWN:
+Score each creative element individually based on the element criteria above.
+For text-only ads: score headline, text_overlays, cta_design, social_proof. Set visual-only elements to null.
+
+STEP 4 — PREDICTIVE PERFORMANCE:
+Using the industry benchmarks provided, predict realistic performance metrics:
+- predicted_ctr: estimated CTR range (e.g., "0.8%-1.2%")
+- predicted_cpa: estimated CPA range (e.g., "$35-$48")
+- predicted_cvr: estimated CVR range (e.g., "1.1%-1.6%")
+- percentile_rank: what percentage of {industry} ads on {platform} this ad would outperform (0-100)
+- benchmark_comparison: "above_average", "average", or "below_average"
+
+STEP 5 — GENERATE 5 A/B VARIANTS:
+Create 5 distinct rewrites of this ad, each with a different psychological angle.
+Each variant MUST be a complete, ready-to-use ad (not a fragment).
+Each MUST reference the specific product/service from the original ad.
+Rank them by predicted performance score.
+
 SCORING RULES:
 1. Scores MUST reflect the reasoning
 2. Diversity required: scores should span at least 30 points
@@ -452,8 +500,8 @@ SCORING RULES:
 5. No proof elements → credibility max 55
 6. Every critical_weakness must include a precise_fix with EXACT rewrite
 7. ad_variants MUST be derived from ACTUAL ad content — not generic templates
-8. If the ad mentions a specific product → variants must reference it
-9. If brand voice is provided: ads deviating from brand guidelines should score lower overall
+8. If brand voice is provided: ads deviating from brand guidelines should score lower overall
+9. Percentile rank MUST be calibrated against industry average score of {benchmarks['avg_score']}
 
 OUTPUT STRICT JSON (no markdown, no preamble):
 {{
@@ -474,6 +522,29 @@ OUTPUT STRICT JSON (no markdown, no preamble):
         "overall": 0, "hook_strength": 0, "clarity": 0, "credibility": 0,
         "emotional_pull": 0, "cta_strength": 0, "audience_match": 0, "platform_fit": 0
     }},
+    "element_breakdown": [
+        {{"element": "headline", "score": 0, "observation": "what you see", "impact": "high|medium|low", "fix": "specific improvement"}},
+        {{"element": "color_palette", "score": null, "observation": "N/A for text ads", "impact": "low", "fix": ""}},
+        {{"element": "cta_design", "score": 0, "observation": "what you see", "impact": "high", "fix": "specific improvement"}},
+        {{"element": "text_overlays", "score": 0, "observation": "what you see", "impact": "medium", "fix": "specific improvement"}},
+        {{"element": "social_proof", "score": 0, "observation": "what you see", "impact": "high", "fix": "specific improvement"}}
+    ],
+    "predictive_performance": {{
+        "predicted_ctr": "X.X%-X.X%",
+        "predicted_cpa": "$XX-$XX",
+        "predicted_cvr": "X.X%-X.X%",
+        "percentile_rank": 0,
+        "benchmark_comparison": "above_average|average|below_average",
+        "confidence_level": "high|medium|low",
+        "key_driver": "The single element most responsible for predicted performance"
+    }},
+    "industry_benchmarks": {{
+        "avg_ctr": {benchmarks['ctr']},
+        "avg_cpa": {benchmarks['cpa']},
+        "avg_cvr": {benchmarks['cvr']},
+        "avg_cpm": {benchmarks['cpm']},
+        "your_predicted_percentile": 0
+    }},
     "strategic_summary": "2-3 sentence summary specific to THIS content and audience.",
     "critical_weaknesses": [
         {{"issue": "...", "severity": "High|Medium|Low", "impact": "...", "precise_fix": "...", "expected_lift": "..."}}
@@ -484,20 +555,34 @@ OUTPUT STRICT JSON (no markdown, no preamble):
     ],
     "ad_variants": [
         {{
-            "id": 1, "angle": "Fear / Loss", "predicted_score": 0,
+            "id": 1, "angle": "Fear / Loss Aversion", "predicted_score": 0,
+            "predicted_ctr": "X.X%", "predicted_percentile": 0,
             "hook": "...", "body": "...", "cta": "...", "why_it_works": "..."
         }},
         {{
             "id": 2, "angle": "Curiosity Gap", "predicted_score": 0,
+            "predicted_ctr": "X.X%", "predicted_percentile": 0,
             "hook": "...", "body": "...", "cta": "...", "why_it_works": "..."
         }},
         {{
-            "id": 3, "angle": "Social Proof", "predicted_score": 0,
+            "id": 3, "angle": "Social Proof / Authority", "predicted_score": 0,
+            "predicted_ctr": "X.X%", "predicted_percentile": 0,
+            "hook": "...", "body": "...", "cta": "...", "why_it_works": "..."
+        }},
+        {{
+            "id": 4, "angle": "Benefit-Led / Value", "predicted_score": 0,
+            "predicted_ctr": "X.X%", "predicted_percentile": 0,
+            "hook": "...", "body": "...", "cta": "...", "why_it_works": "..."
+        }},
+        {{
+            "id": 5, "angle": "Urgency / Scarcity", "predicted_score": 0,
+            "predicted_ctr": "X.X%", "predicted_percentile": 0,
             "hook": "...", "body": "...", "cta": "...", "why_it_works": "..."
         }}
     ],
     "winner_prediction": {{
-        "winner_id": 1, "angle": "...", "confidence": "65%", "reasoning": "..."
+        "winner_id": 1, "angle": "...", "confidence": "65%", "reasoning": "...",
+        "predicted_lift_vs_original": "+XX%"
     }}
 }}"""
 

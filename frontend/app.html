@@ -1508,6 +1508,42 @@
 
             const gaugeHtml = createScoreGauge(analysis.scores.overall, 'Overall Score');
 
+            // ── Predictive Performance Banner ──
+            const pp = analysis.predictive_performance || {};
+            const ib = analysis.industry_benchmarks || {};
+            const pctRank = pp.percentile_rank || ib.your_percentile || 0;
+            const pctColor = pctRank >= 65 ? '#10B981' : pctRank >= 40 ? '#F59E0B' : '#EF4444';
+
+            let predictiveHtml = '';
+            if (pctRank > 0) {
+                predictiveHtml = `
+                    <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; margin-bottom: 1rem;">
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <div style="font-size: 2.5rem; font-weight: 800; color: ${pctColor};">${pctRank}<span style="font-size: 1rem;">th</span></div>
+                            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">Percentile — Outperforms ${pctRank}% of ${(ib.industry || formData.industry || '').replace('_', ' ')} ads on ${ib.platform || formData.platform || ''}</div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CTR</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_ctr || '—'}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">avg: ${ib.avg_ctr || '—'}%</div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CPA</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cpa || '—'}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">avg: $${ib.avg_cpa || '—'}</div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CVR</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cvr || '—'}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">avg: ${ib.avg_cvr || '—'}%</div>
+                            </div>
+                        </div>
+                        ${pp.key_driver ? `<div style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem; color: #818CF8;">Key driver: ${pp.key_driver}</div>` : ''}
+                    </div>`;
+            }
+
+            // ── Score Bars ──
             const scoreLabels = {
                 hook_strength: 'Hook Strength',
                 clarity: 'Clarity',
@@ -1538,6 +1574,36 @@
             }
             scoreBreakdownHtml += '</div>';
 
+            // ── Element Breakdown ──
+            let elementHtml = '';
+            const eb = analysis.element_breakdown;
+            if (eb && eb.length > 0) {
+                const elemIcons = { headline: '📝', color_palette: '🎨', logo_placement: '🏷️', music_audio: '🎵', voiceover: '🎙️', video_pacing: '⚡', cta_design: '🔘', text_overlays: '💬', social_proof: '⭐' };
+                const validElements = eb.filter(e => e.score !== null && e.score !== undefined);
+                if (validElements.length > 0) {
+                    elementHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">';
+                    validElements.forEach(e => {
+                        const sc = e.score || 0;
+                        const clr = sc >= 65 ? '#10B981' : sc >= 40 ? '#F59E0B' : '#EF4444';
+                        const impBadge = e.impact === 'high' ? '🔴 High Impact' : e.impact === 'medium' ? '🟡 Medium' : '🟢 Low';
+                        elementHtml += `
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${clr};">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                    <span style="font-weight: 600; font-size: 0.85rem;">${elemIcons[e.element] || '📊'} ${(e.element || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                    <span style="font-size: 1.1rem; font-weight: 700; color: ${clr};">${sc}</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">${e.observation || ''}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">${impBadge}</span>
+                                    ${e.fix ? `<span style="font-size: 0.75rem; color: #818CF8;">Fix: ${e.fix}</span>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                    elementHtml += '</div>';
+                }
+            }
+
+            // ── Platform Performance ──
             const platformMap = {
                 facebook: { name: 'Facebook', icon: '👥' },
                 instagram: { name: 'Instagram', icon: '📷' },
@@ -1547,7 +1613,6 @@
             };
 
             let platformHtml = '<div class="platform-grid">';
-            // Use platform_fit score as base, adjust for selected platform
             const basePlatformScore = analysis.scores.platform_fit || 60;
             const selectedPlatform = formData.platform;
 
@@ -1569,6 +1634,7 @@
             }
             platformHtml += '</div>';
 
+            // ── Details Accordion ──
             let detailsHtml = '<div class="accordion">';
 
             if (analysis.critical_weaknesses && analysis.critical_weaknesses.length > 0) {
@@ -1582,9 +1648,13 @@
                             <div style="display: flex; flex-direction: column; gap: 1rem;">
                                 ${analysis.critical_weaknesses.map(w => `
                                     <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px; border-left: 3px solid var(--accent-red);">
-                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ ${w.issue}</div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <span style="padding: 0.1rem 0.4rem; background: ${w.severity === 'High' ? '#EF4444' : w.severity === 'Medium' ? '#F59E0B' : '#6366F1'}; color: white; font-size: 0.65rem; font-weight: 700; border-radius: 3px;">${w.severity || 'Medium'}</span>
+                                            <span style="font-weight: 600;">⚠️ ${w.issue}</span>
+                                        </div>
                                         <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${w.impact}</div>
                                         <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">💡 ${w.precise_fix}</div>
+                                        ${w.expected_lift ? `<div style="font-size: 0.8rem; color: #10B981; margin-top: 0.5rem;">📈 Expected lift: ${w.expected_lift}</div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -1597,7 +1667,7 @@
                 detailsHtml += `
                     <div class="accordion-item">
                         <button class="accordion-trigger" aria-expanded="false" type="button">
-                            <span>Recommended Changes</span>
+                            <span>Quick Win — Change Right Now</span>
                             <span class="accordion-chevron">▼</span>
                         </button>
                         <div class="accordion-content">
@@ -1621,22 +1691,44 @@
                 `;
             }
 
+            // ── A/B Variants (enhanced with predictions) ──
             if (analysis.ad_variants && analysis.ad_variants.length > 0) {
+                const wp = analysis.winner_prediction || {};
                 detailsHtml += `
                     <div class="accordion-item">
                         <button class="accordion-trigger" aria-expanded="false" type="button">
-                            <span>Ad Variants</span>
+                            <span>A/B Variants (${analysis.ad_variants.length} generated)</span>
                             <span class="accordion-chevron">▼</span>
                         </button>
                         <div class="accordion-content">
+                            ${wp.winner_id ? `
+                            <div style="padding: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                                <span style="font-weight: 700; color: #10B981;">🏆 Predicted Winner: Variant ${wp.winner_id}</span>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);"> — ${wp.angle || ''} (${wp.confidence || ''} confidence)</span>
+                                ${wp.predicted_lift_vs_original ? `<div style="font-size: 0.85rem; color: #10B981; margin-top: 0.25rem;">Expected lift vs original: ${wp.predicted_lift_vs_original}</div>` : ''}
+                            </div>` : ''}
                             <div style="display: flex; flex-direction: column; gap: 1rem;">
-                                ${analysis.ad_variants.slice(0, 3).map((v, i) => `
-                                    <div style="padding: 1rem; background: rgba(99, 102, 241, 0.05); border-radius: 8px;">
-                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Variant ${i + 1}: ${v.angle}</div>
-                                        <div style="font-size: 0.9rem; margin-bottom: 0.75rem; line-height: 1.5;">${v.hook}</div>
-                                        <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">Predicted Score: ${v.predicted_score}</div>
-                                    </div>
-                                `).join('')}
+                                ${analysis.ad_variants.map((v, i) => {
+                                    const isWinner = wp.winner_id === v.id;
+                                    const varColor = isWinner ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.05)';
+                                    const borderClr = isWinner ? '#10B981' : 'transparent';
+                                    const vScore = v.predicted_score || 0;
+                                    const sClr = vScore >= 65 ? '#10B981' : vScore >= 40 ? '#F59E0B' : '#EF4444';
+                                    return `
+                                    <div style="padding: 1rem; background: ${varColor}; border: 1px solid ${borderClr}; border-radius: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                            <div style="font-weight: 600;">${isWinner ? '🏆 ' : ''}Variant ${v.id || i + 1}: ${v.angle}</div>
+                                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                                <span style="font-size: 1.1rem; font-weight: 700; color: ${sClr};">${vScore}</span>
+                                                ${v.predicted_ctr ? `<span style="font-size: 0.75rem; color: var(--text-muted);">CTR: ${v.predicted_ctr}</span>` : ''}
+                                            </div>
+                                        </div>
+                                        <div style="font-size: 0.85rem; margin-bottom: 0.5rem;"><strong>Hook:</strong> ${v.hook}</div>
+                                        ${v.body ? `<div style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary); line-height: 1.5;">${v.body}</div>` : ''}
+                                        ${v.cta ? `<div style="font-size: 0.85rem; margin-bottom: 0.5rem;"><strong>CTA:</strong> ${v.cta}</div>` : ''}
+                                        <div style="font-size: 0.8rem; color: #818CF8; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05);">💡 ${v.why_it_works}</div>
+                                    </div>`;
+                                }).join('')}
                             </div>
                         </div>
                     </div>
@@ -1648,9 +1740,12 @@
             container.innerHTML = `
                 <div class="card mb-4">
                     <div class="card-title">Score Breakdown</div>
+                    ${predictiveHtml}
                     ${gaugeHtml}
                     ${scoreBreakdownHtml}
                 </div>
+
+                ${elementHtml ? `<div class="card mb-4"><div class="card-title">Element-Level Breakdown</div>${elementHtml}</div>` : ''}
 
                 <div class="card mb-4">
                     <div class="card-title">Platform Performance</div>
@@ -2147,9 +2242,65 @@
                 scriptsHtml += '</div>';
             }
 
+            // ── Predictive Performance ──
+            const pp = analysis.predictive_performance || {};
+            let predictiveHtml = '';
+            if (pp.percentile_rank) {
+                const pctRank = pp.percentile_rank;
+                const pctColor = pctRank >= 65 ? '#10B981' : pctRank >= 40 ? '#F59E0B' : '#EF4444';
+                predictiveHtml = `
+                    <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; margin-bottom: 1rem;">
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <div style="font-size: 2.5rem; font-weight: 800; color: ${pctColor};">${pctRank}<span style="font-size: 1rem;">th</span></div>
+                            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">${pp.vs_industry_avg || 'Percentile rank vs industry average'}</div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CTR</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_ctr || '—'}</div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CPA</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cpa || '—'}</div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CVR</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cvr || '—'}</div>
+                            </div>
+                        </div>
+                        ${pp.key_driver ? `<div style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem; color: #818CF8;">Key driver: ${pp.key_driver}</div>` : ''}
+                    </div>`;
+            }
+
+            // ── Element Breakdown ──
+            let elementHtml = '';
+            const eb = analysis.element_breakdown;
+            if (eb && eb.length > 0) {
+                const elemIcons = { headline: '📝', color_palette: '🎨', logo_placement: '🏷️', music_audio: '🎵', voiceover: '🎙️', video_pacing: '⚡', cta_design: '🔘', text_overlays: '💬', social_proof: '⭐' };
+                const validElements = eb.filter(e => e.score !== null && e.score !== undefined && e.score > 0);
+                if (validElements.length > 0) {
+                    elementHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem;">';
+                    validElements.forEach(e => {
+                        const sc = e.score || 0;
+                        const clr = sc >= 65 ? '#10B981' : sc >= 40 ? '#F59E0B' : '#EF4444';
+                        elementHtml += `
+                            <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${clr};">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                                    <span style="font-weight: 600; font-size: 0.85rem;">${elemIcons[e.element] || '📊'} ${(e.element || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                    <span style="font-size: 1.1rem; font-weight: 700; color: ${clr};">${sc}</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">${e.observation || ''}</div>
+                                ${e.fix ? `<div style="font-size: 0.75rem; color: #818CF8; margin-top: 0.3rem;">Fix: ${e.fix}</div>` : ''}
+                            </div>`;
+                    });
+                    elementHtml += '</div>';
+                }
+            }
+
             container.innerHTML = `
                 <div class="card mb-4">
                     <div class="card-title">Funnel Performance</div>
+                    ${predictiveHtml}
                     ${gaugeHtml}
                 </div>
 
@@ -2157,6 +2308,8 @@
                     <div class="card-title">Video Analysis</div>
                     ${videoHtml}
                 </div>
+
+                ${elementHtml ? `<div class="card mb-4"><div class="card-title">Element-Level Breakdown</div>${elementHtml}</div>` : ''}
 
                 <div class="card mb-4">
                     <div class="card-title">Funnel Flow</div>
