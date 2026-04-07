@@ -116,7 +116,7 @@ class VideoFunnelAnalyzer:
         if brand_voice:
             brand_voice_section = "\n" + build_brand_voice_context(brand_voice)
 
-        prompt = f"""You are an expert video funnel analyst for digital advertising. Analyze this two-stage advertising funnel.
+        prompt = f"""You are an expert video funnel analyst for digital advertising. You are given actual frames extracted from real video ads. You MUST describe exactly what you see in the frames — the specific visuals, colors, text overlays, people, products, scenes, animations, branding elements, etc. NEVER give generic advice. Every observation and recommendation must reference specific elements visible in the frames.
 
 CONTEXT:
 - Platform: {platform}
@@ -132,45 +132,51 @@ AUDIENCE PERSONAS:
 TASK 1: ANALYZE THE AD VIDEO
 {self._format_video_section("AD VIDEO", ad_frames, ad_transcript)}
 
+CRITICAL: First describe EXACTLY what you see in each frame — text, colors, people, products, logos, backgrounds, animations, overlays. Then score based on what you actually see.
 Score these (0-100): hook_score, visual_quality, message_clarity, curiosity_gap, platform_fit
+Provide: visual_description (detailed description of what is visible in the frames), verdict (referencing specific elements you saw), strengths (specific to this video), weaknesses (specific to this video)
 
 TASK 2: ANALYZE THE LANDING PAGE VIDEO
 {self._format_video_section("LANDING PAGE VIDEO", landing_frames, landing_transcript)}
 
+Same approach — describe what you see first, then score.
 Score these (0-100): continuity_score, depth_score, trust_building, cta_effectiveness, conversion_psychology
+Provide: visual_description, verdict, strengths, weaknesses
 
 TASK 3: ANALYZE THE COMPLETE FUNNEL WITH DROP-OFF ANALYSIS
 The funnel has three stages: Hook (first 3 seconds) → Message (middle section) → CTA (end)
 Score: message_escalation (0-100), drop_off_risk (Low/Medium/High), audience_funnel_fit (0-100), predicted_conversion (level + range), overall_score (0-100)
+Provide: funnel_summary (2-3 sentences summarizing the overall funnel flow referencing specific visual elements from both videos)
 
 For drop_off_analysis, predict viewer retention at each stage:
 - stage_1_retention: % viewers retained through Hook (first 3 seconds)
 - stage_2_retention: % viewers retained through Message (middle)
 - stage_3_retention: % viewers retained through CTA (end)
 - primary_drop_point: Which stage has the biggest drop (Hook→Message or Message→CTA)
-- drop_reason: Why do viewers drop at that point
-- recovery_tactic: Specific change to recover those viewers
+- drop_reason: Specific reason referencing actual content seen in the frames
+- recovery_tactic: Specific change referencing actual content that needs to change
 
-TASK 4: Provide 3-5 prioritized recommendations with priority, area, issue, fix, expected_impact
+TASK 4: Provide 3-5 prioritized recommendations. Each MUST reference specific elements from the video frames (e.g. "The red text overlay at timestamp X is hard to read" or "The product shot lacks close-up detail"). Include: priority (P1/P2/P3), area, issue (specific to this video), fix (actionable and specific), expected_impact
 
-TASK 5: Provide improved versions of both scripts
+TASK 5: Provide improved versions of both scripts that address the specific issues found
 
 TASK 6: PLATFORM-SPECIFIC PREDICTIONS
-Based on the funnel analysis, predict how this funnel would perform on each platform with:
-- facebook: Score 0-100 and reasoning
+Based on the funnel analysis, predict performance on each platform referencing specific visual elements:
+- facebook: Score 0-100 and reasoning referencing specific video elements
 - tiktok: Score 0-100 and reasoning
 - instagram: Score 0-100 and reasoning
 - youtube: Score 0-100 and reasoning
 
 Return valid JSON:
 {{
-  "ad_video_analysis": {{"hook_score": 0, "visual_quality": 0, "message_clarity": 0, "curiosity_gap": 0, "platform_fit": 0, "verdict": "", "strengths": [], "weaknesses": []}},
-  "landing_video_analysis": {{"continuity_score": 0, "depth_score": 0, "trust_building": 0, "cta_effectiveness": 0, "conversion_psychology": 0, "verdict": "", "strengths": [], "weaknesses": []}},
+  "ad_video_analysis": {{"hook_score": 0, "visual_quality": 0, "message_clarity": 0, "curiosity_gap": 0, "platform_fit": 0, "visual_description": "Detailed description of what is visible in the ad video frames - colors, text, people, products, scenes, branding", "verdict": "Assessment referencing specific visual elements", "strengths": ["Specific strength referencing actual content"], "weaknesses": ["Specific weakness referencing actual content"]}},
+  "landing_video_analysis": {{"continuity_score": 0, "depth_score": 0, "trust_building": 0, "cta_effectiveness": 0, "conversion_psychology": 0, "visual_description": "Detailed description of landing video frames", "verdict": "Assessment referencing specific visual elements", "strengths": [], "weaknesses": []}},
   "funnel_analysis": {{
     "message_escalation": 0,
     "drop_off_risk": "",
     "drop_off_point": "",
     "audience_funnel_fit": 0,
+    "funnel_summary": "2-3 sentence summary of the funnel flow referencing specific visuals from both videos",
     "predicted_conversion": {{"level": "", "range": ""}},
     "overall_score": 0,
     "drop_off_analysis": {{
@@ -178,8 +184,8 @@ Return valid JSON:
       "stage_2_retention": 0,
       "stage_3_retention": 0,
       "primary_drop_point": "",
-      "drop_reason": "",
-      "recovery_tactic": ""
+      "drop_reason": "Specific reason referencing actual video content",
+      "recovery_tactic": "Specific tactic referencing what needs to change"
     }},
     "platform_predictions": {{
       "facebook": {{"score": 0, "reason": ""}},
@@ -188,7 +194,7 @@ Return valid JSON:
       "youtube": {{"score": 0, "reason": ""}}
     }}
   }},
-  "recommendations": [{{"priority": "", "area": "", "issue": "", "fix": "", "expected_impact": ""}}],
+  "recommendations": [{{"priority": "P1", "area": "", "issue": "Specific issue referencing actual video content", "fix": "Specific actionable fix", "expected_impact": "Estimated impact with reasoning"}}],
   "improved_scripts": {{"ad_video_script": "", "landing_video_script": "", "why_these_work": ""}}
 }}"""
         return prompt

@@ -1899,6 +1899,11 @@
 
             let funnelHtml = `
                 <div style="padding: 1.5rem; background: rgba(99, 102, 241, 0.05); border-radius: 12px;">
+                    ${fa.funnel_summary ? `
+                    <div style="padding: 1rem; background: rgba(99, 102, 241, 0.08); border-left: 3px solid #6366F1; border-radius: 4px; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.6;">
+                        <div style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #818CF8; margin-bottom: 0.5rem;">Funnel Summary</div>
+                        ${fa.funnel_summary}
+                    </div>` : ''}
                     <div style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 120px; text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                             <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Escalation</div>
@@ -1948,16 +1953,79 @@
             let recHtml = '';
             if (analysis.recommendations && analysis.recommendations.length > 0) {
                 recHtml = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
-                analysis.recommendations.forEach(rec => {
+                analysis.recommendations.forEach((rec, idx) => {
+                    const priorityColor = rec.priority === 'P1' ? '#EF4444' : rec.priority === 'P2' ? '#F59E0B' : '#6366F1';
+                    const borderColor = rec.priority === 'P1' ? 'var(--accent-red)' : rec.priority === 'P2' ? '#F59E0B' : '#6366F1';
                     recHtml += `
-                        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-left: 3px solid var(--accent-red); border-radius: 4px;">
-                            <div style="font-weight: 600; margin-bottom: 0.5rem;">🎯 ${rec.area}</div>
-                            <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${rec.issue}</div>
-                            <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">💡 ${rec.fix}</div>
+                        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-left: 3px solid ${borderColor}; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                <span style="padding: 0.15rem 0.5rem; background: ${priorityColor}; color: white; font-size: 0.7rem; font-weight: 700; border-radius: 4px; text-transform: uppercase;">${rec.priority || 'P' + (idx + 1)}</span>
+                                <span style="font-weight: 600;">🎯 ${rec.area}</span>
+                            </div>
+                            <div style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--text-secondary);">${rec.issue}</div>
+                            <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.5rem;">💡 <strong>Fix:</strong> ${rec.fix}</div>
+                            ${rec.expected_impact ? `<div style="font-size: 0.8rem; color: #10B981;">📈 Expected Impact: ${rec.expected_impact}</div>` : ''}
                         </div>
                     `;
                 });
                 recHtml += '</div>';
+            }
+
+            // Platform predictions
+            let platformHtml = '';
+            const pp = fa.platform_predictions;
+            if (pp) {
+                const platforms = [
+                    { key: 'facebook', icon: '📘', label: 'Facebook' },
+                    { key: 'tiktok', icon: '🎵', label: 'TikTok' },
+                    { key: 'instagram', icon: '📸', label: 'Instagram' },
+                    { key: 'youtube', icon: '▶️', label: 'YouTube' }
+                ];
+                platformHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">';
+                platforms.forEach(p => {
+                    const data = pp[p.key];
+                    if (data) {
+                        const sc = data.score || 0;
+                        const clr = sc >= 65 ? '#10B981' : sc >= 40 ? '#F59E0B' : '#EF4444';
+                        platformHtml += `
+                            <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600;">${p.icon} ${p.label}</span>
+                                    <span style="font-size: 1.25rem; font-weight: 700; color: ${clr};">${sc}</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">${data.reason || ''}</div>
+                            </div>`;
+                    }
+                });
+                platformHtml += '</div>';
+            }
+
+            // Improved scripts
+            let scriptsHtml = '';
+            const scripts = analysis.improved_scripts;
+            if (scripts && (scripts.ad_video_script || scripts.landing_video_script)) {
+                scriptsHtml = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+                if (scripts.ad_video_script) {
+                    scriptsHtml += `
+                        <div style="padding: 1rem; background: rgba(16, 185, 129, 0.05); border-left: 3px solid #10B981; border-radius: 4px;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; color: #10B981;">Improved Ad Script</div>
+                            <div style="font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">${scripts.ad_video_script}</div>
+                        </div>`;
+                }
+                if (scripts.landing_video_script) {
+                    scriptsHtml += `
+                        <div style="padding: 1rem; background: rgba(16, 185, 129, 0.05); border-left: 3px solid #10B981; border-radius: 4px;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; color: #10B981;">Improved Landing Script</div>
+                            <div style="font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">${scripts.landing_video_script}</div>
+                        </div>`;
+                }
+                if (scripts.why_these_work) {
+                    scriptsHtml += `
+                        <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 4px; font-size: 0.85rem;">
+                            <strong>Why these work:</strong> ${scripts.why_these_work}
+                        </div>`;
+                }
+                scriptsHtml += '</div>';
             }
 
             container.innerHTML = `
@@ -1976,21 +2044,88 @@
                     ${funnelHtml}
                 </div>
 
-                ${recHtml ? `<div class="card"><div class="card-title">Recommendations</div>${recHtml}</div>` : ''}
+                ${recHtml ? `<div class="card mb-4"><div class="card-title">Recommendations</div>${recHtml}</div>` : ''}
+
+                ${platformHtml ? `<div class="card mb-4"><div class="card-title">Platform Predictions</div>${platformHtml}</div>` : ''}
+
+                ${scriptsHtml ? `<div class="card"><div class="card-title">Improved Scripts</div>${scriptsHtml}</div>` : ''}
             `;
 
             setupAccordion();
         }
 
         function createVideoAnalysisContent(videoAnalysis) {
+            // Determine which scores to show based on what's present
+            const isAd = videoAnalysis.hook_score !== undefined;
+            const scores = isAd
+                ? [
+                    { label: 'Hook', value: videoAnalysis.hook_score },
+                    { label: 'Visual Quality', value: videoAnalysis.visual_quality },
+                    { label: 'Message Clarity', value: videoAnalysis.message_clarity },
+                    { label: 'Curiosity Gap', value: videoAnalysis.curiosity_gap },
+                    { label: 'Platform Fit', value: videoAnalysis.platform_fit }
+                ]
+                : [
+                    { label: 'Continuity', value: videoAnalysis.continuity_score },
+                    { label: 'Depth', value: videoAnalysis.depth_score },
+                    { label: 'Trust Building', value: videoAnalysis.trust_building },
+                    { label: 'CTA Effectiveness', value: videoAnalysis.cta_effectiveness },
+                    { label: 'Conversion Psychology', value: videoAnalysis.conversion_psychology }
+                ];
+
+            const scoreColor = (v) => !v ? '#888' : v >= 65 ? '#10B981' : v >= 40 ? '#F59E0B' : '#EF4444';
+
+            let scoreBarHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">';
+            scores.forEach(s => {
+                const val = s.value || 0;
+                scoreBarHtml += `
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: ${scoreColor(val)};">${val}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.25rem;">${s.label}</div>
+                    </div>`;
+            });
+            scoreBarHtml += '</div>';
+
+            const visualDesc = videoAnalysis.visual_description
+                ? `<div style="padding: 1rem; background: rgba(99, 102, 241, 0.08); border-left: 3px solid #6366F1; border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #818CF8; margin-bottom: 0.5rem;">What AI Detected in Your Video</div>
+                    <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">${videoAnalysis.visual_description}</div>
+                   </div>`
+                : '';
+
+            const verdict = videoAnalysis.verdict
+                ? `<div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem;">
+                    <strong>Verdict:</strong> ${videoAnalysis.verdict}
+                   </div>`
+                : '';
+
+            const formatList = (items, color, icon) => {
+                if (!items || !Array.isArray(items) || items.length === 0) return '';
+                return items.map(item => `<div style="padding: 0.5rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.85rem;">
+                    <span style="color: ${color}; flex-shrink: 0;">${icon}</span>
+                    <span>${item}</span>
+                </div>`).join('');
+            };
+
+            const strengthsHtml = formatList(videoAnalysis.strengths, '#10B981', '✓');
+            const weaknessesHtml = formatList(videoAnalysis.weaknesses, '#EF4444', '✗');
+
             return `
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <div><strong>Hook Score:</strong> ${videoAnalysis.hook_score || 'N/A'}</div>
-                    <div><strong>Visual Quality:</strong> ${videoAnalysis.visual_quality || 'N/A'}</div>
-                    <div><strong>Message Clarity:</strong> ${videoAnalysis.message_clarity || 'N/A'}</div>
-                    <div><strong>Verdict:</strong> ${videoAnalysis.verdict || 'Analyze more'}</div>
-                    ${videoAnalysis.strengths ? `<div><strong>Strengths:</strong> ${videoAnalysis.strengths}</div>` : ''}
-                    ${videoAnalysis.weaknesses ? `<div><strong>Weaknesses:</strong> ${videoAnalysis.weaknesses}</div>` : ''}
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    ${visualDesc}
+                    ${scoreBarHtml}
+                    ${verdict}
+                    ${strengthsHtml || weaknessesHtml ? `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        ${strengthsHtml ? `<div style="background: rgba(16, 185, 129, 0.05); border-radius: 8px; padding: 0.75rem;">
+                            <div style="font-weight: 600; font-size: 0.8rem; color: #10B981; text-transform: uppercase; margin-bottom: 0.5rem;">Strengths</div>
+                            ${strengthsHtml}
+                        </div>` : ''}
+                        ${weaknessesHtml ? `<div style="background: rgba(239, 68, 68, 0.05); border-radius: 8px; padding: 0.75rem;">
+                            <div style="font-weight: 600; font-size: 0.8rem; color: #EF4444; text-transform: uppercase; margin-bottom: 0.5rem;">Weaknesses</div>
+                            ${weaknessesHtml}
+                        </div>` : ''}
+                    </div>` : ''}
                 </div>
             `;
         }
