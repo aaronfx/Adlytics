@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 SUPPORTED_FORMATS = {'mp4', 'mov', 'webm', 'mkv'}
-KEY_FRAME_TIMESTAMPS = [0, 3, 10]
+KEY_FRAME_TIMESTAMPS = [1, 8]
 
 # Only use a real OpenAI key for Whisper — OpenRouter keys won't work
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -68,20 +68,29 @@ class VideoProcessor:
 
         try:
             for timestamp in valid_timestamps:
-                frame_path = temp_dir / f"frame_{timestamp:.2f}s.png"
-                cmd = ['ffmpeg', '-i', str(video_path), '-ss', str(timestamp),
-                       '-vframes', '1', '-q:v', '2', '-y', str(frame_path)]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                # Extract as small JPEG (512px wide, quality 5) to save memory
+                frame_path = temp_dir / f"frame_{timestamp:.0f}s.jpg"
+                cmd = [
+                    'ffmpeg', '-i', str(video_path), '-ss', str(timestamp),
+                    '-vframes', '1',
+                    '-vf', 'scale=512:-1',  # Resize to 512px width
+                    '-q:v', '5',  # JPEG quality (2=best, 31=worst)
+                    '-y', str(frame_path)
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
 
                 if result.returncode != 0:
-                    self.logger.warning(f"Failed to extract frame at {timestamp}s: {result.stderr}")
+                    self.logger.warning(f"Failed to extract frame at {timestamp}s")
                     continue
 
                 with open(frame_path, 'rb') as f:
                     frame_base64 = base64.b64encode(f.read()).decode('utf-8')
 
+                # Delete frame file immediately to free disk/memory
+                frame_path.unlink(missing_ok=True)
+
                 frames.append({'timestamp': timestamp, 'base64_image': frame_base64})
-                self.logger.info(f"Extracted frame at {timestamp}s")
+                self.logger.info(f"Extracted frame at {timestamp}s ({len(frame_base64) // 1024}KB)")
 
             return frames
         except Exception as e:

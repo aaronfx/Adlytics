@@ -208,23 +208,21 @@ Return valid JSON:
 
         message_content = [{"type": "text", "text": prompt}]
 
-        # Limit frames to reduce payload size (max 3 per video)
+        # Limit to 2 frames per video to stay within memory/token limits
         if ad_frames:
-            selected_ad = ad_frames[:3]
-            for frame in selected_ad:
+            for frame in ad_frames[:2]:
                 if "base64_image" in frame:
                     message_content.append({
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{frame['base64_image']}"}
+                        "image_url": {"url": f"data:image/jpeg;base64,{frame['base64_image']}"}
                     })
 
         if landing_frames:
-            selected_landing = landing_frames[:3]
-            for frame in selected_landing:
+            for frame in landing_frames[:2]:
                 if "base64_image" in frame:
                     message_content.append({
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{frame['base64_image']}"}
+                        "image_url": {"url": f"data:image/jpeg;base64,{frame['base64_image']}"}
                     })
 
         try:
