@@ -1768,6 +1768,105 @@
             });
         }
 
+        /**
+         * Extract audio from a video file using Web Audio API (browser-side).
+         * Returns base64 WAV string (no data: prefix), downsampled to 16kHz mono.
+         * Returns empty string if extraction fails or no audio track exists.
+         */
+        async function extractAudioFromVideo(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+
+                let audioBuffer;
+                try {
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+                } catch (decodeErr) {
+                    console.warn('No audio track in video or decode failed:', decodeErr);
+                    audioContext.close();
+                    return '';
+                }
+
+                // Downsample to 16kHz mono for smallest possible WAV
+                const targetRate = 16000;
+                const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * targetRate), targetRate);
+                const source = offlineCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(offlineCtx.destination);
+                source.start(0);
+                const renderedBuffer = await offlineCtx.startRendering();
+
+                // Encode AudioBuffer to WAV format
+                const pcmData = renderedBuffer.getChannelData(0);
+                const wavBuffer = encodeWAV(pcmData, targetRate);
+                const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+
+                // Limit to ~2MB to keep request reasonable (roughly 60s of 16kHz mono)
+                if (wavBlob.size > 2 * 1024 * 1024) {
+                    console.warn('Audio too large, truncating to first 60s');
+                    const truncatedSamples = pcmData.slice(0, targetRate * 60);
+                    const truncWav = encodeWAV(truncatedSamples, targetRate);
+                    const truncBlob = new Blob([truncWav], { type: 'audio/wav' });
+                    const base64 = await blobToBase64(truncBlob);
+                    audioContext.close();
+                    return base64;
+                }
+
+                const base64 = await blobToBase64(wavBlob);
+                audioContext.close();
+                return base64;
+            } catch (err) {
+                console.warn('Audio extraction failed:', err);
+                return '';
+            }
+        }
+
+        function encodeWAV(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            // WAV header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);           // subchunk1 size
+            view.setUint16(20, 1, true);             // PCM format
+            view.setUint16(22, 1, true);             // mono
+            view.setUint32(24, sampleRate, true);    // sample rate
+            view.setUint32(28, sampleRate * 2, true); // byte rate
+            view.setUint16(32, 2, true);             // block align
+            view.setUint16(34, 16, true);            // bits per sample
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            // Convert float32 to int16
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++) {
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                offset += 2;
+            }
+            return buffer;
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
         async function handleFunnelSubmit(e) {
             e.preventDefault();
             clearError('funnelError');
@@ -1786,8 +1885,10 @@
                     return;
                 }
 
-                // Extract frames in browser (no server-side FFmpeg needed)
+                // Extract frames AND audio in browser (no server-side FFmpeg needed)
                 const statusTextEl = document.getElementById('statusText');
+
+                // Step 1: Extract frames from ad video
                 if (statusTextEl) statusTextEl.textContent = 'Extracting frames from ad video...';
                 const adFrames = await extractFramesFromVideo(adVideoInput.files[0]);
                 if (adFrames.length === 0) {
@@ -1796,19 +1897,37 @@
                     return;
                 }
 
-                let landingFrames = null;
-                if (landingVideoInput.files && landingVideoInput.files[0]) {
-                        if (statusTextEl) statusTextEl.textContent = 'Extracting frames from landing video...';
-                    landingFrames = await extractFramesFromVideo(landingVideoInput.files[0]);
+                // Step 2: Extract audio from ad video
+                if (statusTextEl) statusTextEl.textContent = 'Extracting audio from ad video...';
+                const adAudio = await extractAudioFromVideo(adVideoInput.files[0]);
+                if (adAudio) {
+                    console.log(`Ad audio extracted: ${(adAudio.length / 1024).toFixed(0)}KB base64`);
                 }
 
-                if (statusTextEl) statusTextEl.textContent = 'Analyzing video funnel with AI...';
+                // Step 3: Process landing video if provided
+                let landingFrames = null;
+                let landingAudio = '';
+                if (landingVideoInput.files && landingVideoInput.files[0]) {
+                    if (statusTextEl) statusTextEl.textContent = 'Extracting frames from landing video...';
+                    landingFrames = await extractFramesFromVideo(landingVideoInput.files[0]);
 
-                // Build FormData with extracted frames (NOT full video files)
+                    if (statusTextEl) statusTextEl.textContent = 'Extracting audio from landing video...';
+                    landingAudio = await extractAudioFromVideo(landingVideoInput.files[0]);
+                }
+
+                if (statusTextEl) statusTextEl.textContent = adAudio ? 'Transcribing audio & analyzing with AI...' : 'Analyzing video funnel with AI...';
+
+                // Build FormData with frames + audio (NOT full video files)
                 const formData = new FormData();
                 formData.append('ad_frames_json', JSON.stringify(adFrames));
                 if (landingFrames && landingFrames.length > 0) {
                     formData.append('landing_frames_json', JSON.stringify(landingFrames));
+                }
+                if (adAudio) {
+                    formData.append('ad_audio_base64', adAudio);
+                }
+                if (landingAudio) {
+                    formData.append('landing_audio_base64', landingAudio);
                 }
                 formData.append('platform', form.querySelector('[name="platform"]').value);
                 formData.append('industry', form.querySelector('[name="industry"]').value);
@@ -1817,9 +1936,9 @@
                 formData.append('audience_income', form.querySelector('[name="audience_income"]').value);
                 formData.append('cta_destination', form.querySelector('[name="cta_destination"]').value);
 
-                // Use AbortController for timeout (3 minutes — no video upload, just AI analysis)
+                // Use AbortController for timeout (4 minutes — includes audio transcription + AI analysis)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 180000);
+                const timeoutId = setTimeout(() => controller.abort(), 240000);
 
                 const response = await fetch(`${API_BASE}/api/video-funnel/analyze-frames`, {
                     method: 'POST',
@@ -2093,6 +2212,13 @@
                    </div>`
                 : '';
 
+            const audioDesc = videoAnalysis.audio_analysis
+                ? `<div style="padding: 1rem; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #10B981; margin-bottom: 0.5rem;">Audio & Voiceover Analysis</div>
+                    <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">${videoAnalysis.audio_analysis}</div>
+                   </div>`
+                : '';
+
             const verdict = videoAnalysis.verdict
                 ? `<div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem;">
                     <strong>Verdict:</strong> ${videoAnalysis.verdict}
@@ -2113,6 +2239,7 @@
             return `
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                     ${visualDesc}
+                    ${audioDesc}
                     ${scoreBarHtml}
                     ${verdict}
                     ${strengthsHtml || weaknessesHtml ? `

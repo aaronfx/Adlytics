@@ -101,13 +101,13 @@ class VideoFunnelAnalyzer:
         """Format video data for the prompt"""
         section = f"\n{label}:"
         if frames:
-            section += f"\n- {len(frames)} key frames extracted"
+            section += f"\n- {len(frames)} key frames extracted (analyze the visual content in detail)"
         else:
             section += "\n- No video provided"
         if transcript:
-            section += f'\n- Transcript:\n"""\n{transcript}\n"""'
+            section += f'\n- Audio Transcript (spoken words from the video):\n"""\n{transcript}\n"""\nIMPORTANT: Analyze the voiceover/speech content — assess the hook wording, persuasion techniques, emotional tone, clarity of message, CTA strength, and how the spoken words complement the visuals.'
         else:
-            section += "\n- No transcript available"
+            section += "\n- No audio transcript available (analyze based on visuals only)"
         return section
 
     def _build_vision_prompt(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram", brand_voice=None):
@@ -169,8 +169,8 @@ Based on the funnel analysis, predict performance on each platform referencing s
 
 Return valid JSON:
 {{
-  "ad_video_analysis": {{"hook_score": 0, "visual_quality": 0, "message_clarity": 0, "curiosity_gap": 0, "platform_fit": 0, "visual_description": "Detailed description of what is visible in the ad video frames - colors, text, people, products, scenes, branding", "verdict": "Assessment referencing specific visual elements", "strengths": ["Specific strength referencing actual content"], "weaknesses": ["Specific weakness referencing actual content"]}},
-  "landing_video_analysis": {{"continuity_score": 0, "depth_score": 0, "trust_building": 0, "cta_effectiveness": 0, "conversion_psychology": 0, "visual_description": "Detailed description of landing video frames", "verdict": "Assessment referencing specific visual elements", "strengths": [], "weaknesses": []}},
+  "ad_video_analysis": {{"hook_score": 0, "visual_quality": 0, "message_clarity": 0, "curiosity_gap": 0, "platform_fit": 0, "visual_description": "Detailed description of what is visible in the ad video frames - colors, text, people, products, scenes, branding", "audio_analysis": "Analysis of voiceover/speech content if transcript was provided - tone, persuasion, clarity. Empty string if no audio.", "verdict": "Assessment referencing specific visual AND audio elements", "strengths": ["Specific strength referencing actual content"], "weaknesses": ["Specific weakness referencing actual content"]}},
+  "landing_video_analysis": {{"continuity_score": 0, "depth_score": 0, "trust_building": 0, "cta_effectiveness": 0, "conversion_psychology": 0, "visual_description": "Detailed description of landing video frames", "audio_analysis": "Analysis of voiceover/speech if available", "verdict": "Assessment referencing specific visual AND audio elements", "strengths": [], "weaknesses": []}},
   "funnel_analysis": {{
     "message_escalation": 0,
     "drop_off_risk": "",
@@ -359,10 +359,67 @@ async def analyze_video_funnel(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+async def transcribe_audio_via_openrouter(audio_base64: str, label: str = "video") -> str:
+    """Transcribe audio using OpenRouter's audio-capable model.
+    Sends base64 WAV audio to GPT-4o-audio-preview for transcription.
+    Falls back gracefully if transcription fails."""
+    if not OPENROUTER_API_KEY or not audio_base64:
+        return ""
+
+    try:
+        logger.info(f"Transcribing {label} audio via OpenRouter ({len(audio_base64) // 1024}KB base64)")
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{OPENROUTER_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "openai/gpt-4o-audio-preview",
+                    "messages": [{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Transcribe this audio exactly. Return ONLY the spoken words, nothing else. If there is no speech, return 'NO_SPEECH'."},
+                            {
+                                "type": "input_audio",
+                                "input_audio": {
+                                    "data": audio_base64,
+                                    "format": "wav"
+                                }
+                            }
+                        ]
+                    }],
+                    "temperature": 0.0,
+                    "max_tokens": 1000
+                }
+            )
+
+            if response.status_code != 200:
+                logger.warning(f"Audio transcription failed ({response.status_code}): {response.text[:200]}")
+                return ""
+
+            result = response.json()
+            transcript = result.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+
+            if transcript and transcript != "NO_SPEECH":
+                logger.info(f"Transcribed {label} audio: {len(transcript)} chars")
+                return transcript
+            else:
+                logger.info(f"No speech detected in {label} audio")
+                return ""
+
+    except Exception as e:
+        logger.warning(f"Audio transcription error for {label}: {str(e)}")
+        return ""
+
+
 @router.post("/analyze-frames")
 async def analyze_video_funnel_frames(
     ad_frames_json: str = Form(..., description="JSON array of base64 JPEG frames from ad video"),
     landing_frames_json: Optional[str] = Form(None, description="JSON array of base64 JPEG frames from landing video"),
+    ad_audio_base64: Optional[str] = Form(None, description="Base64 WAV audio extracted from ad video"),
+    landing_audio_base64: Optional[str] = Form(None, description="Base64 WAV audio extracted from landing video"),
     platform: str = Form("facebook"),
     industry: str = Form("finance"),
     audience_country: str = Form("nigeria"),
@@ -371,7 +428,7 @@ async def analyze_video_funnel_frames(
     cta_destination: str = Form("telegram"),
     brand_voice: Optional[str] = Form(None)
 ) -> Dict[str, Any]:
-    """Analyze video funnel using pre-extracted frames (extracted in browser via Canvas API)."""
+    """Analyze video funnel using pre-extracted frames and optional audio (extracted in browser)."""
     logger.info(f"Starting frames-based funnel analysis - Platform: {platform}, Industry: {industry}")
 
     analyzer = VideoFunnelAnalyzer()
@@ -392,16 +449,30 @@ async def analyze_video_funnel_frames(
             if landing_frames:
                 landing_frame_data = [{"base64_image": f} for f in landing_frames[:2]]
 
+        # Transcribe audio if provided (runs in parallel)
+        ad_transcript = ""
+        landing_transcript = ""
+        if ad_audio_base64:
+            ad_transcript = await transcribe_audio_via_openrouter(ad_audio_base64, "ad")
+        if landing_audio_base64:
+            landing_transcript = await transcribe_audio_via_openrouter(landing_audio_base64, "landing")
+
+        if ad_transcript:
+            logger.info(f"Ad transcript: {ad_transcript[:100]}...")
+        if landing_transcript:
+            logger.info(f"Landing transcript: {landing_transcript[:100]}...")
+
         if brand_voice:
             try:
                 parsed_brand_voice = json.loads(brand_voice)
             except json.JSONDecodeError:
                 parsed_brand_voice = None
 
-        logger.info(f"Analyzing {len(ad_frame_data)} ad frames, {len(landing_frame_data) if landing_frame_data else 0} landing frames")
+        has_audio = bool(ad_transcript or landing_transcript)
+        logger.info(f"Analyzing {len(ad_frame_data)} ad frames, {len(landing_frame_data) if landing_frame_data else 0} landing frames, audio: {has_audio}")
         analysis = await analyzer.analyze_with_vision(
-            ad_frames=ad_frame_data, ad_transcript=None,
-            landing_frames=landing_frame_data, landing_transcript=None,
+            ad_frames=ad_frame_data, ad_transcript=ad_transcript or None,
+            landing_frames=landing_frame_data, landing_transcript=landing_transcript or None,
             platform=platform, industry=industry, audience_country=audience_country,
             audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination,
             brand_voice=parsed_brand_voice
@@ -415,7 +486,8 @@ async def analyze_video_funnel_frames(
                 "platform": platform, "industry": industry,
                 "audience": {"country": audience_country, "age_range": audience_age, "income_level": audience_income},
                 "cta_destination": cta_destination,
-                "analysis_type": "frames-only"
+                "analysis_type": "frames-with-audio" if has_audio else "frames-only",
+                "has_transcript": has_audio
             }
         }
 
