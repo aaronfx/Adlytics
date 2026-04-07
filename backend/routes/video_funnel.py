@@ -278,24 +278,37 @@ Return valid JSON:
                 )
 
                 if response.status_code != 200:
-                    error_detail = response.text
+                    error_detail = response.text[:500]
                     self.logger.error(f"OpenRouter API error: {response.status_code} - {error_detail}")
-                    raise HTTPException(status_code=500, detail=f"AI analysis failed: {error_detail}")
+                    raise HTTPException(status_code=500, detail=f"AI analysis failed (HTTP {response.status_code}): {error_detail}")
 
                 result = response.json()
                 content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                finish_reason = result.get("choices", [{}])[0].get("finish_reason", "unknown")
+                self.logger.info(f"OpenRouter response received: {len(content)} chars, finish_reason={finish_reason}")
 
                 try:
+                    if not content or not content.strip():
+                        self.logger.error("OpenRouter returned empty content")
+                        raise ValueError("AI returned empty response — model may have timed out")
+
+                    # Strip markdown code blocks if present
+                    import re
+                    code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+                    if code_block_match:
+                        content = code_block_match.group(1)
+
                     json_start = content.find("{")
                     json_end = content.rfind("}") + 1
                     if json_start >= 0 and json_end > json_start:
                         json_str = content[json_start:json_end]
                         analysis = json.loads(json_str)
                     else:
-                        raise ValueError("No JSON found in response")
+                        self.logger.error(f"No JSON braces found in response. First 500 chars: {content[:500]}")
+                        raise ValueError("No JSON found in response — AI may have returned plain text")
                 except json.JSONDecodeError as e:
-                    self.logger.error(f"Failed to parse AI response as JSON: {str(e)}")
-                    raise HTTPException(status_code=500, detail="Failed to parse AI analysis response")
+                    self.logger.error(f"Failed to parse AI response as JSON: {str(e)}\nFirst 500 chars: {content[:500]}")
+                    raise HTTPException(status_code=500, detail=f"Failed to parse AI analysis response: {str(e)}")
 
                 return analysis
 
