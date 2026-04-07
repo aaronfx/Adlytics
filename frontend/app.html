@@ -1372,9 +1372,7 @@
 
             const statuses = isVideoUpload
                 ? [
-                    'Uploading videos...',
-                    'Extracting frames...',
-                    'Transcribing audio...',
+                    'Processing video frames...',
                     'AI analyzing content...',
                     'Evaluating funnel flow...',
                     'Generating insights...',
@@ -1705,6 +1703,71 @@
         }
 
         // ===== VIDEO FUNNEL =====
+
+        /**
+         * Extract frames from a video file using Canvas API (browser-side).
+         * Returns array of base64 JPEG strings (no data: prefix).
+         */
+        function extractFramesFromVideo(file, timestamps = [1, 8]) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.muted = true;
+                video.preload = 'auto';
+                video.playsInline = true;
+
+                const url = URL.createObjectURL(file);
+                video.src = url;
+
+                const frames = [];
+                let currentIdx = 0;
+
+                video.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load video. Ensure the file is a valid video.'));
+                };
+
+                video.onloadedmetadata = () => {
+                    const duration = video.duration;
+                    // Filter timestamps that are within video duration
+                    const validTs = timestamps.filter(t => t <= duration);
+                    if (validTs.length === 0) validTs.push(0); // fallback to first frame
+
+                    function seekNext() {
+                        if (currentIdx >= validTs.length) {
+                            URL.revokeObjectURL(url);
+                            resolve(frames);
+                            return;
+                        }
+                        video.currentTime = validTs[currentIdx];
+                    }
+
+                    video.onseeked = () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            // Scale to 512px wide, maintain aspect ratio
+                            const scale = 512 / video.videoWidth;
+                            canvas.width = 512;
+                            canvas.height = Math.round(video.videoHeight * scale);
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            // Convert to JPEG at low quality (0.5) for small size
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                            // Strip the "data:image/jpeg;base64," prefix
+                            const base64 = dataUrl.split(',')[1];
+                            frames.push(base64);
+                            currentIdx++;
+                            seekNext();
+                        } catch (err) {
+                            URL.revokeObjectURL(url);
+                            reject(new Error('Failed to extract frame: ' + err.message));
+                        }
+                    };
+
+                    seekNext();
+                };
+            });
+        }
+
         async function handleFunnelSubmit(e) {
             e.preventDefault();
             clearError('funnelError');
@@ -1713,13 +1776,52 @@
             const loadingState = showLoading(form.querySelector('button'), true);
 
             try {
-                const formData = new FormData(form);
+                // Get video files
+                const adVideoInput = document.getElementById('adVideoInput');
+                const landingVideoInput = document.getElementById('landingVideoInput');
 
-                // Use AbortController for timeout (4 minutes for video uploads)
+                if (!adVideoInput.files || !adVideoInput.files[0]) {
+                    hideLoading(loadingState);
+                    showError('funnelError', 'Please select an ad video file.');
+                    return;
+                }
+
+                // Extract frames in browser (no server-side FFmpeg needed)
+                const statusTextEl = document.getElementById('statusText');
+                if (statusTextEl) statusTextEl.textContent = 'Extracting frames from ad video...';
+                const adFrames = await extractFramesFromVideo(adVideoInput.files[0]);
+                if (adFrames.length === 0) {
+                    hideLoading(loadingState);
+                    showError('funnelError', 'Could not extract frames from the ad video. Try a different file.');
+                    return;
+                }
+
+                let landingFrames = null;
+                if (landingVideoInput.files && landingVideoInput.files[0]) {
+                        if (statusTextEl) statusTextEl.textContent = 'Extracting frames from landing video...';
+                    landingFrames = await extractFramesFromVideo(landingVideoInput.files[0]);
+                }
+
+                if (statusTextEl) statusTextEl.textContent = 'Analyzing video funnel with AI...';
+
+                // Build FormData with extracted frames (NOT full video files)
+                const formData = new FormData();
+                formData.append('ad_frames_json', JSON.stringify(adFrames));
+                if (landingFrames && landingFrames.length > 0) {
+                    formData.append('landing_frames_json', JSON.stringify(landingFrames));
+                }
+                formData.append('platform', form.querySelector('[name="platform"]').value);
+                formData.append('industry', form.querySelector('[name="industry"]').value);
+                formData.append('audience_country', form.querySelector('[name="audience_country"]').value);
+                formData.append('audience_age', form.querySelector('[name="audience_age"]').value);
+                formData.append('audience_income', form.querySelector('[name="audience_income"]').value);
+                formData.append('cta_destination', form.querySelector('[name="cta_destination"]').value);
+
+                // Use AbortController for timeout (3 minutes — no video upload, just AI analysis)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 240000);
+                const timeoutId = setTimeout(() => controller.abort(), 180000);
 
-                const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, {
+                const response = await fetch(`${API_BASE}/api/video-funnel/analyze-frames`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
@@ -1735,14 +1837,18 @@
                 }
 
                 displayFunnelResults(result.analysis);
-                saveToHistory('funnel', Object.fromEntries(formData), result.analysis);
+                saveToHistory('funnel', {
+                    platform: form.querySelector('[name="platform"]').value,
+                    industry: form.querySelector('[name="industry"]').value,
+                    type: 'frames-analysis'
+                }, result.analysis);
 
             } catch (error) {
                 hideLoading(loadingState);
                 if (error.name === 'AbortError') {
-                    showError('funnelError', 'Request timed out. Video files may be too large — try shorter clips or check your connection.');
+                    showError('funnelError', 'Request timed out. The AI analysis took too long — please try again.');
                 } else {
-                    showError('funnelError', 'Network error. Please check your connection and try again.');
+                    showError('funnelError', error.message || 'Network error. Please check your connection and try again.');
                 }
                 console.error(error);
             }

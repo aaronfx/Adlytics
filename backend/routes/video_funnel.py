@@ -353,6 +353,75 @@ async def analyze_video_funnel(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+@router.post("/analyze-frames")
+async def analyze_video_funnel_frames(
+    ad_frames_json: str = Form(..., description="JSON array of base64 JPEG frames from ad video"),
+    landing_frames_json: Optional[str] = Form(None, description="JSON array of base64 JPEG frames from landing video"),
+    platform: str = Form("facebook"),
+    industry: str = Form("finance"),
+    audience_country: str = Form("nigeria"),
+    audience_age: str = Form("25-34"),
+    audience_income: str = Form("middle"),
+    cta_destination: str = Form("telegram"),
+    brand_voice: Optional[str] = Form(None)
+) -> Dict[str, Any]:
+    """Analyze video funnel using pre-extracted frames (extracted in browser via Canvas API)."""
+    logger.info(f"Starting frames-based funnel analysis - Platform: {platform}, Industry: {industry}")
+
+    analyzer = VideoFunnelAnalyzer()
+    parsed_brand_voice = None
+
+    try:
+        # Parse frames JSON
+        ad_frames = json.loads(ad_frames_json)
+        if not ad_frames:
+            raise HTTPException(status_code=400, detail="At least one ad video frame is required")
+
+        # Convert to the format expected by analyze_with_vision
+        ad_frame_data = [{"base64_image": f} for f in ad_frames[:2]]
+
+        landing_frame_data = None
+        if landing_frames_json:
+            landing_frames = json.loads(landing_frames_json)
+            if landing_frames:
+                landing_frame_data = [{"base64_image": f} for f in landing_frames[:2]]
+
+        if brand_voice:
+            try:
+                parsed_brand_voice = json.loads(brand_voice)
+            except json.JSONDecodeError:
+                parsed_brand_voice = None
+
+        logger.info(f"Analyzing {len(ad_frame_data)} ad frames, {len(landing_frame_data) if landing_frame_data else 0} landing frames")
+        analysis = await analyzer.analyze_with_vision(
+            ad_frames=ad_frame_data, ad_transcript=None,
+            landing_frames=landing_frame_data, landing_transcript=None,
+            platform=platform, industry=industry, audience_country=audience_country,
+            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination,
+            brand_voice=parsed_brand_voice
+        )
+
+        logger.info("Frames-based funnel analysis completed successfully")
+        return {
+            "success": True,
+            "analysis": analysis,
+            "metadata": {
+                "platform": platform, "industry": industry,
+                "audience": {"country": audience_country, "age_range": audience_age, "income_level": audience_income},
+                "cta_destination": cta_destination,
+                "analysis_type": "frames-only"
+            }
+        }
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid frames JSON format")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in frames-based analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
 @router.post("/analyze-script")
 async def analyze_video_funnel_script(
     ad_script: str = Form(...),
