@@ -18,6 +18,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import httpx
 
 from backend.services.video_processor import create_video_processor, VideoProcessingError
+from backend.services.ai_engine import build_brand_voice_context
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +110,12 @@ class VideoFunnelAnalyzer:
             section += "\n- No transcript available"
         return section
 
-    def _build_vision_prompt(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram"):
+    def _build_vision_prompt(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram", brand_voice=None):
         """Build comprehensive GPT-4o Vision analysis prompt"""
+        brand_voice_section = ""
+        if brand_voice:
+            brand_voice_section = "\n" + build_brand_voice_context(brand_voice)
+
         prompt = f"""You are an expert video funnel analyst for digital advertising. Analyze this two-stage advertising funnel.
 
 CONTEXT:
@@ -122,7 +127,7 @@ CONTEXT:
 - CTA Destination: {cta_destination}
 
 AUDIENCE PERSONAS:
-{json.dumps(AUDIENCE_PERSONAS, indent=2)}
+{json.dumps(AUDIENCE_PERSONAS, indent=2)}{brand_voice_section}
 
 TASK 1: ANALYZE THE AD VIDEO
 {self._format_video_section("AD VIDEO", ad_frames, ad_transcript)}
@@ -134,24 +139,61 @@ TASK 2: ANALYZE THE LANDING PAGE VIDEO
 
 Score these (0-100): continuity_score, depth_score, trust_building, cta_effectiveness, conversion_psychology
 
-TASK 3: ANALYZE THE COMPLETE FUNNEL
+TASK 3: ANALYZE THE COMPLETE FUNNEL WITH DROP-OFF ANALYSIS
+The funnel has three stages: Hook (first 3 seconds) → Message (middle section) → CTA (end)
 Score: message_escalation (0-100), drop_off_risk (Low/Medium/High), audience_funnel_fit (0-100), predicted_conversion (level + range), overall_score (0-100)
+
+For drop_off_analysis, predict viewer retention at each stage:
+- stage_1_retention: % viewers retained through Hook (first 3 seconds)
+- stage_2_retention: % viewers retained through Message (middle)
+- stage_3_retention: % viewers retained through CTA (end)
+- primary_drop_point: Which stage has the biggest drop (Hook→Message or Message→CTA)
+- drop_reason: Why do viewers drop at that point
+- recovery_tactic: Specific change to recover those viewers
 
 TASK 4: Provide 3-5 prioritized recommendations with priority, area, issue, fix, expected_impact
 
 TASK 5: Provide improved versions of both scripts
 
+TASK 6: PLATFORM-SPECIFIC PREDICTIONS
+Based on the funnel analysis, predict how this funnel would perform on each platform with:
+- facebook: Score 0-100 and reasoning
+- tiktok: Score 0-100 and reasoning
+- instagram: Score 0-100 and reasoning
+- youtube: Score 0-100 and reasoning
+
 Return valid JSON:
 {{
   "ad_video_analysis": {{"hook_score": 0, "visual_quality": 0, "message_clarity": 0, "curiosity_gap": 0, "platform_fit": 0, "verdict": "", "strengths": [], "weaknesses": []}},
   "landing_video_analysis": {{"continuity_score": 0, "depth_score": 0, "trust_building": 0, "cta_effectiveness": 0, "conversion_psychology": 0, "verdict": "", "strengths": [], "weaknesses": []}},
-  "funnel_analysis": {{"message_escalation": 0, "drop_off_risk": "", "drop_off_point": "", "audience_funnel_fit": 0, "predicted_conversion": {{"level": "", "range": ""}}, "overall_score": 0}},
+  "funnel_analysis": {{
+    "message_escalation": 0,
+    "drop_off_risk": "",
+    "drop_off_point": "",
+    "audience_funnel_fit": 0,
+    "predicted_conversion": {{"level": "", "range": ""}},
+    "overall_score": 0,
+    "drop_off_analysis": {{
+      "stage_1_retention": 0,
+      "stage_2_retention": 0,
+      "stage_3_retention": 0,
+      "primary_drop_point": "",
+      "drop_reason": "",
+      "recovery_tactic": ""
+    }},
+    "platform_predictions": {{
+      "facebook": {{"score": 0, "reason": ""}},
+      "tiktok": {{"score": 0, "reason": ""}},
+      "instagram": {{"score": 0, "reason": ""}},
+      "youtube": {{"score": 0, "reason": ""}}
+    }}
+  }},
   "recommendations": [{{"priority": "", "area": "", "issue": "", "fix": "", "expected_impact": ""}}],
   "improved_scripts": {{"ad_video_script": "", "landing_video_script": "", "why_these_work": ""}}
 }}"""
         return prompt
 
-    async def analyze_with_vision(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram"):
+    async def analyze_with_vision(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram", brand_voice=None):
         """Analyze video funnel using GPT-4o Vision via OpenRouter API."""
         if not OPENROUTER_API_KEY:
             raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
@@ -160,7 +202,8 @@ Return valid JSON:
             ad_frames=ad_frames, ad_transcript=ad_transcript,
             landing_frames=landing_frames, landing_transcript=landing_transcript,
             platform=platform, industry=industry, audience_country=audience_country,
-            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination
+            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination,
+            brand_voice=brand_voice
         )
 
         message_content = [{"type": "text", "text": prompt}]
@@ -238,7 +281,8 @@ async def analyze_video_funnel(
     audience_country: str = Form("nigeria"),
     audience_age: str = Form("25-34"),
     audience_income: str = Form("middle"),
-    cta_destination: str = Form("telegram")
+    cta_destination: str = Form("telegram"),
+    brand_voice: Optional[str] = Form(None)
 ) -> Dict[str, Any]:
     """Analyze a video advertising funnel (ad platform video + landing page video)."""
     logger.info(f"Starting video funnel analysis - Platform: {platform}, Industry: {industry}")
@@ -251,8 +295,17 @@ async def analyze_video_funnel(
     ad_transcript = None
     landing_frames = None
     landing_transcript = None
+    parsed_brand_voice = None
 
     try:
+        # Parse brand_voice JSON if provided
+        if brand_voice:
+            try:
+                parsed_brand_voice = json.loads(brand_voice)
+            except json.JSONDecodeError:
+                logger.warning("Invalid brand_voice JSON provided, proceeding without brand voice")
+                parsed_brand_voice = None
+
         if ad_video:
             logger.info(f"Processing ad video: {ad_video.filename}")
             ad_result = await analyzer.process_video_file(ad_video)
@@ -274,7 +327,8 @@ async def analyze_video_funnel(
             ad_frames=ad_frames, ad_transcript=ad_transcript,
             landing_frames=landing_frames, landing_transcript=landing_transcript,
             platform=platform, industry=industry, audience_country=audience_country,
-            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination
+            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination,
+            brand_voice=parsed_brand_voice
         )
 
         logger.info("Video funnel analysis completed successfully")
@@ -307,7 +361,8 @@ async def analyze_video_funnel_script(
     audience_country: str = Form("nigeria"),
     audience_age: str = Form("25-34"),
     audience_income: str = Form("middle"),
-    cta_destination: str = Form("telegram")
+    cta_destination: str = Form("telegram"),
+    brand_voice: Optional[str] = Form(None)
 ) -> Dict[str, Any]:
     """Analyze a video advertising funnel using text scripts only (no video upload)."""
     logger.info(f"Starting script-based funnel analysis - Platform: {platform}, Industry: {industry}")
@@ -316,14 +371,24 @@ async def analyze_video_funnel_script(
         raise HTTPException(status_code=400, detail="ad_script is required and cannot be empty")
 
     analyzer = VideoFunnelAnalyzer()
+    parsed_brand_voice = None
 
     try:
+        # Parse brand_voice JSON if provided
+        if brand_voice:
+            try:
+                parsed_brand_voice = json.loads(brand_voice)
+            except json.JSONDecodeError:
+                logger.warning("Invalid brand_voice JSON provided, proceeding without brand voice")
+                parsed_brand_voice = None
+
         logger.info("Running AI analysis with text scripts")
         analysis = await analyzer.analyze_with_vision(
             ad_frames=None, ad_transcript=ad_script,
             landing_frames=None, landing_transcript=landing_script,
             platform=platform, industry=industry, audience_country=audience_country,
-            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination
+            audience_age=audience_age, audience_income=audience_income, cta_destination=cta_destination,
+            brand_voice=parsed_brand_voice
         )
 
         logger.info("Script-based funnel analysis completed successfully")

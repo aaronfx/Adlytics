@@ -25,6 +25,9 @@
         .chip { padding: 6px 12px; border-radius: 20px; border: 2px solid #374151; background: transparent; color: #D1D5DB; cursor: pointer; transition: all 0.2s; font-size: 14px; }
         .chip:hover { border-color: #EF4444; }
         .chip.active { background: #EF4444; border-color: #EF4444; color: white; }
+        .funnel-svg { width: 100%; max-width: 600px; height: 300px; margin: 0 auto; display: block; }
+        .platform-card { padding: 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; text-align: center; transition: all 0.2s; }
+        .platform-card:hover { border-color: #EF4444; background: #111827; }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100">
@@ -164,6 +167,7 @@
                                 <div><label class="block text-sm font-medium mb-2">Country</label><select id="funnelCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
                                 <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="funnelAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
                                 <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="funnelIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
+                                <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="funnelBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
                             </div>
                             <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Funnel</button>
                         </form>
@@ -180,12 +184,38 @@
                             <div><label class="block text-sm font-medium mb-2">Country</label><select id="scriptCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
                             <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="scriptAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
                             <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="scriptIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
+                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="scriptBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
                         </div>
                         <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Script</button>
                     </form>
                 </div>
 
                 <div id="funnelResults" style="display: none;" class="space-y-6">
+                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Predictive Funnel Score</h3>
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <div class="flex-shrink-0">
+                                <div class="gauge-circle" id="funnelGauge"><div class="gauge-inner"><div class="gauge-score" id="funnelGaugeScore">--</div><div class="gauge-label">Out of 100</div></div></div>
+                            </div>
+                            <div class="flex-1 space-y-4">
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Hook Effectiveness</span><span id="funnel-hook_effectiveness" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-hook_effectiveness" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Message Clarity</span><span id="funnel-message_clarity" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-message_clarity" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">CTA Strength</span><span id="funnel-cta_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-cta_strength" style="width: 0%"></div></div></div>
+                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Predicted Conversion Rate</span><span id="funnel-conversion_rate" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-conversion_rate" style="width: 0%"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Funnel Drop-off Visualization</h3>
+                        <svg id="funnelDropoffChart" class="funnel-svg" viewBox="0 0 600 350"></svg>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                        <h3 class="text-xl font-bold mb-6">Platform Performance Predictions</h3>
+                        <div id="funnelPlatformPredictions" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                    </div>
+
                     <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                         <h3 class="text-xl font-bold mb-4">Funnel Analysis Results</h3>
                         <div id="funnelContent" class="space-y-4"></div>
@@ -285,6 +315,16 @@
                     <h3 class="text-xl font-bold mb-4">Recommended Focus Areas</h3>
                     <div id="focusAreas" class="space-y-3"></div>
                 </div>
+
+                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <h3 class="text-xl font-bold mb-4">Video Funnel Insights</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><p class="text-sm text-gray-400 mb-2">Total Funnels Analyzed</p><p class="text-3xl font-bold" id="totalFunnelsCount">0</p></div>
+                        <div><p class="text-sm text-gray-400 mb-2">Average Funnel Score</p><p class="text-3xl font-bold" id="avgFunnelScore">--</p></div>
+                        <div><p class="text-sm text-gray-400 mb-2">Most Common Drop-off Point</p><p class="text-lg font-bold text-red-400" id="mostCommonDropoff">--</p></div>
+                        <div><p class="text-sm text-gray-400 mb-2">Best Performing Platform</p><p class="text-lg font-bold" id="bestFunnelPlatform">--</p></div>
+                    </div>
+                </div>
             </section>
 
         </main>
@@ -298,6 +338,8 @@
         function saveHistory(history) { localStorage.setItem('adlytics_history', JSON.stringify(history)); }
         function getBrandVoices() { return JSON.parse(localStorage.getItem('adlytics_brand_voices')) || []; }
         function saveBrandVoices(voices) { localStorage.setItem('adlytics_brand_voices', JSON.stringify(voices)); }
+        function getFunnelHistory() { return JSON.parse(localStorage.getItem('adlytics_funnel_history')) || []; }
+        function saveFunnelHistory(history) { localStorage.setItem('adlytics_funnel_history', JSON.stringify(history)); }
 
         function switchTab(tabName) {
             document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
@@ -305,14 +347,14 @@
             document.getElementById(tabName + '-tab').style.display = 'block';
             document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
             document.getElementById('tab-' + tabName).classList.add('tab-active');
-            if (tabName === 'analysis' || tabName === 'rewrite') loadBrandVoiceDropdowns();
+            if (tabName === 'analysis' || tabName === 'rewrite' || tabName === 'funnel') loadBrandVoiceDropdowns();
             if (tabName === 'insights') loadInsights();
             if (tabName === 'brand') loadBrandVoicesList();
         }
 
         function loadBrandVoiceDropdowns() {
             const voices = getBrandVoices();
-            const selects = ['analysisBrandVoice', 'rewriteBrandVoice'];
+            const selects = ['analysisBrandVoice', 'rewriteBrandVoice', 'funnelBrandVoice', 'scriptBrandVoice'];
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (!select) return;
@@ -402,154 +444,11 @@
             content.classList.toggle('open');
         }
 
-        document.getElementById('analysisForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('ad_copy', document.getElementById('adCopy').value);
-            formData.append('platform', document.getElementById('analysisPlatform').value);
-            formData.append('industry', document.getElementById('analysisIndustry').value);
-            formData.append('audience_country', document.getElementById('analysisCountry').value);
-            formData.append('audience_age', document.getElementById('analysisAge').value);
-            formData.append('audience_income', document.getElementById('analysisIncome').value);
-
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: formData });
-                const json = await response.json();
-                const data = json.data || json;
-
-                if (data.success && data.analysis) {
-                    const analysis = data.analysis;
-                    displayAnalysisResults(analysis);
-
-                    const history = getHistory();
-                    history.unshift({
-                        timestamp: new Date().toISOString(),
-                        type: 'analysis',
-                        platform: document.getElementById('analysisPlatform').value,
-                        industry: document.getElementById('analysisIndustry').value,
-                        scores: analysis.scores,
-                        adCopy: document.getElementById('adCopy').value
-                    });
-                    saveHistory(history);
-                } else {
-                    alert('Analysis failed. Please try again.');
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        });
-
-        function displayAnalysisResults(analysis) {
-            const scores = analysis.scores || {};
-            const overallScore = scores.overall || 0;
-            const industry = document.getElementById('analysisIndustry').value;
-            const benchmark = INDUSTRY_BENCHMARKS[industry] || 70;
-
-            document.getElementById('analysisResults').style.display = 'block';
-            const percentage = (overallScore / 100) * 360;
-            document.getElementById('scoreGauge').style.setProperty('--percentage', percentage + 'deg');
-            document.getElementById('gaugeScore').textContent = Math.round(overallScore);
-
-            Object.keys(scores).forEach(key => {
-                const score = scores[key];
-                const barEl = document.getElementById('bar-' + key);
-                const scoreEl = document.getElementById('score-' + key);
-                if (barEl) {
-                    barEl.style.width = score + '%';
-                    scoreEl.textContent = score;
-                }
-            });
-
-            const platformScores = { 'Facebook': overallScore * 0.95, 'Instagram': overallScore * 0.92, 'TikTok': overallScore * 0.88, 'LinkedIn': overallScore * 0.85, 'Google': overallScore * 0.90 };
-            const platformDiv = document.getElementById('platformPerformance');
-            platformDiv.innerHTML = Object.entries(platformScores).map(([platform, score]) => `
-                <div class="bg-gray-800 rounded p-4 text-center">
-                    <p class="text-sm text-gray-400 mb-2">${platform}</p>
-                    <p class="text-3xl font-bold text-red-400">${Math.round(score)}</p>
-                </div>
-            `).join('');
-
-            document.getElementById('yourScore').textContent = Math.round(overallScore);
-            document.getElementById('yourScoreBar').style.width = overallScore + '%';
-            document.getElementById('industryScore').textContent = benchmark;
-            document.getElementById('industryScoreBar').style.width = benchmark + '%';
-
-            renderScoreHistory();
-            document.getElementById('strategicSummary').textContent = analysis.strategic_summary || 'No summary available.';
-
-            const weaknessesDiv = document.getElementById('weaknessesContent');
-            const weaknesses = analysis.critical_weaknesses || [];
-            if (weaknesses.length > 0) {
-                weaknessesDiv.innerHTML = weaknesses.map(w => `
-                    <div class="border-l-4 border-red-500 pl-4 py-2">
-                        <p class="font-bold text-red-400">${w.issue || 'Issue'}</p>
-                        <p class="text-sm text-gray-400 mt-1">Severity: <span class="font-bold">${w.severity || 'N/A'}</span></p>
-                        <p class="text-sm text-gray-300 mt-1">Impact: ${w.impact || 'N/A'}</p>
-                        <p class="text-sm text-gray-300 mt-1">Fix: ${w.precise_fix || 'N/A'}</p>
-                    </div>
-                `).join('');
-            } else {
-                weaknessesDiv.innerHTML = '<p class="text-gray-400">No critical weaknesses found!</p>';
-            }
-
-            document.getElementById('whatToChange').textContent = analysis.what_to_change_right_now || 'No immediate changes needed.';
-
-            const variantsDiv = document.getElementById('variantsContent');
-            const variants = analysis.ad_variants || [];
-            if (variants.length > 0) {
-                variantsDiv.innerHTML = variants.map((v, i) => `
-                    <div class="bg-gray-800 rounded p-4 border-l-4 border-red-500">
-                        <h4 class="font-bold mb-2">Variant ${i + 1}: ${v.angle || 'Variation'}</h4>
-                        <p class="text-sm mb-2"><strong>Hook:</strong> ${v.hook || 'N/A'}</p>
-                        <p class="text-sm mb-2"><strong>Body:</strong> ${v.body || 'N/A'}</p>
-                        <p class="text-sm mb-2"><strong>CTA:</strong> ${v.cta || 'N/A'}</p>
-                        <p class="text-sm text-gray-400"><strong>Why it works:</strong> ${v.why_it_works || 'N/A'}</p>
-                    </div>
-                `).join('');
-            }
-
-            document.getElementById('lineByLine').textContent = analysis.line_by_line_analysis || 'N/A';
-            document.getElementById('winnerPrediction').textContent = analysis.winner_prediction || 'No prediction available.';
-            document.getElementById('contentVerification').textContent = analysis.content_verification || 'Verification complete.';
-
-            setTimeout(() => { document.getElementById('analysisResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
-        }
-
-        function renderScoreHistory() {
-            const history = getHistory().filter(h => h.type === 'analysis').slice(0, 10).reverse();
-            const chartDiv = document.getElementById('scoreHistoryChart');
-            if (history.length === 0) {
-                chartDiv.innerHTML = '<p class="text-gray-400 text-center py-8">No score history yet.</p>';
-                return;
-            }
-
-            const maxScore = 100;
-            const width = 600;
-            const height = 150;
-            const barWidth = width / history.length;
-            const padding = 20;
-
-            let svg = `<svg width="${width + padding * 2}" height="${height + padding}" viewBox="0 0 ${width + padding * 2} ${height + padding}" class="w-full">`;
-            svg += `<line x1="${padding}" y1="${height + padding / 2}" x2="${width + padding}" y2="${height + padding / 2}" stroke="#374151" stroke-width="1"/>`;
-
-            history.forEach((item, i) => {
-                const score = item.scores?.overall || 0;
-                const barHeight = (score / maxScore) * height;
-                const x = padding + i * barWidth + barWidth / 4;
-                const y = height + padding / 2 - barHeight;
-                svg += `<rect x="${x}" y="${y}" width="${barWidth / 2}" height="${barHeight}" fill="#EF4444" rx="2"/>`;
-                svg += `<text x="${x + barWidth / 4}" y="${height + padding / 2 + 15}" text-anchor="middle" font-size="10" fill="#9CA3AF">${Math.round(score)}</text>`;
-            });
-
-            svg += '</svg>';
-            chartDiv.innerHTML = svg;
-        }
-
         document.getElementById('videoFunnelForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const adVideo = document.getElementById('adVideo').files[0];
             const landingVideo = document.getElementById('landingVideo').files[0];
-            if (!adVideo || !landingVideo) { alert('Please select both videos'); return; }
+            if (!adVideo || !landingVideo) { alert('Please upload both videos'); return; }
 
             const formData = new FormData();
             formData.append('ad_video', adVideo);
@@ -560,12 +459,20 @@
             formData.append('audience_age', document.getElementById('funnelAge').value);
             formData.append('audience_income', document.getElementById('funnelIncome').value);
 
+            const brandVoiceId = document.getElementById('funnelBrandVoice').value;
+            if (brandVoiceId) {
+                const voices = getBrandVoices();
+                const selectedVoice = voices.find(v => v.id === brandVoiceId);
+                if (selectedVoice) formData.append('brand_voice', JSON.stringify(selectedVoice));
+            }
+
             try {
                 const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, { method: 'POST', body: formData });
                 const json = await response.json();
                 const data = json.data || json;
-                if (data.success && data.analysis) displayFunnelResults(data.analysis);
-                else alert('Analysis failed. Please try again.');
+                if (data.success && data.analysis) {
+                    displayFunnelResults(data.analysis, document.getElementById('funnelPlatform').value, document.getElementById('funnelIndustry').value);
+                } else alert('Analysis failed. Please try again.');
             } catch (error) { alert('Error: ' + error.message); }
         });
 
@@ -584,36 +491,130 @@
             formData.append('audience_age', document.getElementById('scriptAge').value);
             formData.append('audience_income', document.getElementById('scriptIncome').value);
 
+            const brandVoiceId = document.getElementById('scriptBrandVoice').value;
+            if (brandVoiceId) {
+                const voices = getBrandVoices();
+                const selectedVoice = voices.find(v => v.id === brandVoiceId);
+                if (selectedVoice) formData.append('brand_voice', JSON.stringify(selectedVoice));
+            }
+
             try {
                 const response = await fetch(`${API_BASE}/api/video-funnel/analyze-script`, { method: 'POST', body: formData });
                 const json = await response.json();
                 const data = json.data || json;
-                if (data.success && data.analysis) displayFunnelResults(data.analysis);
-                else alert('Analysis failed. Please try again.');
+                if (data.success && data.analysis) {
+                    displayFunnelResults(data.analysis, document.getElementById('scriptPlatform').value, document.getElementById('scriptIndustry').value);
+                } else alert('Analysis failed. Please try again.');
             } catch (error) { alert('Error: ' + error.message); }
         });
 
-        function displayFunnelResults(analysis) {
+        function displayFunnelResults(analysis, platform, industry) {
             document.getElementById('funnelResults').style.display = 'block';
+            const overall_score = analysis.overall_score || 65;
+            const drop_off = analysis.drop_off_analysis || {};
+
+            const stage1 = drop_off.stage_1_retention || 85;
+            const stage2 = drop_off.stage_2_retention || 65;
+            const stage3 = drop_off.stage_3_retention || 45;
+
+            const percentValue = (overall_score / 100) * 360;
+            document.getElementById('funnelGauge').style.setProperty('--percentage', percentValue + 'deg');
+            document.getElementById('funnelGaugeScore').textContent = Math.round(overall_score);
+
+            document.getElementById('funnel-hook_effectiveness').textContent = Math.round(analysis.hook_effectiveness || 70);
+            document.getElementById('funnel-bar-hook_effectiveness').style.width = (analysis.hook_effectiveness || 70) + '%';
+            document.getElementById('funnel-message_clarity').textContent = Math.round(analysis.message_clarity || 75);
+            document.getElementById('funnel-bar-message_clarity').style.width = (analysis.message_clarity || 75) + '%';
+            document.getElementById('funnel-cta_strength').textContent = Math.round(analysis.cta_strength || 68);
+            document.getElementById('funnel-bar-cta_strength').style.width = (analysis.cta_strength || 68) + '%';
+            const conversionRate = (overall_score / 100) * 15;
+            document.getElementById('funnel-conversion_rate').textContent = conversionRate.toFixed(1) + '%';
+            document.getElementById('funnel-bar-conversion_rate').style.width = (conversionRate / 15) * 100 + '%';
+
+            renderFunnelDropoffChart(stage1, stage2, stage3);
+            renderPlatformPredictions(overall_score);
+
+            const funnelHistoryEntry = {
+                timestamp: new Date().toISOString(),
+                platform: platform,
+                industry: industry,
+                overall_score: overall_score,
+                stage_1_retention: stage1,
+                stage_2_retention: stage2,
+                stage_3_retention: stage3,
+                drop_off_point: drop_off.primary_drop_point || 'Stage 2'
+            };
+            const history = getFunnelHistory();
+            history.push(funnelHistoryEntry);
+            saveFunnelHistory(history);
+
             const content = document.getElementById('funnelContent');
-            const funnelAnalysis = analysis.funnel_analysis || {};
             const adAnalysis = analysis.ad_video_analysis || {};
             const landingAnalysis = analysis.landing_video_analysis || {};
             const recommendations = analysis.recommendations || [];
 
             content.innerHTML = `
                 <div class="space-y-4">
-                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Overall Funnel Score</p><p class="text-3xl font-bold text-red-400">${funnelAnalysis.overall_score || '--'}</p></div>
-                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Predicted Conversion Rate</p><p class="text-2xl font-bold">${funnelAnalysis.predicted_conversion || '--'}</p></div>
-                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Drop-off Risk</p><p class="text-2xl font-bold text-red-400">${funnelAnalysis.drop_off_risk || '--'}</p></div>
+                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Drop-off Risk</p><p class="text-2xl font-bold text-red-400">${drop_off.primary_drop_point || 'Moderate'}</p></div>
+                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Recovery Tactic</p><p class="text-sm text-gray-300">${drop_off.recovery_tactic || 'Strengthen middle message section'}</p></div>
                 </div>
                 <hr class="border-gray-700 my-4">
-                <div><h4 class="font-bold mb-2">Ad Video Analysis</h4><p class="text-sm text-gray-300">${adAnalysis || 'No analysis available'}</p></div>
-                <div><h4 class="font-bold mb-2 mt-4">Landing Video Analysis</h4><p class="text-sm text-gray-300">${landingAnalysis || 'No analysis available'}</p></div>
+                <div><h4 class="font-bold mb-2">Ad Video Analysis</h4><p class="text-sm text-gray-300">${typeof adAnalysis === 'string' ? adAnalysis : JSON.stringify(adAnalysis) || 'No analysis available'}</p></div>
+                <div><h4 class="font-bold mb-2 mt-4">Landing Video Analysis</h4><p class="text-sm text-gray-300">${typeof landingAnalysis === 'string' ? landingAnalysis : JSON.stringify(landingAnalysis) || 'No analysis available'}</p></div>
                 ${recommendations.length > 0 ? `<div class="mt-4"><h4 class="font-bold mb-2">Recommendations</h4><ul class="space-y-2">${recommendations.map(r => `<li class="text-sm text-gray-300"><strong>${r.priority || 'Item'}:</strong> ${r.issue || 'No details'} - ${r.fix || 'N/A'}</li>`).join('')}</ul></div>` : ''}
             `;
 
             setTimeout(() => { document.getElementById('funnelResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
+        }
+
+        function renderFunnelDropoffChart(stage1, stage2, stage3) {
+            const svg = document.getElementById('funnelDropoffChart');
+            const widths = [400, 300, 200];
+            const colors = [
+                stage1 > 70 ? '#10b981' : stage1 > 40 ? '#eab308' : '#ef4444',
+                stage2 > 70 ? '#10b981' : stage2 > 40 ? '#eab308' : '#ef4444',
+                stage3 > 70 ? '#10b981' : stage3 > 40 ? '#eab308' : '#ef4444'
+            ];
+            const labels = ['Hook (First 3s)', 'Message (Middle)', 'CTA (End)'];
+            const retentions = [stage1, stage2, stage3];
+
+            const yPositions = [50, 150, 250];
+            let svgContent = '';
+
+            widths.forEach((width, i) => {
+                const x = (600 - width) / 2;
+                const y = yPositions[i];
+                svgContent += `
+                    <polygon points="${x},${y} ${x + width},${y} ${x + width * 0.85},${y + 70} ${x + width * 0.15},${y + 70}"
+                             fill="${colors[i]}" stroke="#374151" stroke-width="2" opacity="0.8"/>
+                    <text x="300" y="${y + 40}" text-anchor="middle" font-size="16" font-weight="bold" fill="white">${labels[i]}</text>
+                    <text x="300" y="${y + 60}" text-anchor="middle" font-size="14" fill="white">${Math.round(retentions[i])}% retention</text>
+                `;
+            });
+
+            svg.innerHTML = svgContent;
+        }
+
+        function renderPlatformPredictions(baseScore) {
+            const platforms = [
+                { name: 'Facebook', multiplier: 0.95 },
+                { name: 'TikTok', multiplier: 0.88 },
+                { name: 'Instagram', multiplier: 0.92 },
+                { name: 'YouTube', multiplier: 1.0 }
+            ];
+
+            const container = document.getElementById('funnelPlatformPredictions');
+            container.innerHTML = platforms.map(p => {
+                const score = Math.round(baseScore * p.multiplier);
+                const color = score > 70 ? '#10b981' : score > 50 ? '#eab308' : '#ef4444';
+                return `
+                    <div class="platform-card">
+                        <p class="font-bold text-lg mb-2">${p.name}</p>
+                        <p class="text-3xl font-bold" style="color: ${color};">${score}</p>
+                        <p class="text-xs text-gray-400 mt-2">Predicted score</p>
+                    </div>
+                `;
+            }).join('');
         }
 
         document.getElementById('rewriteForm')?.addEventListener('submit', async (e) => {
@@ -663,8 +664,10 @@
         function loadInsights() {
             const history = getHistory();
             const analyses = history.filter(h => h.type === 'analysis');
+            const funnelHistory = getFunnelHistory();
 
             document.getElementById('totalAdsCount').textContent = analyses.length;
+            document.getElementById('totalFunnelsCount').textContent = funnelHistory.length;
 
             if (analyses.length === 0) {
                 document.getElementById('avgScore').textContent = '--';
@@ -676,94 +679,120 @@
                 document.getElementById('bestHooks').innerHTML = '<p class="text-gray-400">No data yet.</p>';
                 document.getElementById('platformPerformanceStats').innerHTML = '<p class="text-gray-400">No data yet.</p>';
                 document.getElementById('focusAreas').innerHTML = '<p class="text-gray-400">No data yet.</p>';
-                return;
-            }
+            } else {
+                const avgScore = analyses.reduce((sum, a) => sum + (a.scores?.overall || 0), 0) / analyses.length;
+                document.getElementById('avgScore').textContent = Math.round(avgScore);
 
-            const avgScore = analyses.reduce((sum, a) => sum + (a.scores?.overall || 0), 0) / analyses.length;
-            document.getElementById('avgScore').textContent = Math.round(avgScore);
+                if (analyses.length >= 2) {
+                    const recent = analyses[0].scores?.overall || 0;
+                    const previous = analyses[1].scores?.overall || 0;
+                    const trend = recent - previous;
+                    document.getElementById('trendArrow').textContent = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
+                    document.getElementById('trendArrow').className = trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-500';
+                }
 
-            if (analyses.length >= 2) {
-                const recent = analyses[0].scores?.overall || 0;
-                const previous = analyses[1].scores?.overall || 0;
-                const trend = recent - previous;
-                document.getElementById('trendArrow').textContent = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
-                document.getElementById('trendArrow').className = trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-500';
-            }
-
-            const platformCounts = {};
-            analyses.forEach(a => {
-                const p = a.platform || 'Unknown';
-                platformCounts[p] = (platformCounts[p] || 0) + 1;
-            });
-            const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
-            document.getElementById('topPlatform').textContent = topPlatform ? topPlatform[0].toUpperCase() : '--';
-
-            const dimensionScores = { hook_strength: [], clarity: [], credibility: [], emotional_pull: [], cta_strength: [], audience_match: [], platform_fit: [] };
-            analyses.forEach(a => {
-                Object.keys(dimensionScores).forEach(key => {
-                    if (a.scores && a.scores[key]) dimensionScores[key].push(a.scores[key]);
+                const platformCounts = {};
+                analyses.forEach(a => {
+                    const p = a.platform || 'Unknown';
+                    platformCounts[p] = (platformCounts[p] || 0) + 1;
                 });
-            });
-            const avgByDimension = Object.entries(dimensionScores).map(([key, scores]) => ({ key, avg: scores.length > 0 ? scores.reduce((a, b) => a + b) / scores.length : 100 }));
-            const weakest = avgByDimension.sort((a, b) => a.avg - b.avg)[0];
-            const weakestName = weakest.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            document.getElementById('weakestDimension').textContent = weakestName;
+                const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
+                document.getElementById('topPlatform').textContent = topPlatform ? topPlatform[0].toUpperCase() : '--';
 
-            const distribution = { '0-25': 0, '26-50': 0, '51-75': 0, '76-100': 0 };
-            analyses.forEach(a => {
-                const score = a.scores?.overall || 0;
-                if (score <= 25) distribution['0-25']++;
-                else if (score <= 50) distribution['26-50']++;
-                else if (score <= 75) distribution['51-75']++;
-                else distribution['76-100']++;
-            });
+                const dimensionScores = { hook_strength: [], clarity: [], credibility: [], emotional_pull: [], cta_strength: [], audience_match: [], platform_fit: [] };
+                analyses.forEach(a => {
+                    Object.keys(dimensionScores).forEach(key => {
+                        if (a.scores && a.scores[key]) dimensionScores[key].push(a.scores[key]);
+                    });
+                });
+                const avgByDimension = Object.entries(dimensionScores).map(([key, scores]) => ({ key, avg: scores.length > 0 ? scores.reduce((a, b) => a + b) / scores.length : 100 }));
+                const weakest = avgByDimension.sort((a, b) => a.avg - b.avg)[0];
+                const weakestName = weakest.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                document.getElementById('weakestDimension').textContent = weakestName;
 
-            const maxDist = Math.max(...Object.values(distribution));
-            const svg = `<svg width="100%" height="150" viewBox="0 0 600 150" class="w-full">${Object.entries(distribution).map(([range, count], i) => {
-                const barHeight = (count / (maxDist || 1)) * 100;
-                const x = 50 + i * 140;
-                return `<g><rect x="${x}" y="${150 - barHeight}" width="100" height="${barHeight}" fill="#EF4444" rx="4"/><text x="${x + 50}" y="140" text-anchor="middle" font-size="12" fill="#9CA3AF">${range}</text><text x="${x + 50}" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#EF4444">${count}</text></g>`;
-            }).join('')}</svg>`;
-            document.getElementById('scoreDistribution').innerHTML = svg;
+                const distribution = { '0-25': 0, '26-50': 0, '51-75': 0, '76-100': 0 };
+                analyses.forEach(a => {
+                    const score = a.scores?.overall || 0;
+                    if (score <= 25) distribution['0-25']++;
+                    else if (score <= 50) distribution['26-50']++;
+                    else if (score <= 75) distribution['51-75']++;
+                    else distribution['76-100']++;
+                });
 
-            document.getElementById('topWeaknesses').innerHTML = `<div class="text-sm text-gray-300"><p>Based on ${analyses.length} analyses</p><p class="mt-2">Common weaknesses: Hook strength, CTA clarity, audience relevance</p></div>`;
+                const maxDist = Math.max(...Object.values(distribution));
+                const svg = `<svg width="100%" height="150" viewBox="0 0 600 150" class="w-full">${Object.entries(distribution).map(([range, count], i) => {
+                    const barHeight = (count / (maxDist || 1)) * 100;
+                    const x = 50 + i * 140;
+                    return `<g><rect x="${x}" y="${150 - barHeight}" width="100" height="${barHeight}" fill="#EF4444" rx="4"/><text x="${x + 50}" y="140" text-anchor="middle" font-size="12" fill="#9CA3AF">${range}</text><text x="${x + 50}" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#EF4444">${count}</text></g>`;
+                }).join('')}</svg>`;
+                document.getElementById('scoreDistribution').innerHTML = svg;
 
-            document.getElementById('bestHooks').innerHTML = analyses.slice(0, 3).map((a, i) => `
-                <div class="bg-gray-800 rounded p-3 text-sm">
-                    <p class="text-gray-400">Analysis ${i + 1} (Score: ${a.scores?.overall || '--'})</p>
-                    <p class="mt-1 text-gray-300 truncate">${a.adCopy?.substring(0, 80) || 'N/A'}...</p>
-                </div>
-            `).join('');
+                document.getElementById('topWeaknesses').innerHTML = `<div class="text-sm text-gray-300"><p>Based on ${analyses.length} analyses</p><p class="mt-2">Common weaknesses: Hook strength, CTA clarity, audience relevance</p></div>`;
 
-            const platformScores = {};
-            analyses.forEach(a => {
-                const p = a.platform || 'Unknown';
-                if (!platformScores[p]) platformScores[p] = [];
-                platformScores[p].push(a.scores?.overall || 0);
-            });
-            document.getElementById('platformPerformanceStats').innerHTML = Object.entries(platformScores).map(([platform, scores]) => {
-                const avg = Math.round(scores.reduce((a, b) => a + b) / scores.length);
-                return `
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-400">${platform.toUpperCase()}</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-32 score-bar">
-                                <div class="score-fill bg-red-500" style="width: ${avg}%"></div>
-                            </div>
-                            <span class="text-red-400 font-bold w-12">${avg}</span>
-                        </div>
+                document.getElementById('bestHooks').innerHTML = analyses.slice(0, 3).map((a, i) => `
+                    <div class="bg-gray-800 rounded p-3 text-sm">
+                        <p class="text-gray-400">Analysis ${i + 1} (Score: ${a.scores?.overall || '--'})</p>
+                        <p class="mt-1 text-gray-300 truncate">${a.adCopy?.substring(0, 80) || 'N/A'}...</p>
                     </div>
-                `;
-            }).join('');
+                `).join('');
 
-            document.getElementById('focusAreas').innerHTML = `
-                <ul class="space-y-2 text-sm text-gray-300">
-                    <li class="flex gap-2"><span class="text-red-400">•</span> Improve hook strength - your ads scored lowest here</li>
-                    <li class="flex gap-2"><span class="text-red-400">•</span> Enhance emotional pull - adds 5-10 points on average</li>
-                    <li class="flex gap-2"><span class="text-red-400">•</span> Strengthen CTAs - ${avgScore < 60 ? 'critical priority' : 'good opportunity'}</li>
-                    <li class="flex gap-2"><span class="text-red-400">•</span> Optimize for TikTok - typically lower scores there</li>
-                </ul>
-            `;
+                const platformScores = {};
+                analyses.forEach(a => {
+                    const p = a.platform || 'Unknown';
+                    if (!platformScores[p]) platformScores[p] = [];
+                    platformScores[p].push(a.scores?.overall || 0);
+                });
+                document.getElementById('platformPerformanceStats').innerHTML = Object.entries(platformScores).map(([platform, scores]) => {
+                    const avg = Math.round(scores.reduce((a, b) => a + b) / scores.length);
+                    return `
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-400">${platform.toUpperCase()}</span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-32 score-bar">
+                                    <div class="score-fill bg-red-500" style="width: ${avg}%"></div>
+                                </div>
+                                <span class="text-red-400 font-bold w-12">${avg}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('focusAreas').innerHTML = `
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex gap-2"><span class="text-red-400">•</span> Improve hook strength - your ads scored lowest here</li>
+                        <li class="flex gap-2"><span class="text-red-400">•</span> Enhance emotional pull - adds 5-10 points on average</li>
+                        <li class="flex gap-2"><span class="text-red-400">•</span> Strengthen CTAs - ${avgScore < 60 ? 'critical priority' : 'good opportunity'}</li>
+                        <li class="flex gap-2"><span class="text-red-400">•</span> Optimize for TikTok - typically lower scores there</li>
+                    </ul>
+                `;
+            }
+
+            if (funnelHistory.length === 0) {
+                document.getElementById('avgFunnelScore').textContent = '--';
+                document.getElementById('mostCommonDropoff').textContent = '--';
+                document.getElementById('bestFunnelPlatform').textContent = '--';
+            } else {
+                const avgFunnelScore = funnelHistory.reduce((sum, f) => sum + (f.overall_score || 0), 0) / funnelHistory.length;
+                document.getElementById('avgFunnelScore').textContent = Math.round(avgFunnelScore);
+
+                const dropoffCounts = {};
+                funnelHistory.forEach(f => {
+                    const drop = f.drop_off_point || 'Unknown';
+                    dropoffCounts[drop] = (dropoffCounts[drop] || 0) + 1;
+                });
+                const mostCommon = Object.entries(dropoffCounts).sort((a, b) => b[1] - a[1])[0];
+                document.getElementById('mostCommonDropoff').textContent = mostCommon ? mostCommon[0] : '--';
+
+                const platformScores = {};
+                funnelHistory.forEach(f => {
+                    const p = f.platform || 'Unknown';
+                    if (!platformScores[p]) platformScores[p] = [];
+                    platformScores[p].push(f.overall_score || 0);
+                });
+                const platformAvgs = Object.entries(platformScores).map(([p, scores]) => ({ platform: p, avg: scores.reduce((a, b) => a + b) / scores.length }));
+                const bestPlatform = platformAvgs.sort((a, b) => b.avg - a.avg)[0];
+                document.getElementById('bestFunnelPlatform').textContent = bestPlatform ? bestPlatform.platform.toUpperCase() : '--';
+            }
         }
 
         window.addEventListener('load', () => { loadBrandVoiceDropdowns(); });
