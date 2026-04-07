@@ -2243,32 +2243,32 @@
             }
 
             // ── Predictive Performance ──
-            const pp = analysis.predictive_performance || {};
+            const funnelPP = analysis.predictive_performance || {};
             let predictiveHtml = '';
-            if (pp.percentile_rank) {
-                const pctRank = pp.percentile_rank;
+            if (funnelPP.percentile_rank) {
+                const pctRank = funnelPP.percentile_rank;
                 const pctColor = pctRank >= 65 ? '#10B981' : pctRank >= 40 ? '#F59E0B' : '#EF4444';
                 predictiveHtml = `
                     <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; margin-bottom: 1rem;">
                         <div style="text-align: center; margin-bottom: 1rem;">
                             <div style="font-size: 2.5rem; font-weight: 800; color: ${pctColor};">${pctRank}<span style="font-size: 1rem;">th</span></div>
-                            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">${pp.vs_industry_avg || 'Percentile rank vs industry average'}</div>
+                            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">${funnelPP.vs_industry_avg || 'Percentile rank vs industry average'}</div>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
                             <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                                 <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CTR</div>
-                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_ctr || '—'}</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${funnelPP.predicted_ctr || '—'}</div>
                             </div>
                             <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                                 <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CPA</div>
-                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cpa || '—'}</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${funnelPP.predicted_cpa || '—'}</div>
                             </div>
                             <div style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                                 <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Predicted CVR</div>
-                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${pp.predicted_cvr || '—'}</div>
+                                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem;">${funnelPP.predicted_cvr || '—'}</div>
                             </div>
                         </div>
-                        ${pp.key_driver ? `<div style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem; color: #818CF8;">Key driver: ${pp.key_driver}</div>` : ''}
+                        ${funnelPP.key_driver ? `<div style="text-align: center; margin-top: 0.75rem; font-size: 0.8rem; color: #818CF8;">Key driver: ${funnelPP.key_driver}</div>` : ''}
                     </div>`;
             }
 
