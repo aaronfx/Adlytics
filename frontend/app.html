@@ -20,6 +20,9 @@
         }
 
         * { box-sizing: border-box; }
+        html {
+            color-scheme: dark;
+        }
         body {
             background: var(--bg-dark);
             color: var(--text-primary);
@@ -233,21 +236,46 @@
         }
 
         .form-input, .form-select, .form-textarea {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-card);
+            background: #161622;
+            border: 1px solid #2a2a3e;
             border-radius: 8px;
             padding: 0.75rem 1rem;
             color: var(--text-primary);
             font-size: 0.95rem;
             transition: all 0.2s ease;
             font-family: inherit;
+            -webkit-appearance: none;
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239CA3AF' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 12px;
+            padding-right: 2.5rem;
+            cursor: pointer;
+        }
+
+        .form-select option {
+            background: #161622;
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: #555570;
+        }
+
+        .form-input:hover, .form-select:hover, .form-textarea:hover {
+            border-color: #3a3a52;
         }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: var(--accent-red);
             box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-            background: rgba(255, 255, 255, 0.08);
+            background: #1a1a28;
         }
 
         .form-textarea {
@@ -596,16 +624,20 @@
         }
 
         .accordion-content {
-            padding: 1.5rem;
+            padding: 0 1.5rem;
             border-top: 1px solid var(--border-card);
             background: rgba(255, 255, 255, 0.02);
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease, padding 0.3s ease;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+        }
+
+        .accordion-trigger[aria-expanded="false"] + .accordion-content {
+            border-top: none;
         }
 
         .accordion-trigger[aria-expanded="true"] + .accordion-content {
-            max-height: 2000px;
+            max-height: 3000px;
             padding: 1.5rem;
         }
 
@@ -626,6 +658,11 @@
             font-size: 0.875rem;
             font-weight: 500;
             transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .chip input[type="checkbox"] {
+            display: none;
         }
 
         .chip:hover {
@@ -717,18 +754,21 @@
         .file-input-button {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px dashed var(--border-card);
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: #161622;
+            border: 2px dashed #2a2a3e;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
+            color: var(--text-muted);
+            font-size: 0.95rem;
         }
 
         .file-input-button:hover {
             border-color: var(--accent-red);
             background: rgba(239, 68, 68, 0.05);
+            color: var(--text-primary);
         }
 
         .file-input-button input {
@@ -774,50 +814,118 @@
         /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
             .header-content {
-                padding: 1rem;
+                padding: 0.75rem 1rem;
             }
 
             .logo {
-                font-size: 1.5rem;
+                font-size: 1.25rem;
+            }
+
+            .version-badge {
+                font-size: 0.65rem;
+                padding: 0.15rem 0.5rem;
             }
 
             .main-content {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .form-row {
                 grid-template-columns: 1fr;
+                gap: 1rem;
             }
 
             .platform-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
             }
 
             .tabs-container {
-                padding: 0 1rem;
+                padding: 0 0.5rem;
+                gap: 0;
             }
 
             .tab-button {
-                padding: 0.75rem 1rem;
-                font-size: 0.85rem;
+                padding: 0.75rem 0.75rem;
+                font-size: 0.8rem;
+                gap: 0.35rem;
             }
 
             .gauge-svg {
-                width: 150px;
-                height: 150px;
+                width: 140px;
+                height: 140px;
             }
 
             .gauge-score {
-                font-size: 1.75rem;
+                font-size: 1.5rem;
             }
 
             .cta-card {
                 flex-direction: column;
                 text-align: center;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .cta-card .btn {
+                width: 100%;
+                justify-content: center;
             }
 
             .metric-value {
-                font-size: 1.75rem;
+                font-size: 1.5rem;
+            }
+
+            .metric-card {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .score-breakdown {
+                gap: 1rem;
+            }
+
+            .accordion-content {
+                padding: 1rem;
+            }
+
+            .accordion-trigger[aria-expanded="true"] + .accordion-content {
+                padding: 1rem;
+            }
+
+            .chip-group {
+                gap: 0.5rem;
+            }
+
+            .chip {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .form-label {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .platform-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .header-content {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .tab-button {
+                padding: 0.6rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1188,6 +1296,7 @@
     <script>
         const API_BASE = window.location.origin;
         let currentAnalysis = null;
+        let currentFormData = {};
         let brandVoices = [];
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1250,7 +1359,7 @@
         }
 
         // ===== LOADING STATE =====
-        function showLoading(buttonElement) {
+        function showLoading(buttonElement, isVideoUpload = false) {
             const progressBar = document.getElementById('progressBar');
             const statusMessage = document.getElementById('statusMessage');
 
@@ -1261,12 +1370,22 @@
             const originalText = buttonElement.textContent;
             buttonElement.innerHTML = '<span class="spinner-icon"></span> Processing...';
 
-            const statuses = [
-                'Sending request...',
-                'AI is analyzing...',
-                'Generating insights...',
-                'Finalizing results...'
-            ];
+            const statuses = isVideoUpload
+                ? [
+                    'Uploading videos...',
+                    'Extracting frames...',
+                    'Transcribing audio...',
+                    'AI analyzing content...',
+                    'Evaluating funnel flow...',
+                    'Generating insights...',
+                    'Almost done...'
+                ]
+                : [
+                    'Sending request...',
+                    'AI is analyzing...',
+                    'Generating insights...',
+                    'Finalizing results...'
+                ];
 
             let statusIndex = 0;
             const statusInterval = setInterval(() => {
@@ -1274,9 +1393,16 @@
                     document.getElementById('statusText').textContent = statuses[statusIndex];
                     statusIndex++;
                 }
-            }, 1500);
+            }, isVideoUpload ? 8000 : 2000);
 
-            return { progressBar, statusMessage, buttonElement, originalText, statusInterval };
+            // Safety timeout - auto-hide after 3 minutes for video, 90s for text
+            const safetyTimeout = setTimeout(() => {
+                hideLoading({ progressBar, statusMessage, buttonElement, originalText, statusInterval, safetyTimeout: null });
+                const errorTarget = isVideoUpload ? 'funnelError' : 'analysisError';
+                showError(errorTarget, 'Request timed out. The server may be busy — please try again.');
+            }, isVideoUpload ? 180000 : 90000);
+
+            return { progressBar, statusMessage, buttonElement, originalText, statusInterval, safetyTimeout };
         }
 
         function hideLoading(loadingState) {
@@ -1285,6 +1411,7 @@
             loadingState.buttonElement.disabled = false;
             loadingState.buttonElement.textContent = loadingState.originalText;
             clearInterval(loadingState.statusInterval);
+            if (loadingState.safetyTimeout) clearTimeout(loadingState.safetyTimeout);
         }
 
         // ===== ERROR HANDLING =====
@@ -1336,10 +1463,15 @@
                     }
                 }
 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+
                 const response = await fetch(`${API_BASE}/api/analyze`, {
                     method: 'POST',
-                    body: submitData
+                    body: submitData,
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 const result = await response.json();
                 hideLoading(loadingState);
@@ -1350,6 +1482,7 @@
                 }
 
                 currentAnalysis = result.analysis;
+                currentFormData = data;
                 displayAnalysisResults(result.analysis, data);
                 saveToHistory('analysis', data, result.analysis);
 
@@ -1363,7 +1496,11 @@
 
             } catch (error) {
                 hideLoading(loadingState);
-                showError('analysisError', 'Network error. Please try again.');
+                if (error.name === 'AbortError') {
+                    showError('analysisError', 'Request timed out. The server may be busy — please try again.');
+                } else {
+                    showError('analysisError', 'Network error. Please check your connection and try again.');
+                }
                 console.error(error);
             }
         }
@@ -1573,20 +1710,27 @@
             clearError('funnelError');
 
             const form = e.target;
-            const loadingState = showLoading(form.querySelector('button'));
+            const loadingState = showLoading(form.querySelector('button'), true);
 
             try {
                 const formData = new FormData(form);
+
+                // Use AbortController for timeout (2.5 minutes for video uploads)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 150000);
+
                 const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 const result = await response.json();
                 hideLoading(loadingState);
 
                 if (!result.success) {
-                    showError('funnelError', result.error || 'Analysis failed. Please try again.');
+                    showError('funnelError', result.detail || result.error || 'Analysis failed. Please try again.');
                     return;
                 }
 
@@ -1595,7 +1739,11 @@
 
             } catch (error) {
                 hideLoading(loadingState);
-                showError('funnelError', 'Network error. Please try again.');
+                if (error.name === 'AbortError') {
+                    showError('funnelError', 'Request timed out. Video files may be too large — try shorter clips or check your connection.');
+                } else {
+                    showError('funnelError', 'Network error. Please check your connection and try again.');
+                }
                 console.error(error);
             }
         }
@@ -1812,9 +1960,9 @@
                 // Backend expects Form data, not JSON
                 const submitData = new FormData();
                 submitData.append('original_ad', document.getElementById('originalAdText').value);
-                submitData.append('platform', data.platform || 'tiktok');
-                submitData.append('industry', data.industry || 'finance');
-                submitData.append('audience_country', data.audience_country || 'nigeria');
+                submitData.append('platform', currentFormData.platform || data.platform || 'tiktok');
+                submitData.append('industry', currentFormData.industry || data.industry || 'finance');
+                submitData.append('audience_country', currentFormData.audience_country || data.audience_country || 'nigeria');
                 submitData.append('rewrite_focus', data.rewrite_focus || 'full');
                 submitData.append('original_scores', JSON.stringify(currentAnalysis?.scores || { overall: 50 }));
                 submitData.append('weaknesses', JSON.stringify(currentAnalysis?.critical_weaknesses || ['General improvement needed']));
@@ -1827,10 +1975,15 @@
                     }
                 }
 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+
                 const response = await fetch(`${API_BASE}/api/rewrite`, {
                     method: 'POST',
-                    body: submitData
+                    body: submitData,
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 const result = await response.json();
                 hideLoading(loadingState);
