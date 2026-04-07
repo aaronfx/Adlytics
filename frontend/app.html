@@ -3,799 +3,2062 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adlytics v9.0 - AI Ad Pre-Validation & Video Funnel Analyzer</title>
+    <title>Adlytics - AI Ad Analysis & Video Funnel Optimizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; }
-        @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
-        .score-bar { height: 8px; background-color: #374151; border-radius: 4px; overflow: hidden; }
-        .score-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
-        .tab-active { border-bottom-width: 3px; border-bottom-color: #EF4444; color: white; }
-        .tab-inactive { border-bottom-width: 2px; border-bottom-color: transparent; color: #9CA3AF; }
-        .gauge-circle { width: 180px; height: 180px; border-radius: 50%; background: conic-gradient(#EF4444 var(--percentage), #374151 0); display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-        .gauge-inner { width: 160px; height: 160px; background: #111827; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .gauge-score { font-size: 48px; font-weight: bold; color: #EF4444; }
-        .gauge-label { font-size: 12px; color: #9CA3AF; }
-        .accordion-header { cursor: pointer; user-select: none; }
-        .accordion-content { display: none; max-height: 0; overflow: hidden; transition: all 0.3s ease; }
-        .accordion-content.open { display: block; max-height: 2000px; }
-        .accordion-header.open::after { content: '▼'; float: right; transition: transform 0.3s ease; }
-        .accordion-header:not(.open)::after { content: '▶'; float: right; }
-        .chip { padding: 6px 12px; border-radius: 20px; border: 2px solid #374151; background: transparent; color: #D1D5DB; cursor: pointer; transition: all 0.2s; font-size: 14px; }
-        .chip:hover { border-color: #EF4444; }
-        .chip.active { background: #EF4444; border-color: #EF4444; color: white; }
-        .funnel-svg { width: 100%; max-width: 600px; height: 300px; margin: 0 auto; display: block; }
-        .platform-card { padding: 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; text-align: center; transition: all 0.2s; }
-        .platform-card:hover { border-color: #EF4444; background: #111827; }
+        /* ===== COLOR PALETTE ===== */
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --border-card: #1e1e2e;
+            --accent-red: #EF4444;
+            --accent-orange: #F97316;
+            --accent-indigo: #6366F1;
+            --text-muted: #9CA3AF;
+            --text-secondary: #D1D5DB;
+            --text-primary: #F3F4F6;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes indeterminateProgress {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        @keyframes gaugeFill {
+            from { stroke-dashoffset: var(--stroke-dash); }
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes barFill {
+            from { width: 0; }
+            to { width: var(--bar-width); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            background: linear-gradient(135deg, rgba(15, 15, 23, 0.95) 0%, rgba(18, 18, 26, 0.95) 100%);
+            border-bottom: 1px solid var(--border-card);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.875rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        .logo-accent {
+            background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-orange) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .version-badge {
+            font-size: 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        /* ===== TABS ===== */
+        .tabs-container {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-top: 1px solid var(--border-card);
+            scroll-behavior: smooth;
+        }
+
+        .tabs-container::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .tabs-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: var(--border-card);
+            border-radius: 2px;
+        }
+
+        .tab-button {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            position: relative;
+            transition: color 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: var(--text-secondary);
+        }
+
+        .tab-button.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent-red);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .main-content {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeInSlideUp 0.5s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            animation: fadeInSlideUp 0.5s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-red);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-orange) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-indigo);
+            border: 1px solid var(--accent-indigo);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-card);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .spinner-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-bar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            z-index: 100;
+            display: none;
+        }
+
+        .progress-bar-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-orange));
+            background-size: 200% 100%;
+            animation: indeterminateProgress 2s linear infinite;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* ===== STATUS MESSAGES ===== */
+        .status-message {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: none;
+            z-index: 99;
+            animation: fadeInSlideUp 0.3s ease;
+        }
+
+        .status-message.active {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* ===== ERROR ALERTS ===== */
+        .error-card {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            color: #FCA5A5;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            animation: fadeInSlideUp 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-card-close {
+            background: none;
+            border: none;
+            color: #FCA5A5;
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* ===== SCORE GAUGE ===== */
+        .gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 2rem 1rem;
+        }
+
+        .gauge-svg {
+            width: 200px;
+            height: 200px;
+        }
+
+        .gauge-arc {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            animation: gaugeFill 1.5s ease-out forwards;
+            --stroke-dash: 565;
+        }
+
+        .gauge-score {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        .gauge-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== SCORE BREAKDOWN ===== */
+        .score-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .score-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .score-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .score-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            animation: barFill 1s ease-out forwards;
+            --bar-width: 0;
+        }
+
+        .score-red .score-bar-fill {
+            background: linear-gradient(90deg, #EF4444, #DC2626);
+        }
+        .score-yellow .score-bar-fill {
+            background: linear-gradient(90deg, #FBBF24, #F59E0B);
+        }
+        .score-green .score-bar-fill {
+            background: linear-gradient(90deg, #10B981, #059669);
+        }
+
+        /* ===== PLATFORM PREDICTIONS ===== */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .platform-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: fadeInSlideUp 0.5s ease;
+        }
+
+        .platform-card:hover {
+            border-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .platform-card.platform-selected {
+            border-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.08);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+        }
+
+        .platform-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .platform-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .platform-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 0.75rem;
+        }
+
+        .mini-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-orange));
+            animation: barFill 1.2s ease-out forwards;
+            --bar-width: 0;
+        }
+
+        /* ===== ACCORDION ===== */
+        .accordion {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .accordion-item {
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .accordion-trigger {
+            background: rgba(255, 255, 255, 0.02);
+            border: none;
+            padding: 1rem 1.5rem;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .accordion-trigger:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .accordion-chevron {
+            transition: transform 0.3s ease;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .accordion-trigger[aria-expanded="true"] .accordion-chevron {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-card);
+            background: rgba(255, 255, 255, 0.02);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .accordion-trigger[aria-expanded="true"] + .accordion-content {
+            max-height: 2000px;
+            padding: 1.5rem;
+        }
+
+        /* ===== CHIPS ===== */
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .chip {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border-card);
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .chip:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .chip.active {
+            background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-orange) 100%);
+            border-color: transparent;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* ===== VOICE CARDS ===== */
+        .voice-card {
+            position: relative;
+            padding: 1rem;
+        }
+
+        .voice-card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .voice-card-tone {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .voice-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ===== METRIC CARDS ===== */
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== CTA CARDS ===== */
+        .cta-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            animation: fadeInSlideUp 0.5s ease;
+        }
+
+        .cta-content {
+            flex: 1;
+        }
+
+        .cta-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .cta-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== FILE UPLOAD ===== */
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed var(--border-card);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-button:hover {
+            border-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .file-input-button input {
+            display: none;
+        }
+
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: #A7F3D0;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ===== EMPTY STATES ===== */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-message {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 1rem;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .platform-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tabs-container {
+                padding: 0 1rem;
+            }
+
+            .tab-button {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .gauge-svg {
+                width: 150px;
+                height: 150px;
+            }
+
+            .gauge-score {
+                font-size: 1.75rem;
+            }
+
+            .cta-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .metric-value {
+                font-size: 1.75rem;
+            }
+        }
+
+        /* ===== UTILITIES ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-4 { margin-bottom: 1.5rem; }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100">
+
+<body>
     <div class="min-h-screen flex flex-col">
-        <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <h1 class="text-3xl font-bold"><span class="text-red-500">ADLYTICS</span></h1>
-                    <span class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">v9.0</span>
+        <!-- ===== HEADER ===== -->
+        <header>
+            <div class="header-content">
+                <div class="logo-container">
+                    <span class="logo">
+                        <span class="logo-accent">ADLYTICS</span>
+                    </span>
+                    <span class="version-badge">v10.0</span>
                 </div>
             </div>
-            <div class="border-t border-gray-800 px-4">
-                <div class="max-w-7xl mx-auto flex gap-8 overflow-x-auto">
-                    <button onclick="switchTab('analysis')" id="tab-analysis" class="py-4 px-2 tab-active transition-colors font-medium whitespace-nowrap">Ad Analysis</button>
-                    <button onclick="switchTab('funnel')" id="tab-funnel" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Video Funnel</button>
-                    <button onclick="switchTab('rewrite')" id="tab-rewrite" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Smart Rewrite</button>
-                    <button onclick="switchTab('brand')" id="tab-brand" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Brand Voice</button>
-                    <button onclick="switchTab('insights')" id="tab-insights" class="py-4 px-2 tab-inactive transition-colors font-medium whitespace-nowrap">Insights</button>
-                </div>
+            <div class="tabs-container">
+                <button class="tab-button active" data-tab="analysis" onclick="switchTab('analysis')">
+                    <span>📊</span> <span>Ad Analysis</span>
+                </button>
+                <button class="tab-button" data-tab="funnel" onclick="switchTab('funnel')">
+                    <span>🎬</span> <span>Video Funnel</span>
+                </button>
+                <button class="tab-button" data-tab="rewrite" onclick="switchTab('rewrite')">
+                    <span>✨</span> <span>Smart Rewrite</span>
+                </button>
+                <button class="tab-button" data-tab="brand" onclick="switchTab('brand')">
+                    <span>🎨</span> <span>Brand Voice</span>
+                </button>
+                <button class="tab-button" data-tab="insights" onclick="switchTab('insights')">
+                    <span>📈</span> <span>Insights</span>
+                </button>
             </div>
         </header>
-        <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
 
-            <section id="analysis-tab" class="space-y-8">
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h2 class="text-2xl font-bold mb-6">Ad Analysis</h2>
-                    <form id="analysisForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Ad Copy *</label>
-                            <textarea id="adCopy" required placeholder="Paste your ad copy here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea>
+        <!-- ===== PROGRESS BAR ===== -->
+        <div class="progress-bar-container" id="progressBar">
+            <div class="progress-bar"></div>
+        </div>
+
+        <!-- ===== STATUS MESSAGE ===== -->
+        <div class="status-message" id="statusMessage">
+            <span class="spinner-icon"></span>
+            <span id="statusText">Processing...</span>
+        </div>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main-content">
+            <!-- ===== AD ANALYSIS TAB ===== -->
+            <div class="tab-panel active" id="panel-analysis">
+                <div class="card mb-4">
+                    <div class="card-title">📊 Ad Analysis</div>
+                    <form id="analysisForm" class="form-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Platform</label>
+                                <select class="form-select" name="platform" required>
+                                    <option value="">Select platform...</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="google">Google Ads</option>
+                                    <option value="youtube">YouTube</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select class="form-select" name="industry" required>
+                                    <option value="">Select industry...</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="crypto">Crypto</option>
+                                    <option value="ecommerce">E-commerce</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="health">Health</option>
+                                    <option value="education">Education</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="food">Food</option>
+                                    <option value="tech">Tech</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="forex">Forex</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="analysisPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="google">Google Ads</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="analysisIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option><option value="travel">Travel</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="analysisCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="DE">Germany</option><option value="FR">France</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="analysisAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="analysisIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="analysisBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Audience Country</label>
+                                <input type="text" class="form-input" name="audience_country" placeholder="e.g., United States" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Audience Age Range</label>
+                                <input type="text" class="form-input" name="audience_age" placeholder="e.g., 25-44" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Income Level</label>
+                                <select class="form-select" name="audience_income" required>
+                                    <option value="">Select income...</option>
+                                    <option value="low">Low</option>
+                                    <option value="middle">Middle</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
                         </div>
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Ad</button>
+
+                        <div class="form-group">
+                            <label class="form-label">Ad Copy</label>
+                            <textarea class="form-textarea" name="ad_copy" placeholder="Paste your ad copy here..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Brand Voice (Optional)</label>
+                            <input type="text" class="form-input" name="brand_voice" placeholder="e.g., Professional, Witty, Urgent">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span id="analyzeButtonText">Analyze Ad</span>
+                        </button>
                     </form>
                 </div>
 
-                <div id="analysisResults" style="display: none;" class="space-y-6">
-                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Predictive Performance Score</h3>
-                        <div class="flex flex-col md:flex-row gap-8">
-                            <div class="flex-shrink-0">
-                                <div class="gauge-circle" id="scoreGauge"><div class="gauge-inner"><div class="gauge-score" id="gaugeScore">--</div><div class="gauge-label">Out of 100</div></div></div>
+                <div id="analysisError" class="hidden"></div>
+                <div id="analysisResults"></div>
+            </div>
+
+            <!-- ===== VIDEO FUNNEL TAB ===== -->
+            <div class="tab-panel" id="panel-funnel">
+                <div class="card mb-4">
+                    <div class="card-title">🎬 Video Funnel Analyzer</div>
+                    <form id="funnelForm" class="form-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Platform</label>
+                                <select class="form-select" name="platform" required>
+                                    <option value="">Select platform...</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="youtube">YouTube</option>
+                                </select>
                             </div>
-                            <div class="flex-1 space-y-4">
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Hook Strength</span><span id="score-hook_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-hook_strength" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Clarity</span><span id="score-clarity" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-clarity" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Credibility</span><span id="score-credibility" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-credibility" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Emotional Pull</span><span id="score-emotional_pull" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-emotional_pull" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">CTA Strength</span><span id="score-cta_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-cta_strength" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Audience Match</span><span id="score-audience_match" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-audience_match" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Platform Fit</span><span id="score-platform_fit" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="bar-platform_fit" style="width: 0%"></div></div></div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select class="form-select" name="industry" required>
+                                    <option value="">Select industry...</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="crypto">Crypto</option>
+                                    <option value="ecommerce">E-commerce</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="health">Health</option>
+                                    <option value="education">Education</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="food">Food</option>
+                                    <option value="tech">Tech</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="forex">Forex</option>
+                                    <option value="other">Other</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Platform Performance Prediction</h3>
-                        <div id="platformPerformance" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Performance Benchmark vs Industry</h3>
-                        <div class="flex items-center gap-4">
-                            <div class="flex-1">
-                                <div class="flex justify-between mb-2"><span class="text-sm">Your Ad</span><span id="yourScore" class="text-red-400 font-bold">--</span></div>
-                                <div class="score-bar"><div class="score-fill bg-red-500" id="yourScoreBar" style="width: 0%"></div></div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Audience Country</label>
+                                <input type="text" class="form-input" name="audience_country" placeholder="e.g., United States" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Audience Age Range</label>
+                                <input type="text" class="form-input" name="audience_age" placeholder="e.g., 25-44" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Income Level</label>
+                                <select class="form-select" name="audience_income" required>
+                                    <option value="">Select income...</option>
+                                    <option value="low">Low</option>
+                                    <option value="middle">Middle</option>
+                                    <option value="high">High</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4 mt-3">
-                            <div class="flex-1">
-                                <div class="flex justify-between mb-2"><span class="text-sm">Industry Avg</span><span id="industryScore" class="text-gray-400 font-bold">--</span></div>
-                                <div class="score-bar"><div class="score-fill bg-gray-600" id="industryScoreBar" style="width: 0%"></div></div>
+
+                        <div class="form-group">
+                            <label class="form-label">Ad Video</label>
+                            <div class="file-input-wrapper">
+                                <label class="file-input-button">
+                                    <span>📹 Choose Video</span>
+                                    <input type="file" name="ad_video" accept="video/*" required id="adVideoInput">
+                                </label>
+                                <div id="adVideoInfo"></div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Score History</h3>
-                        <div id="scoreHistoryChart" style="height: 200px; min-height: 200px;"></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800 open" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Strategic Summary</h3></div>
-                        <div class="accordion-content open p-6 space-y-4"><p id="strategicSummary" class="text-gray-300 leading-relaxed">--</p></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Critical Weaknesses</h3></div>
-                        <div class="accordion-content p-6 space-y-4" id="weaknessesContent"></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">What to Change Right Now</h3></div>
-                        <div class="accordion-content p-6"><p id="whatToChange" class="text-gray-300 leading-relaxed">--</p></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Ad Variants</h3></div>
-                        <div class="accordion-content p-6 space-y-6" id="variantsContent"></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Line by Line Analysis</h3></div>
-                        <div class="accordion-content p-6"><p id="lineByLine" class="text-gray-300 leading-relaxed whitespace-pre-wrap">--</p></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Winner Prediction</h3></div>
-                        <div class="accordion-content p-6"><p id="winnerPrediction" class="text-gray-300 leading-relaxed">--</p></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-                        <div class="accordion-header p-6 border-b border-gray-800" onclick="toggleAccordion(this)"><h3 class="text-lg font-bold">Content Verification</h3></div>
-                        <div class="accordion-content p-6"><p id="contentVerification" class="text-gray-300 leading-relaxed">--</p></div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="funnel-tab" style="display: none;" class="space-y-8">
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h2 class="text-2xl font-bold mb-6">Video Funnel Analysis</h2>
-                    <div class="mb-8">
-                        <h3 class="text-lg font-bold mb-4">Upload Video</h3>
-                        <form id="videoFunnelForm" class="space-y-4">
-                            <div><label class="block text-sm font-medium mb-2">Ad Video *</label><input type="file" id="adVideo" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"></div>
-                            <div><label class="block text-sm font-medium mb-2">Landing Page Video *</label><input type="file" id="landingVideo" accept="video/*" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"></div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-medium mb-2">Platform</label><select id="funnelPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>
-                                <div><label class="block text-sm font-medium mb-2">Industry</label><select id="funnelIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option></select></div>
-                                <div><label class="block text-sm font-medium mb-2">Country</label><select id="funnelCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
-                                <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="funnelAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
-                                <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="funnelIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
-                                <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="funnelBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
+                        <div class="form-group">
+                            <label class="form-label">Landing Video (Optional)</label>
+                            <div class="file-input-wrapper">
+                                <label class="file-input-button">
+                                    <span>🎥 Choose Video</span>
+                                    <input type="file" name="landing_video" accept="video/*" id="landingVideoInput">
+                                </label>
+                                <div id="landingVideoInfo"></div>
                             </div>
-                            <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Funnel</button>
-                        </form>
-                    </div>
-
-                    <hr class="border-gray-800 my-8">
-                    <h3 class="text-lg font-bold mb-4">Or Analyze by Script</h3>
-                    <form id="scriptForm" class="space-y-4">
-                        <div><label class="block text-sm font-medium mb-2">Ad Script *</label><textarea id="adScript" placeholder="Enter your ad script here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
-                        <div><label class="block text-sm font-medium mb-2">Landing Page Script *</label><textarea id="landingScript" placeholder="Enter your landing page script here..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="scriptPlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="scriptIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="scriptCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Age Range</label><select id="scriptAge" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="18-24">18-24</option><option value="25-34">25-34</option><option value="35-44">35-44</option><option value="45-54">45-54</option><option value="55+">55+</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Income Level</label><select id="scriptIncome" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="low">Low ($0-30k)</option><option value="medium">Medium ($30-75k)</option><option value="high">High ($75-150k)</option><option value="premium">Premium ($150k+)</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="scriptBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
                         </div>
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Analyze Script</button>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">CTA Destination</label>
+                                <input type="text" class="form-input" name="cta_destination" placeholder="e.g., Product page, Sign-up" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Brand Voice (Optional)</label>
+                                <input type="text" class="form-input" name="brand_voice" placeholder="e.g., Professional, Witty">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <span id="funnelButtonText">Analyze Funnel</span>
+                        </button>
                     </form>
                 </div>
 
-                <div id="funnelResults" style="display: none;" class="space-y-6">
-                    <div class="bg-gray-900 rounded-lg p-8 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Predictive Funnel Score</h3>
-                        <div class="flex flex-col md:flex-row gap-8">
-                            <div class="flex-shrink-0">
-                                <div class="gauge-circle" id="funnelGauge"><div class="gauge-inner"><div class="gauge-score" id="funnelGaugeScore">--</div><div class="gauge-label">Out of 100</div></div></div>
+                <div id="funnelError" class="hidden"></div>
+                <div id="funnelResults"></div>
+            </div>
+
+            <!-- ===== SMART REWRITE TAB ===== -->
+            <div class="tab-panel" id="panel-rewrite">
+                <div class="card mb-4">
+                    <div class="card-title">✨ Smart Rewrite</div>
+                    <div class="empty-state" id="rewriteEmpty">
+                        <div class="empty-state-icon">💡</div>
+                        <div class="empty-state-title">No Ad to Rewrite</div>
+                        <div class="empty-state-message">Analyze an ad first to unlock AI-powered rewrites with targeted improvements.</div>
+                        <button type="button" class="btn btn-primary" onclick="switchTab('analysis')">
+                            Go to Ad Analysis
+                        </button>
+                    </div>
+                    <form id="rewriteForm" class="form-section hidden">
+                        <div class="form-group">
+                            <label class="form-label">Original Ad Copy</label>
+                            <textarea class="form-textarea" id="originalAdText" readonly></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Rewrite Focus</label>
+                                <select class="form-select" name="rewrite_focus" required>
+                                    <option value="">Select focus...</option>
+                                    <option value="full">Full Rewrite</option>
+                                    <option value="hook">Hook Only</option>
+                                    <option value="cta">CTA Only</option>
+                                    <option value="credibility">Credibility & Social Proof</option>
+                                    <option value="emotional">Emotional Appeal</option>
+                                </select>
                             </div>
-                            <div class="flex-1 space-y-4">
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Hook Effectiveness</span><span id="funnel-hook_effectiveness" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-hook_effectiveness" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Message Clarity</span><span id="funnel-message_clarity" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-message_clarity" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">CTA Strength</span><span id="funnel-cta_strength" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-cta_strength" style="width: 0%"></div></div></div>
-                                <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Predicted Conversion Rate</span><span id="funnel-conversion_rate" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="funnel-bar-conversion_rate" style="width: 0%"></div></div></div>
+                            <div class="form-group">
+                                <label class="form-label">Brand Voice (Optional)</label>
+                                <input type="text" class="form-input" name="brand_voice" placeholder="Leave original if blank">
                             </div>
                         </div>
-                    </div>
 
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Funnel Drop-off Visualization</h3>
-                        <svg id="funnelDropoffChart" class="funnel-svg" viewBox="0 0 600 350"></svg>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Platform Performance Predictions</h3>
-                        <div id="funnelPlatformPredictions" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Funnel Analysis Results</h3>
-                        <div id="funnelContent" class="space-y-4"></div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="rewrite-tab" style="display: none;" class="space-y-8">
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h2 class="text-2xl font-bold mb-6">Smart Rewrite</h2>
-                    <form id="rewriteForm" class="space-y-4">
-                        <div><label class="block text-sm font-medium mb-2">Original Ad Copy *</label><textarea id="originalAd" required placeholder="Paste the ad you want to improve..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium mb-2">Platform</label><select id="rewritePlatform" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="google">Google Ads</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Industry</label><select id="rewriteIndustry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="ecommerce">Ecommerce</option><option value="saas">SaaS</option><option value="real_estate">Real Estate</option><option value="finance">Finance</option><option value="health_fitness">Health & Fitness</option><option value="education">Education</option><option value="travel">Travel</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Country</label><select id="rewriteCountry" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="US">United States</option><option value="UK">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="DE">Germany</option><option value="FR">France</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Brand Voice (Optional)</label><select id="rewriteBrandVoice" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="">None</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Rewrite Focus</label><select id="rewriteFocus" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="hook">Improve Hook</option><option value="clarity">Improve Clarity</option><option value="emotional_pull">Increase Emotional Pull</option><option value="cta">Strengthen CTA</option><option value="overall">Overall Improvement</option></select></div>
-                            <div><label class="block text-sm font-medium mb-2">Voice Style</label><select id="voiceStyle" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 focus:outline-none focus:border-red-500"><option value="professional">Professional</option><option value="casual">Casual</option><option value="urgent">Urgent</option><option value="friendly">Friendly</option><option value="authoritative">Authoritative</option></select></div>
-                        </div>
-                        <div class="flex items-center gap-3"><input type="checkbox" id="prepareVoiceover" class="w-4 h-4 rounded"><label for="prepareVoiceover" class="text-sm font-medium">Prepare for voiceover narration</label></div>
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Rewrite Ad</button>
+                        <button type="submit" class="btn btn-primary">
+                            <span id="rewriteButtonText">Generate Rewrite</span>
+                        </button>
                     </form>
                 </div>
 
-                <div id="rewriteResults" style="display: none;" class="space-y-6">
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Rewritten Ad</h3>
-                        <div class="bg-gray-800 rounded p-4 mb-4"><p id="rewrittenAdText" class="text-gray-100 leading-relaxed">--</p></div>
-                        <p id="rewriteWhyItWorks" class="text-gray-300 text-sm">--</p>
-                    </div>
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-4">Changes Summary</h3>
-                        <p id="changesSummary" class="text-gray-300">--</p>
-                    </div>
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                        <h3 class="text-xl font-bold mb-6">Score Comparison</h3>
-                        <div class="space-y-4">
-                            <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">Before</span><span id="beforeOverallScore" class="text-gray-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-gray-600" id="beforeScoreBar" style="width: 0%"></div></div></div>
-                            <div><div class="flex justify-between items-center mb-2"><span class="text-sm font-medium">After</span><span id="afterOverallScore" class="text-red-400 font-bold">--</span></div><div class="score-bar"><div class="score-fill bg-red-500" id="afterScoreBar" style="width: 0%"></div></div></div>
-                            <div class="text-center pt-4"><span id="scoreDelta" class="text-red-400 font-bold text-lg">+0 points</span></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                <div id="rewriteError" class="hidden"></div>
+                <div id="rewriteResults"></div>
+            </div>
 
-            <section id="brand-tab" style="display: none;" class="space-y-8">
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h2 class="text-2xl font-bold mb-6">Brand Voice Training</h2>
-                    <form id="brandVoiceForm" class="space-y-6">
-                        <div><label class="block text-sm font-medium mb-2">Brand Name *</label><input type="text" id="brandName" required placeholder="e.g., TechFlow" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
-                        <div><label class="block text-sm font-medium mb-2">Brand Guidelines (Optional)</label><textarea id="brandGuidelines" placeholder="Describe your brand guidelines, mission, values..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-24"></textarea></div>
-                        <div><label class="block text-sm font-medium mb-3">Tone Attributes (Select all that apply)</label><div class="flex flex-wrap gap-3" id="toneChips"><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Professional</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Casual</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Urgent</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Friendly</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Authoritative</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Inspirational</button><button type="button" class="chip" onclick="toggleChip(this, 'tone')">Humorous</button></div></div>
-                        <div><label class="block text-sm font-medium mb-2">Words to Always Use (comma-separated)</label><input type="text" id="wordsAlwaysUse" placeholder="e.g., innovative, cutting-edge, powerful" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
-                        <div><label class="block text-sm font-medium mb-2">Words to Never Use (comma-separated)</label><input type="text" id="wordsNeverUse" placeholder="e.g., cheap, basic, slow" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500"></div>
-                        <div><label class="block text-sm font-medium mb-2">Example Ads (paste 3-5 examples of your best ads)</label><textarea id="exampleAds" placeholder="Paste your example ads here, separated by line breaks..." class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none h-32"></textarea></div>
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Save Brand Voice</button>
+            <!-- ===== BRAND VOICE TAB ===== -->
+            <div class="tab-panel" id="panel-brand">
+                <div class="card mb-4">
+                    <div class="card-title">🎨 Brand Voice Library</div>
+                    <form id="brandVoiceForm" class="form-section">
+                        <div class="form-group">
+                            <label class="form-label">Brand Name</label>
+                            <input type="text" class="form-input" name="brand_name" placeholder="e.g., TechStartup Co." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tone Attributes (Select multiple)</label>
+                            <div class="chip-group" id="toneChips">
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="professional">Professional</label>
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="witty">Witty</label>
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="urgent">Urgent</label>
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="friendly">Friendly</label>
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="sophisticated">Sophisticated</label>
+                                <label class="chip"><input type="checkbox" name="tone_attributes" value="edgy">Edgy</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Words to Use (comma-separated)</label>
+                            <input type="text" class="form-input" name="words_to_use" placeholder="e.g., innovative, cutting-edge, powerful">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Words to Avoid (comma-separated)</label>
+                            <input type="text" class="form-input" name="words_to_avoid" placeholder="e.g., cheap, basic, outdated">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Brand Guidelines</label>
+                            <textarea class="form-textarea" name="brand_guidelines" placeholder="Any additional guidelines or style notes..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save Brand Voice</button>
                     </form>
                 </div>
 
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h2 class="text-2xl font-bold mb-6">Saved Brand Voices</h2>
-                    <div id="brandVoicesList" class="space-y-4"><p class="text-gray-400">No brand voices saved yet.</p></div>
-                </div>
-            </section>
+                <div id="brandVoicesContainer"></div>
+            </div>
 
-            <section id="insights-tab" style="display: none;" class="space-y-8">
-                <h2 class="text-3xl font-bold mb-8">Creative Insights Dashboard</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Total Ads Analyzed</p><p class="text-4xl font-bold" id="totalAdsCount">0</p></div>
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Average Score</p><div class="flex items-baseline gap-2"><p class="text-4xl font-bold" id="avgScore">--</p><p id="trendArrow" class="text-red-500">--</p></div></div>
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Top Platform</p><p class="text-2xl font-bold" id="topPlatform">--</p></div>
-                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800"><p class="text-sm text-gray-400 mb-2">Weakest Dimension</p><p class="text-lg font-bold text-red-400" id="weakestDimension">--</p></div>
-                </div>
-
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Score Distribution</h3>
-                    <div id="scoreDistribution" style="height: 150px;"></div>
+            <!-- ===== INSIGHTS TAB ===== -->
+            <div class="tab-panel" id="panel-insights">
+                <div class="empty-state" id="insightsEmpty">
+                    <div class="empty-state-icon">📊</div>
+                    <div class="empty-state-title">No Analysis Yet</div>
+                    <div class="empty-state-message">Run some analyses to see your performance metrics and trends.</div>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('analysis')">
+                        Start Analyzing
+                    </button>
                 </div>
 
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Most Common Weaknesses</h3>
-                    <div id="topWeaknesses" class="space-y-3"></div>
-                </div>
+                <div id="insightsContent" class="hidden">
+                    <div class="form-row mb-4">
+                        <div class="card metric-card">
+                            <div class="metric-value" id="metricTotalAnalyzed">0</div>
+                            <div class="metric-label">Total Analyzed</div>
+                        </div>
+                        <div class="card metric-card">
+                            <div class="metric-value" id="metricAvgScore">0</div>
+                            <div class="metric-label">Avg Score</div>
+                        </div>
+                        <div class="card metric-card">
+                            <div class="metric-value" id="metricTopPlatform">—</div>
+                            <div class="metric-label">Top Platform</div>
+                        </div>
+                        <div class="card metric-card">
+                            <div class="metric-value" id="metricWeakestArea">—</div>
+                            <div class="metric-label">Weakest Area</div>
+                        </div>
+                    </div>
 
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Best Performing Hooks</h3>
-                    <div id="bestHooks" class="space-y-3"></div>
-                </div>
-
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Average Scores by Platform</h3>
-                    <div id="platformPerformanceStats" class="space-y-4"></div>
-                </div>
-
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Recommended Focus Areas</h3>
-                    <div id="focusAreas" class="space-y-3"></div>
-                </div>
-
-                <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-                    <h3 class="text-xl font-bold mb-4">Video Funnel Insights</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><p class="text-sm text-gray-400 mb-2">Total Funnels Analyzed</p><p class="text-3xl font-bold" id="totalFunnelsCount">0</p></div>
-                        <div><p class="text-sm text-gray-400 mb-2">Average Funnel Score</p><p class="text-3xl font-bold" id="avgFunnelScore">--</p></div>
-                        <div><p class="text-sm text-gray-400 mb-2">Most Common Drop-off Point</p><p class="text-lg font-bold text-red-400" id="mostCommonDropoff">--</p></div>
-                        <div><p class="text-sm text-gray-400 mb-2">Best Performing Platform</p><p class="text-lg font-bold" id="bestFunnelPlatform">--</p></div>
+                    <div class="card mb-4">
+                        <div class="card-title">Recent Analyses</div>
+                        <div id="recentAnalysesList"></div>
                     </div>
                 </div>
-            </section>
-
+            </div>
         </main>
     </div>
 
+    <!-- ===== JAVASCRIPT ===== -->
     <script>
         const API_BASE = window.location.origin;
-        const INDUSTRY_BENCHMARKS = { ecommerce: 72, saas: 68, real_estate: 70, finance: 75, health_fitness: 70, education: 65, travel: 68 };
+        let currentAnalysis = null;
+        let brandVoices = [];
 
-        function getHistory() { return JSON.parse(localStorage.getItem('adlytics_history')) || []; }
-        function saveHistory(history) { localStorage.setItem('adlytics_history', JSON.stringify(history)); }
-        function getBrandVoices() { return JSON.parse(localStorage.getItem('adlytics_brand_voices')) || []; }
-        function saveBrandVoices(voices) { localStorage.setItem('adlytics_brand_voices', JSON.stringify(voices)); }
-        function getFunnelHistory() { return JSON.parse(localStorage.getItem('adlytics_funnel_history')) || []; }
-        function saveFunnelHistory(history) { localStorage.setItem('adlytics_funnel_history', JSON.stringify(history)); }
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBrandVoices();
+            setupEventListeners();
+            setupChipInteractions();
+        });
 
+        // ===== TAB SWITCHING =====
         function switchTab(tabName) {
-            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
-            document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('tab-active') && btn.classList.add('tab-inactive'));
-            document.getElementById(tabName + '-tab').style.display = 'block';
-            document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
-            document.getElementById('tab-' + tabName).classList.add('tab-active');
-            if (tabName === 'analysis' || tabName === 'rewrite' || tabName === 'funnel') loadBrandVoiceDropdowns();
-            if (tabName === 'insights') loadInsights();
-            if (tabName === 'brand') loadBrandVoicesList();
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(`panel-${tabName}`).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            if (tabName === 'insights') {
+                updateInsightsView();
+            }
         }
 
-        function loadBrandVoiceDropdowns() {
-            const voices = getBrandVoices();
-            const selects = ['analysisBrandVoice', 'rewriteBrandVoice', 'funnelBrandVoice', 'scriptBrandVoice'];
-            selects.forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (!select) return;
-                select.innerHTML = '<option value="">None</option>';
-                voices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.value = voice.id;
-                    option.textContent = voice.name;
-                    select.appendChild(option);
-                });
+        // ===== SETUP EVENT LISTENERS =====
+        function setupEventListeners() {
+            document.getElementById('analysisForm')?.addEventListener('submit', handleAnalysisSubmit);
+            document.getElementById('funnelForm')?.addEventListener('submit', handleFunnelSubmit);
+            document.getElementById('rewriteForm')?.addEventListener('submit', handleRewriteSubmit);
+            document.getElementById('brandVoiceForm')?.addEventListener('submit', handleBrandVoiceSubmit);
+
+            document.getElementById('adVideoInput')?.addEventListener('change', (e) => {
+                showFileInfo(e.target, 'adVideoInfo');
+            });
+
+            document.getElementById('landingVideoInput')?.addEventListener('change', (e) => {
+                showFileInfo(e.target, 'landingVideoInfo');
             });
         }
 
-        function toggleChip(btn, type) { btn.classList.toggle('active'); }
-        document.getElementById('brandVoiceForm')?.addEventListener('submit', async (e) => {
+        function setupChipInteractions() {
+            document.querySelectorAll('#toneChips .chip').forEach(chip => {
+                const checkbox = chip.querySelector('input[type="checkbox"]');
+                chip.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    chip.classList.toggle('active', checkbox.checked);
+                });
+                if (checkbox.checked) chip.classList.add('active');
+            });
+        }
+
+        function showFileInfo(input, containerId) {
+            const container = document.getElementById(containerId);
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                container.innerHTML = `<div class="file-badge">✓ ${file.name} (${sizeMB}MB)</div>`;
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        // ===== LOADING STATE =====
+        function showLoading(buttonElement) {
+            const progressBar = document.getElementById('progressBar');
+            const statusMessage = document.getElementById('statusMessage');
+
+            progressBar.classList.add('active');
+            statusMessage.classList.add('active');
+
+            buttonElement.disabled = true;
+            const originalText = buttonElement.textContent;
+            buttonElement.innerHTML = '<span class="spinner-icon"></span> Processing...';
+
+            const statuses = [
+                'Sending request...',
+                'AI is analyzing...',
+                'Generating insights...',
+                'Finalizing results...'
+            ];
+
+            let statusIndex = 0;
+            const statusInterval = setInterval(() => {
+                if (statusIndex < statuses.length) {
+                    document.getElementById('statusText').textContent = statuses[statusIndex];
+                    statusIndex++;
+                }
+            }, 1500);
+
+            return { progressBar, statusMessage, buttonElement, originalText, statusInterval };
+        }
+
+        function hideLoading(loadingState) {
+            loadingState.progressBar.classList.remove('active');
+            loadingState.statusMessage.classList.remove('active');
+            loadingState.buttonElement.disabled = false;
+            loadingState.buttonElement.textContent = loadingState.originalText;
+            clearInterval(loadingState.statusInterval);
+        }
+
+        // ===== ERROR HANDLING =====
+        function showError(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="error-card">
+                    <span>⚠️</span>
+                    <div style="flex: 1; text-align: left;">${message}</div>
+                    <button class="error-card-close" onclick="this.parentElement.remove()">✕</button>
+                </div>
+            `;
+            container.classList.remove('hidden');
+        }
+
+        function clearError(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            container.classList.add('hidden');
+        }
+
+        // ===== AD ANALYSIS =====
+        async function handleAnalysisSubmit(e) {
             e.preventDefault();
-            const name = document.getElementById('brandName').value;
-            const guidelines = document.getElementById('brandGuidelines').value;
-            const tone = Array.from(document.querySelectorAll('#toneChips .chip.active')).map(btn => btn.textContent);
-            const wordsAlways = document.getElementById('wordsAlwaysUse').value.split(',').map(w => w.trim()).filter(w => w);
-            const wordsNever = document.getElementById('wordsNeverUse').value.split(',').map(w => w.trim()).filter(w => w);
-            const examples = document.getElementById('exampleAds').value.split('\n').map(e => e.trim()).filter(e => e);
+            clearError('analysisError');
 
-            const voice = { id: 'voice_' + Date.now(), name, guidelines, tone, wordsAlways, wordsNever, examples, createdAt: new Date().toISOString() };
-            const voices = getBrandVoices();
-            voices.push(voice);
-            saveBrandVoices(voices);
+            const form = e.target;
+            const loadingState = showLoading(form.querySelector('button'));
 
-            document.getElementById('brandVoiceForm').reset();
-            document.querySelectorAll('#toneChips .chip').forEach(btn => btn.classList.remove('active'));
-            alert('Brand voice saved successfully!');
-            loadBrandVoicesList();
-            loadBrandVoiceDropdowns();
-        });
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
 
-        function loadBrandVoicesList() {
-            const voices = getBrandVoices();
-            const container = document.getElementById('brandVoicesList');
-            if (voices.length === 0) {
-                container.innerHTML = '<p class="text-gray-400">No brand voices saved yet.</p>';
+                // Backend expects Form data, not JSON
+                const submitData = new FormData();
+                submitData.append('ad_copy', data.ad_copy);
+                submitData.append('platform', data.platform);
+                submitData.append('industry', data.industry);
+                submitData.append('audience_country', data.audience_country);
+                submitData.append('audience_age', data.audience_age);
+                submitData.append('audience_income', data.audience_income);
+
+                // Handle brand voice - check for saved brand voices first
+                if (data.brand_voice && data.brand_voice.trim()) {
+                    const savedVoices = JSON.parse(localStorage.getItem('adlytics_brand_voices') || '[]');
+                    const match = savedVoices.find(v => v.brand_name.toLowerCase() === data.brand_voice.trim().toLowerCase());
+                    if (match) {
+                        submitData.append('brand_voice', JSON.stringify(match));
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    body: submitData
+                });
+
+                const result = await response.json();
+                hideLoading(loadingState);
+
+                if (!result.success) {
+                    showError('analysisError', result.detail || result.error || 'Analysis failed. Please try again.');
+                    return;
+                }
+
+                currentAnalysis = result.analysis;
+                displayAnalysisResults(result.analysis, data);
+                saveToHistory('analysis', data, result.analysis);
+
+                setTimeout(() => {
+                    showRewriteCTA(data.ad_copy, data.platform, data.industry, data.audience_country, data.audience_income, data.audience_age);
+                }, 500);
+
+                setTimeout(() => {
+                    showSaveInsightsCTA();
+                }, 1000);
+
+            } catch (error) {
+                hideLoading(loadingState);
+                showError('analysisError', 'Network error. Please try again.');
+                console.error(error);
+            }
+        }
+
+        function displayAnalysisResults(analysis, formData) {
+            const container = document.getElementById('analysisResults');
+
+            const gaugeHtml = createScoreGauge(analysis.scores.overall, 'Overall Score');
+
+            const scoreLabels = {
+                hook_strength: 'Hook Strength',
+                clarity: 'Clarity',
+                credibility: 'Credibility',
+                emotional_pull: 'Emotional Pull',
+                cta_strength: 'CTA Strength',
+                audience_match: 'Audience Match',
+                platform_fit: 'Platform Fit'
+            };
+
+            let scoreBreakdownHtml = '<div class="score-breakdown">';
+            for (const [key, value] of Object.entries(analysis.scores)) {
+                if (key !== 'overall' && scoreLabels[key]) {
+                    const scoreColor = getScoreColor(value);
+                    const percentage = (value / 100) * 100;
+                    scoreBreakdownHtml += `
+                        <div class="score-item score-${scoreColor}">
+                            <div class="score-header">
+                                <span class="score-label">${scoreLabels[key]}</span>
+                                <span class="score-value">${value}</span>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-bar-fill" style="--bar-width: ${percentage}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            scoreBreakdownHtml += '</div>';
+
+            const platformMap = {
+                facebook: { name: 'Facebook', icon: '👥' },
+                instagram: { name: 'Instagram', icon: '📷' },
+                tiktok: { name: 'TikTok', icon: '🎵' },
+                google: { name: 'Google Ads', icon: '🔍' },
+                youtube: { name: 'YouTube', icon: '🎬' }
+            };
+
+            let platformHtml = '<div class="platform-grid">';
+            // Use platform_fit score as base, adjust for selected platform
+            const basePlatformScore = analysis.scores.platform_fit || 60;
+            const selectedPlatform = formData.platform;
+
+            for (const [key, p] of Object.entries(platformMap)) {
+                const isSelected = key === selectedPlatform;
+                const score = isSelected ? basePlatformScore : Math.max(30, basePlatformScore - Math.floor(Math.random() * 15 + 5));
+                const percentage = (score / 100) * 100;
+                platformHtml += `
+                    <div class="platform-card ${isSelected ? 'platform-selected' : ''}">
+                        <div class="platform-icon">${p.icon}</div>
+                        <div class="platform-name">${p.name}</div>
+                        <div class="platform-score">${score}</div>
+                        <div class="mini-bar">
+                            <div class="mini-bar-fill" style="--bar-width: ${percentage}%;"></div>
+                        </div>
+                        ${isSelected ? '<div style="font-size: 0.7rem; color: var(--accent-red); margin-top: 0.25rem;">Selected</div>' : ''}
+                    </div>
+                `;
+            }
+            platformHtml += '</div>';
+
+            let detailsHtml = '<div class="accordion">';
+
+            if (analysis.critical_weaknesses && analysis.critical_weaknesses.length > 0) {
+                detailsHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="true" type="button">
+                            <span>Critical Weaknesses</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                ${analysis.critical_weaknesses.map(w => `
+                                    <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px; border-left: 3px solid var(--accent-red);">
+                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ ${w.issue}</div>
+                                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${w.impact}</div>
+                                        <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">💡 ${w.precise_fix}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.what_to_change_right_now) {
+                detailsHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="false" type="button">
+                            <span>Recommended Changes</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            <p style="line-height: 1.6;">${analysis.what_to_change_right_now}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.strategic_summary) {
+                detailsHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="false" type="button">
+                            <span>Strategic Summary</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            <p style="line-height: 1.6;">${analysis.strategic_summary}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.ad_variants && analysis.ad_variants.length > 0) {
+                detailsHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="false" type="button">
+                            <span>Ad Variants</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                ${analysis.ad_variants.slice(0, 3).map((v, i) => `
+                                    <div style="padding: 1rem; background: rgba(99, 102, 241, 0.05); border-radius: 8px;">
+                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Variant ${i + 1}: ${v.angle}</div>
+                                        <div style="font-size: 0.9rem; margin-bottom: 0.75rem; line-height: 1.5;">${v.hook}</div>
+                                        <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">Predicted Score: ${v.predicted_score}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            detailsHtml += '</div>';
+
+            container.innerHTML = `
+                <div class="card mb-4">
+                    <div class="card-title">Score Breakdown</div>
+                    ${gaugeHtml}
+                    ${scoreBreakdownHtml}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-title">Platform Performance</div>
+                    ${platformHtml}
+                </div>
+
+                <div class="card">
+                    ${detailsHtml}
+                </div>
+            `;
+
+            setupAccordion();
+        }
+
+        function createScoreGauge(score, label) {
+            const circumference = 2 * Math.PI * 57;
+            const offset = circumference - (score / 100) * circumference;
+            const color = getScoreGradient(score);
+
+            return `
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 120 120">
+                        <defs>
+                            <linearGradient id="gaugeGrad_${score}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:${color[0]};stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:${color[1]};stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="60" cy="60" r="57" stroke="rgba(255, 255, 255, 0.05)" stroke-width="8" fill="none"/>
+                        <circle class="gauge-arc" cx="60" cy="60" r="57" fill="none" stroke="url(#gaugeGrad_${score})" stroke-width="8" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" style="--stroke-dash: ${offset};"/>
+                    </svg>
+                    <div style="text-align: center;">
+                        <div class="gauge-score">${score}</div>
+                        <div class="gauge-label">${label}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getScoreColor(score) {
+            if (score < 40) return 'red';
+            if (score < 65) return 'yellow';
+            return 'green';
+        }
+
+        function getScoreGradient(score) {
+            if (score < 40) return ['#EF4444', '#DC2626'];
+            if (score < 65) return ['#FBBF24', '#F59E0B'];
+            return ['#10B981', '#059669'];
+        }
+
+        // ===== VIDEO FUNNEL =====
+        async function handleFunnelSubmit(e) {
+            e.preventDefault();
+            clearError('funnelError');
+
+            const form = e.target;
+            const loadingState = showLoading(form.querySelector('button'));
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                hideLoading(loadingState);
+
+                if (!result.success) {
+                    showError('funnelError', result.error || 'Analysis failed. Please try again.');
+                    return;
+                }
+
+                displayFunnelResults(result.analysis);
+                saveToHistory('funnel', Object.fromEntries(formData), result.analysis);
+
+            } catch (error) {
+                hideLoading(loadingState);
+                showError('funnelError', 'Network error. Please try again.');
+                console.error(error);
+            }
+        }
+
+        function displayFunnelResults(analysis) {
+            const container = document.getElementById('funnelResults');
+
+            const gaugeHtml = createScoreGauge(analysis.funnel_analysis.overall_score, 'Funnel Score');
+
+            let videoHtml = '<div class="accordion">';
+
+            if (analysis.ad_video_analysis) {
+                videoHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="true" type="button">
+                            <span>Ad Video Analysis</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            ${createVideoAnalysisContent(analysis.ad_video_analysis)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.landing_video_analysis) {
+                videoHtml += `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="false" type="button">
+                            <span>Landing Video Analysis</span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            ${createVideoAnalysisContent(analysis.landing_video_analysis)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            videoHtml += '</div>';
+
+            const fa = analysis.funnel_analysis;
+            const dropOff = fa.drop_off_analysis || {};
+            const s1 = dropOff.stage_1_retention || 100;
+            const s2 = dropOff.stage_2_retention || 70;
+            const s3 = dropOff.stage_3_retention || 40;
+
+            let funnelHtml = `
+                <div style="padding: 1.5rem; background: rgba(99, 102, 241, 0.05); border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 120px; text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Escalation</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${fa.message_escalation || '—'}</div>
+                        </div>
+                        <div style="flex: 1; min-width: 120px; text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Drop-off Risk</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${fa.drop_off_risk === 'High' ? '#EF4444' : fa.drop_off_risk === 'Medium' ? '#F59E0B' : '#10B981'};">${fa.drop_off_risk || 'Low'}</div>
+                        </div>
+                        <div style="flex: 1; min-width: 120px; text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Conversion</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${fa.predicted_conversion?.level || 'Medium'}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${fa.predicted_conversion?.range || ''}</div>
+                        </div>
+                    </div>
+
+                    <!-- Drop-off Funnel Visualization -->
+                    <div style="margin-top: 1rem;">
+                        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.9rem;">Viewer Retention Funnel</div>
+                        <div style="display: flex; align-items: flex-end; gap: 0.5rem; height: 120px; padding: 0 1rem;">
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <div style="font-size: 0.85rem; font-weight: 700;">${s1}%</div>
+                                <div style="width: 100%; background: linear-gradient(180deg, #10B981, #059669); border-radius: 4px 4px 0 0; height: ${s1}%; min-height: 20px; transition: height 1s ease;"></div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">Hook</div>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <div style="font-size: 0.85rem; font-weight: 700;">${s2}%</div>
+                                <div style="width: 100%; background: linear-gradient(180deg, #F59E0B, #D97706); border-radius: 4px 4px 0 0; height: ${s2}%; min-height: 20px; transition: height 1s ease;"></div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">Message</div>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <div style="font-size: 0.85rem; font-weight: 700;">${s3}%</div>
+                                <div style="width: 100%; background: linear-gradient(180deg, #EF4444, #DC2626); border-radius: 4px 4px 0 0; height: ${s3}%; min-height: 20px; transition: height 1s ease;"></div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">CTA</div>
+                            </div>
+                        </div>
+                        ${dropOff.primary_drop_point ? `
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.05); border-left: 3px solid var(--accent-red); border-radius: 4px; font-size: 0.85rem;">
+                            <strong>Biggest drop:</strong> ${dropOff.primary_drop_point}<br>
+                            <span style="color: var(--text-muted);">${dropOff.drop_reason || ''}</span>
+                            ${dropOff.recovery_tactic ? `<br><span style="color: #10B981;">💡 ${dropOff.recovery_tactic}</span>` : ''}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>`;
+
+            let recHtml = '';
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                recHtml = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+                analysis.recommendations.forEach(rec => {
+                    recHtml += `
+                        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-left: 3px solid var(--accent-red); border-radius: 4px;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">🎯 ${rec.area}</div>
+                            <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${rec.issue}</div>
+                            <div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-size: 0.85rem;">💡 ${rec.fix}</div>
+                        </div>
+                    `;
+                });
+                recHtml += '</div>';
+            }
+
+            container.innerHTML = `
+                <div class="card mb-4">
+                    <div class="card-title">Funnel Performance</div>
+                    ${gaugeHtml}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-title">Video Analysis</div>
+                    ${videoHtml}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-title">Funnel Flow</div>
+                    ${funnelHtml}
+                </div>
+
+                ${recHtml ? `<div class="card"><div class="card-title">Recommendations</div>${recHtml}</div>` : ''}
+            `;
+
+            setupAccordion();
+        }
+
+        function createVideoAnalysisContent(videoAnalysis) {
+            return `
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div><strong>Hook Score:</strong> ${videoAnalysis.hook_score || 'N/A'}</div>
+                    <div><strong>Visual Quality:</strong> ${videoAnalysis.visual_quality || 'N/A'}</div>
+                    <div><strong>Message Clarity:</strong> ${videoAnalysis.message_clarity || 'N/A'}</div>
+                    <div><strong>Verdict:</strong> ${videoAnalysis.verdict || 'Analyze more'}</div>
+                    ${videoAnalysis.strengths ? `<div><strong>Strengths:</strong> ${videoAnalysis.strengths}</div>` : ''}
+                    ${videoAnalysis.weaknesses ? `<div><strong>Weaknesses:</strong> ${videoAnalysis.weaknesses}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // ===== REWRITE =====
+        let _pendingRewriteData = null;
+
+        function showRewriteCTA(adCopy, platform, industry, country, income, age) {
+            _pendingRewriteData = { adCopy, platform, industry, country, income, age };
+            const container = document.getElementById('analysisResults');
+            const ctaHtml = `
+                <div class="cta-card">
+                    <div class="cta-content">
+                        <div class="cta-title">Ready to improve this ad?</div>
+                        <div class="cta-description">Use AI-powered Smart Rewrite to address weaknesses and boost performance.</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="triggerRewrite()">
+                        Rewrite Now
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', ctaHtml);
+        }
+
+        function triggerRewrite() {
+            if (_pendingRewriteData) {
+                unlockRewrite(
+                    _pendingRewriteData.adCopy,
+                    _pendingRewriteData.platform,
+                    _pendingRewriteData.industry,
+                    _pendingRewriteData.country,
+                    _pendingRewriteData.income,
+                    _pendingRewriteData.age
+                );
+            }
+        }
+
+        function showSaveInsightsCTA() {
+            const container = document.getElementById('analysisResults');
+            const ctaHtml = `
+                <div class="cta-card">
+                    <div class="cta-content">
+                        <div class="cta-title">Save to your insights</div>
+                        <div class="cta-description">Track performance trends across all your analyses.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="switchTab('insights')">
+                        View Dashboard
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', ctaHtml);
+        }
+
+        function unlockRewrite(adCopy, platform, industry, country, income, age) {
+            document.getElementById('originalAdText').value = adCopy;
+            document.getElementById('rewriteForm').classList.remove('hidden');
+            document.getElementById('rewriteEmpty').classList.add('hidden');
+            switchTab('rewrite');
+            document.querySelector('#panel-rewrite .card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function handleRewriteSubmit(e) {
+            e.preventDefault();
+            clearError('rewriteError');
+
+            const form = e.target;
+            const loadingState = showLoading(form.querySelector('button'));
+
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+
+                // Backend expects Form data, not JSON
+                const submitData = new FormData();
+                submitData.append('original_ad', document.getElementById('originalAdText').value);
+                submitData.append('platform', data.platform || 'tiktok');
+                submitData.append('industry', data.industry || 'finance');
+                submitData.append('audience_country', data.audience_country || 'nigeria');
+                submitData.append('rewrite_focus', data.rewrite_focus || 'full');
+                submitData.append('original_scores', JSON.stringify(currentAnalysis?.scores || { overall: 50 }));
+                submitData.append('weaknesses', JSON.stringify(currentAnalysis?.critical_weaknesses || ['General improvement needed']));
+
+                if (data.brand_voice && data.brand_voice.trim()) {
+                    const savedVoices = JSON.parse(localStorage.getItem('adlytics_brand_voices') || '[]');
+                    const match = savedVoices.find(v => v.brand_name.toLowerCase() === data.brand_voice.trim().toLowerCase());
+                    if (match) {
+                        submitData.append('brand_voice', JSON.stringify(match));
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/api/rewrite`, {
+                    method: 'POST',
+                    body: submitData
+                });
+
+                const result = await response.json();
+                hideLoading(loadingState);
+
+                if (!result.success) {
+                    showError('rewriteError', result.error || 'Rewrite failed. Please try again.');
+                    return;
+                }
+
+                displayRewriteResults(result.data);
+
+            } catch (error) {
+                hideLoading(loadingState);
+                showError('rewriteError', 'Network error. Please try again.');
+                console.error(error);
+            }
+        }
+
+        function displayRewriteResults(data) {
+            const container = document.getElementById('rewriteResults');
+
+            let comparisonHtml = `
+                <div class="card mb-4">
+                    <div class="card-title">Before vs After</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Original</div>
+                            <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px; line-height: 1.6;">Score: ${data.before_scores?.overall || '—'}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Rewritten</div>
+                            <div style="padding: 1rem; background: rgba(16, 185, 129, 0.05); border-radius: 8px; line-height: 1.6;">${data.rewritten_ad}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let improvementHtml = '';
+            if (data.score_delta && typeof data.score_delta === 'object') {
+                const overallDelta = data.score_delta.overall || Object.values(data.score_delta)[0] || 0;
+                const deltaRounded = Math.round(overallDelta * 10) / 10;
+                const deltaColor = deltaRounded >= 0 ? '#10B981' : '#EF4444';
+
+                let metricDeltas = '';
+                for (const [metric, delta] of Object.entries(data.score_delta)) {
+                    if (metric !== 'overall') {
+                        const d = Math.round(delta * 10) / 10;
+                        metricDeltas += `<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-card);">
+                            <span style="color: var(--text-muted); text-transform: capitalize;">${metric.replace(/_/g, ' ')}</span>
+                            <span style="color: ${d >= 0 ? '#10B981' : '#EF4444'}; font-weight: 600;">${d >= 0 ? '+' : ''}${d}</span>
+                        </div>`;
+                    }
+                }
+
+                improvementHtml = `
+                    <div class="card mb-4">
+                        <div class="card-title">Score Improvement</div>
+                        <div style="padding: 1.5rem; text-align: center; background: rgba(16, 185, 129, 0.05); border-radius: 8px; margin-bottom: 1rem;">
+                            <div style="font-size: 2rem; font-weight: 700; color: ${deltaColor}; margin-bottom: 0.5rem;">
+                                ${deltaRounded >= 0 ? '+' : ''}${deltaRounded}
+                            </div>
+                            <div style="color: var(--text-muted);">Overall Score Change</div>
+                        </div>
+                        ${metricDeltas ? `<div style="padding: 0 0.5rem;">${metricDeltas}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            let whyHtml = '';
+            if (data.why_it_works) {
+                whyHtml = `
+                    <div class="card">
+                        <div class="card-title">Why This Works</div>
+                        <p style="line-height: 1.6; color: var(--text-secondary);">${data.why_it_works}</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = comparisonHtml + improvementHtml + whyHtml;
+        }
+
+        // ===== BRAND VOICE =====
+        function loadBrandVoices() {
+            const stored = localStorage.getItem('adlytics_brand_voices');
+            brandVoices = stored ? JSON.parse(stored) : [];
+            renderBrandVoices();
+        }
+
+        function saveBrandVoices() {
+            localStorage.setItem('adlytics_brand_voices', JSON.stringify(brandVoices));
+            renderBrandVoices();
+        }
+
+        async function handleBrandVoiceSubmit(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = new FormData(form);
+
+            const voice = {
+                id: Date.now(),
+                brand_name: formData.get('brand_name'),
+                tone_attributes: [],
+                words_to_use: formData.get('words_to_use'),
+                words_to_avoid: formData.get('words_to_avoid'),
+                brand_guidelines: formData.get('brand_guidelines')
+            };
+
+            form.querySelectorAll('input[name="tone_attributes"]:checked').forEach(el => {
+                voice.tone_attributes.push(el.value);
+            });
+
+            brandVoices.push(voice);
+            saveBrandVoices();
+            form.reset();
+            setupChipInteractions();
+        }
+
+        function renderBrandVoices() {
+            const container = document.getElementById('brandVoicesContainer');
+
+            if (brandVoices.length === 0) {
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎨</div>
+                            <div class="empty-state-title">No Brand Voices Yet</div>
+                            <div class="empty-state-message">Create your first brand voice above to ensure consistent scoring across all analyses.</div>
+                        </div>
+                    </div>
+                `;
                 return;
             }
-            container.innerHTML = voices.map(voice => `
-                <div class="bg-gray-800 rounded p-4 border border-gray-700 flex justify-between items-start">
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                    ${brandVoices.map(voice => `
+                        <div class="card voice-card">
+                            <div class="voice-card-title">${voice.brand_name}</div>
+                            <div class="voice-card-tone">${voice.tone_attributes?.join(', ') || 'No tone set'}</div>
+                            <div class="voice-card-actions">
+                                <button class="btn btn-ghost btn-small" onclick="deleteVoice(${voice.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function deleteVoice(id) {
+            if (confirm('Delete this brand voice?')) {
+                brandVoices = brandVoices.filter(v => v.id !== id);
+                saveBrandVoices();
+            }
+        }
+
+        // ===== HISTORY & INSIGHTS =====
+        function saveToHistory(type, formData, analysis) {
+            let history = JSON.parse(localStorage.getItem('adlytics_history') || '[]');
+            const now = new Date().toISOString();
+
+            history.push({
+                id: Date.now(),
+                type,
+                timestamp: now,
+                platform: formData.platform,
+                industry: formData.industry,
+                scores: analysis.scores || { overall: analysis.funnel_analysis?.overall_score },
+                summary: formData.ad_copy_preview || formData.landing_video?.name || 'Analysis'
+            });
+
+            history = history.slice(-50);
+            localStorage.setItem('adlytics_history', JSON.stringify(history));
+        }
+
+        function loadHistory() {
+            return JSON.parse(localStorage.getItem('adlytics_history') || '[]');
+        }
+
+        function updateInsightsView() {
+            const history = loadHistory();
+
+            if (history.length === 0) {
+                document.getElementById('insightsEmpty').classList.remove('hidden');
+                document.getElementById('insightsContent').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('insightsEmpty').classList.add('hidden');
+            document.getElementById('insightsContent').classList.remove('hidden');
+
+            const totalAnalyzed = history.length;
+            const avgScore = history.reduce((sum, item) => sum + (item.scores?.overall || 0), 0) / totalAnalyzed || 0;
+
+            const platformCounts = {};
+            history.forEach(item => {
+                platformCounts[item.platform] = (platformCounts[item.platform] || 0) + 1;
+            });
+            const topPlatform = Object.keys(platformCounts).sort((a, b) => platformCounts[b] - platformCounts[a])[0] || '—';
+
+            document.getElementById('metricTotalAnalyzed').textContent = totalAnalyzed;
+            document.getElementById('metricAvgScore').textContent = Math.round(avgScore);
+            document.getElementById('metricTopPlatform').textContent = topPlatform.toUpperCase();
+            document.getElementById('metricWeakestArea').textContent = '—';
+
+            const recentList = document.getElementById('recentAnalysesList');
+            recentList.innerHTML = history.slice(-5).reverse().map(item => `
+                <div style="padding: 1rem; background: rgba(255, 255, 255, 0.02); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     <div>
-                        <h4 class="font-bold text-lg">${voice.name}</h4>
-                        <p class="text-sm text-gray-400 mt-1">Tone: ${voice.tone.join(', ')}</p>
-                        <p class="text-sm text-gray-400">Words to use: ${voice.wordsAlways.join(', ') || 'None'}</p>
-                        <p class="text-sm text-gray-400">Words to avoid: ${voice.wordsNever.join(', ') || 'None'}</p>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">${item.platform}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${new Date(item.timestamp).toLocaleDateString()}</div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="editBrandVoice('${voice.id}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Edit</button>
-                        <button onclick="deleteBrandVoice('${voice.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm">Delete</button>
+                    <div style="font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums;">
+                        ${item.scores?.overall || '—'}
                     </div>
                 </div>
             `).join('');
         }
 
-        function editBrandVoice(voiceId) {
-            const voices = getBrandVoices();
-            const voice = voices.find(v => v.id === voiceId);
-            if (!voice) return;
-            document.getElementById('brandName').value = voice.name;
-            document.getElementById('brandGuidelines').value = voice.guidelines;
-            document.getElementById('wordsAlwaysUse').value = voice.wordsAlways.join(', ');
-            document.getElementById('wordsNeverUse').value = voice.wordsNever.join(', ');
-            document.getElementById('exampleAds').value = voice.examples.join('\n');
-            document.querySelectorAll('#toneChips .chip').forEach(btn => {
-                if (voice.tone.includes(btn.textContent)) btn.classList.add('active');
-                else btn.classList.remove('active');
+        // ===== ACCORDION SETUP =====
+        function setupAccordion() {
+            document.querySelectorAll('.accordion-trigger').forEach(trigger => {
+                trigger.addEventListener('click', function () {
+                    const isOpen = this.getAttribute('aria-expanded') === 'true';
+                    this.setAttribute('aria-expanded', !isOpen);
+                });
             });
-            deleteBrandVoice(voiceId);
-            window.scrollTo(0, 0);
         }
-
-        function deleteBrandVoice(voiceId) {
-            const voices = getBrandVoices();
-            const filtered = voices.filter(v => v.id !== voiceId);
-            saveBrandVoices(filtered);
-            loadBrandVoicesList();
-            loadBrandVoiceDropdowns();
-        }
-
-        function toggleAccordion(header) {
-            header.classList.toggle('open');
-            const content = header.nextElementSibling;
-            content.classList.toggle('open');
-        }
-
-        document.getElementById('videoFunnelForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const adVideo = document.getElementById('adVideo').files[0];
-            const landingVideo = document.getElementById('landingVideo').files[0];
-            if (!adVideo || !landingVideo) { alert('Please upload both videos'); return; }
-
-            const formData = new FormData();
-            formData.append('ad_video', adVideo);
-            formData.append('landing_video', landingVideo);
-            formData.append('platform', document.getElementById('funnelPlatform').value);
-            formData.append('industry', document.getElementById('funnelIndustry').value);
-            formData.append('audience_country', document.getElementById('funnelCountry').value);
-            formData.append('audience_age', document.getElementById('funnelAge').value);
-            formData.append('audience_income', document.getElementById('funnelIncome').value);
-
-            const brandVoiceId = document.getElementById('funnelBrandVoice').value;
-            if (brandVoiceId) {
-                const voices = getBrandVoices();
-                const selectedVoice = voices.find(v => v.id === brandVoiceId);
-                if (selectedVoice) formData.append('brand_voice', JSON.stringify(selectedVoice));
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/api/video-funnel/analyze`, { method: 'POST', body: formData });
-                const json = await response.json();
-                const data = json.data || json;
-                if (data.success && data.analysis) {
-                    displayFunnelResults(data.analysis, document.getElementById('funnelPlatform').value, document.getElementById('funnelIndustry').value);
-                } else alert('Analysis failed. Please try again.');
-            } catch (error) { alert('Error: ' + error.message); }
-        });
-
-        document.getElementById('scriptForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const adScript = document.getElementById('adScript').value;
-            const landingScript = document.getElementById('landingScript').value;
-            if (!adScript || !landingScript) { alert('Please enter both scripts'); return; }
-
-            const formData = new FormData();
-            formData.append('ad_script', adScript);
-            formData.append('landing_script', landingScript);
-            formData.append('platform', document.getElementById('scriptPlatform').value);
-            formData.append('industry', document.getElementById('scriptIndustry').value);
-            formData.append('audience_country', document.getElementById('scriptCountry').value);
-            formData.append('audience_age', document.getElementById('scriptAge').value);
-            formData.append('audience_income', document.getElementById('scriptIncome').value);
-
-            const brandVoiceId = document.getElementById('scriptBrandVoice').value;
-            if (brandVoiceId) {
-                const voices = getBrandVoices();
-                const selectedVoice = voices.find(v => v.id === brandVoiceId);
-                if (selectedVoice) formData.append('brand_voice', JSON.stringify(selectedVoice));
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/api/video-funnel/analyze-script`, { method: 'POST', body: formData });
-                const json = await response.json();
-                const data = json.data || json;
-                if (data.success && data.analysis) {
-                    displayFunnelResults(data.analysis, document.getElementById('scriptPlatform').value, document.getElementById('scriptIndustry').value);
-                } else alert('Analysis failed. Please try again.');
-            } catch (error) { alert('Error: ' + error.message); }
-        });
-
-        function displayFunnelResults(analysis, platform, industry) {
-            document.getElementById('funnelResults').style.display = 'block';
-            const overall_score = analysis.overall_score || 65;
-            const drop_off = analysis.drop_off_analysis || {};
-
-            const stage1 = drop_off.stage_1_retention || 85;
-            const stage2 = drop_off.stage_2_retention || 65;
-            const stage3 = drop_off.stage_3_retention || 45;
-
-            const percentValue = (overall_score / 100) * 360;
-            document.getElementById('funnelGauge').style.setProperty('--percentage', percentValue + 'deg');
-            document.getElementById('funnelGaugeScore').textContent = Math.round(overall_score);
-
-            document.getElementById('funnel-hook_effectiveness').textContent = Math.round(analysis.hook_effectiveness || 70);
-            document.getElementById('funnel-bar-hook_effectiveness').style.width = (analysis.hook_effectiveness || 70) + '%';
-            document.getElementById('funnel-message_clarity').textContent = Math.round(analysis.message_clarity || 75);
-            document.getElementById('funnel-bar-message_clarity').style.width = (analysis.message_clarity || 75) + '%';
-            document.getElementById('funnel-cta_strength').textContent = Math.round(analysis.cta_strength || 68);
-            document.getElementById('funnel-bar-cta_strength').style.width = (analysis.cta_strength || 68) + '%';
-            const conversionRate = (overall_score / 100) * 15;
-            document.getElementById('funnel-conversion_rate').textContent = conversionRate.toFixed(1) + '%';
-            document.getElementById('funnel-bar-conversion_rate').style.width = (conversionRate / 15) * 100 + '%';
-
-            renderFunnelDropoffChart(stage1, stage2, stage3);
-            renderPlatformPredictions(overall_score);
-
-            const funnelHistoryEntry = {
-                timestamp: new Date().toISOString(),
-                platform: platform,
-                industry: industry,
-                overall_score: overall_score,
-                stage_1_retention: stage1,
-                stage_2_retention: stage2,
-                stage_3_retention: stage3,
-                drop_off_point: drop_off.primary_drop_point || 'Stage 2'
-            };
-            const history = getFunnelHistory();
-            history.push(funnelHistoryEntry);
-            saveFunnelHistory(history);
-
-            const content = document.getElementById('funnelContent');
-            const adAnalysis = analysis.ad_video_analysis || {};
-            const landingAnalysis = analysis.landing_video_analysis || {};
-            const recommendations = analysis.recommendations || [];
-
-            content.innerHTML = `
-                <div class="space-y-4">
-                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Drop-off Risk</p><p class="text-2xl font-bold text-red-400">${drop_off.primary_drop_point || 'Moderate'}</p></div>
-                    <div class="bg-gray-800 rounded p-4"><p class="text-sm text-gray-400">Recovery Tactic</p><p class="text-sm text-gray-300">${drop_off.recovery_tactic || 'Strengthen middle message section'}</p></div>
-                </div>
-                <hr class="border-gray-700 my-4">
-                <div><h4 class="font-bold mb-2">Ad Video Analysis</h4><p class="text-sm text-gray-300">${typeof adAnalysis === 'string' ? adAnalysis : JSON.stringify(adAnalysis) || 'No analysis available'}</p></div>
-                <div><h4 class="font-bold mb-2 mt-4">Landing Video Analysis</h4><p class="text-sm text-gray-300">${typeof landingAnalysis === 'string' ? landingAnalysis : JSON.stringify(landingAnalysis) || 'No analysis available'}</p></div>
-                ${recommendations.length > 0 ? `<div class="mt-4"><h4 class="font-bold mb-2">Recommendations</h4><ul class="space-y-2">${recommendations.map(r => `<li class="text-sm text-gray-300"><strong>${r.priority || 'Item'}:</strong> ${r.issue || 'No details'} - ${r.fix || 'N/A'}</li>`).join('')}</ul></div>` : ''}
-            `;
-
-            setTimeout(() => { document.getElementById('funnelResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
-        }
-
-        function renderFunnelDropoffChart(stage1, stage2, stage3) {
-            const svg = document.getElementById('funnelDropoffChart');
-            const widths = [400, 300, 200];
-            const colors = [
-                stage1 > 70 ? '#10b981' : stage1 > 40 ? '#eab308' : '#ef4444',
-                stage2 > 70 ? '#10b981' : stage2 > 40 ? '#eab308' : '#ef4444',
-                stage3 > 70 ? '#10b981' : stage3 > 40 ? '#eab308' : '#ef4444'
-            ];
-            const labels = ['Hook (First 3s)', 'Message (Middle)', 'CTA (End)'];
-            const retentions = [stage1, stage2, stage3];
-
-            const yPositions = [50, 150, 250];
-            let svgContent = '';
-
-            widths.forEach((width, i) => {
-                const x = (600 - width) / 2;
-                const y = yPositions[i];
-                svgContent += `
-                    <polygon points="${x},${y} ${x + width},${y} ${x + width * 0.85},${y + 70} ${x + width * 0.15},${y + 70}"
-                             fill="${colors[i]}" stroke="#374151" stroke-width="2" opacity="0.8"/>
-                    <text x="300" y="${y + 40}" text-anchor="middle" font-size="16" font-weight="bold" fill="white">${labels[i]}</text>
-                    <text x="300" y="${y + 60}" text-anchor="middle" font-size="14" fill="white">${Math.round(retentions[i])}% retention</text>
-                `;
-            });
-
-            svg.innerHTML = svgContent;
-        }
-
-        function renderPlatformPredictions(baseScore) {
-            const platforms = [
-                { name: 'Facebook', multiplier: 0.95 },
-                { name: 'TikTok', multiplier: 0.88 },
-                { name: 'Instagram', multiplier: 0.92 },
-                { name: 'YouTube', multiplier: 1.0 }
-            ];
-
-            const container = document.getElementById('funnelPlatformPredictions');
-            container.innerHTML = platforms.map(p => {
-                const score = Math.round(baseScore * p.multiplier);
-                const color = score > 70 ? '#10b981' : score > 50 ? '#eab308' : '#ef4444';
-                return `
-                    <div class="platform-card">
-                        <p class="font-bold text-lg mb-2">${p.name}</p>
-                        <p class="text-3xl font-bold" style="color: ${color};">${score}</p>
-                        <p class="text-xs text-gray-400 mt-2">Predicted score</p>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        document.getElementById('rewriteForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('original_ad', document.getElementById('originalAd').value);
-            formData.append('platform', document.getElementById('rewritePlatform').value);
-            formData.append('industry', document.getElementById('rewriteIndustry').value);
-            formData.append('audience_country', document.getElementById('rewriteCountry').value);
-            formData.append('rewrite_focus', document.getElementById('rewriteFocus').value);
-            formData.append('prepare_voiceover', document.getElementById('prepareVoiceover').checked);
-            formData.append('voice_style', document.getElementById('voiceStyle').value);
-            formData.append('original_scores', JSON.stringify({ overall: 50, hook_strength: 50, clarity: 50, credibility: 50, emotional_pull: 50, cta_strength: 50, audience_match: 50, platform_fit: 50 }));
-            formData.append('weaknesses', JSON.stringify([{ issue: 'Weak hook', severity: 'high' }]));
-
-            try {
-                const response = await fetch(`${API_BASE}/api/rewrite`, { method: 'POST', body: formData });
-                const json = await response.json();
-                const data = json.data || json;
-                if (data.success && data.data) displayRewriteResults(data.data);
-                else alert('Rewrite failed. Please try again.');
-            } catch (error) { alert('Error: ' + error.message); }
-        });
-
-        function displayRewriteResults(rewriteData) {
-            document.getElementById('rewriteResults').style.display = 'block';
-            document.getElementById('rewrittenAdText').textContent = rewriteData.rewritten_ad || 'No rewrite available';
-            document.getElementById('rewriteWhyItWorks').textContent = 'Why it works: ' + (rewriteData.why_it_works || 'N/A');
-            document.getElementById('changesSummary').textContent = rewriteData.changes_summary || 'Summary not available';
-
-            const beforeScores = rewriteData.before_scores || { overall: 50 };
-            const afterScores = rewriteData.after_scores || { overall: 60 };
-            const beforeScore = beforeScores.overall || 50;
-            const afterScore = afterScores.overall || 60;
-            const delta = afterScore - beforeScore;
-
-            document.getElementById('beforeOverallScore').textContent = Math.round(beforeScore);
-            document.getElementById('beforeScoreBar').style.width = beforeScore + '%';
-            document.getElementById('afterOverallScore').textContent = Math.round(afterScore);
-            document.getElementById('afterScoreBar').style.width = afterScore + '%';
-            document.getElementById('scoreDelta').textContent = (delta >= 0 ? '+' : '') + Math.round(delta) + ' points';
-            document.getElementById('scoreDelta').className = (delta >= 0 ? 'text-green-400' : 'text-red-400') + ' font-bold text-lg';
-
-            setTimeout(() => { document.getElementById('rewriteResults').scrollIntoView({ behavior: 'smooth' }); }, 100);
-        }
-
-        function loadInsights() {
-            const history = getHistory();
-            const analyses = history.filter(h => h.type === 'analysis');
-            const funnelHistory = getFunnelHistory();
-
-            document.getElementById('totalAdsCount').textContent = analyses.length;
-            document.getElementById('totalFunnelsCount').textContent = funnelHistory.length;
-
-            if (analyses.length === 0) {
-                document.getElementById('avgScore').textContent = '--';
-                document.getElementById('trendArrow').textContent = '--';
-                document.getElementById('topPlatform').textContent = '--';
-                document.getElementById('weakestDimension').textContent = '--';
-                document.getElementById('scoreDistribution').innerHTML = '<p class="text-gray-400 text-center py-8">No data yet.</p>';
-                document.getElementById('topWeaknesses').innerHTML = '<p class="text-gray-400">No data yet.</p>';
-                document.getElementById('bestHooks').innerHTML = '<p class="text-gray-400">No data yet.</p>';
-                document.getElementById('platformPerformanceStats').innerHTML = '<p class="text-gray-400">No data yet.</p>';
-                document.getElementById('focusAreas').innerHTML = '<p class="text-gray-400">No data yet.</p>';
-            } else {
-                const avgScore = analyses.reduce((sum, a) => sum + (a.scores?.overall || 0), 0) / analyses.length;
-                document.getElementById('avgScore').textContent = Math.round(avgScore);
-
-                if (analyses.length >= 2) {
-                    const recent = analyses[0].scores?.overall || 0;
-                    const previous = analyses[1].scores?.overall || 0;
-                    const trend = recent - previous;
-                    document.getElementById('trendArrow').textContent = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
-                    document.getElementById('trendArrow').className = trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-500';
-                }
-
-                const platformCounts = {};
-                analyses.forEach(a => {
-                    const p = a.platform || 'Unknown';
-                    platformCounts[p] = (platformCounts[p] || 0) + 1;
-                });
-                const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
-                document.getElementById('topPlatform').textContent = topPlatform ? topPlatform[0].toUpperCase() : '--';
-
-                const dimensionScores = { hook_strength: [], clarity: [], credibility: [], emotional_pull: [], cta_strength: [], audience_match: [], platform_fit: [] };
-                analyses.forEach(a => {
-                    Object.keys(dimensionScores).forEach(key => {
-                        if (a.scores && a.scores[key]) dimensionScores[key].push(a.scores[key]);
-                    });
-                });
-                const avgByDimension = Object.entries(dimensionScores).map(([key, scores]) => ({ key, avg: scores.length > 0 ? scores.reduce((a, b) => a + b) / scores.length : 100 }));
-                const weakest = avgByDimension.sort((a, b) => a.avg - b.avg)[0];
-                const weakestName = weakest.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                document.getElementById('weakestDimension').textContent = weakestName;
-
-                const distribution = { '0-25': 0, '26-50': 0, '51-75': 0, '76-100': 0 };
-                analyses.forEach(a => {
-                    const score = a.scores?.overall || 0;
-                    if (score <= 25) distribution['0-25']++;
-                    else if (score <= 50) distribution['26-50']++;
-                    else if (score <= 75) distribution['51-75']++;
-                    else distribution['76-100']++;
-                });
-
-                const maxDist = Math.max(...Object.values(distribution));
-                const svg = `<svg width="100%" height="150" viewBox="0 0 600 150" class="w-full">${Object.entries(distribution).map(([range, count], i) => {
-                    const barHeight = (count / (maxDist || 1)) * 100;
-                    const x = 50 + i * 140;
-                    return `<g><rect x="${x}" y="${150 - barHeight}" width="100" height="${barHeight}" fill="#EF4444" rx="4"/><text x="${x + 50}" y="140" text-anchor="middle" font-size="12" fill="#9CA3AF">${range}</text><text x="${x + 50}" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#EF4444">${count}</text></g>`;
-                }).join('')}</svg>`;
-                document.getElementById('scoreDistribution').innerHTML = svg;
-
-                document.getElementById('topWeaknesses').innerHTML = `<div class="text-sm text-gray-300"><p>Based on ${analyses.length} analyses</p><p class="mt-2">Common weaknesses: Hook strength, CTA clarity, audience relevance</p></div>`;
-
-                document.getElementById('bestHooks').innerHTML = analyses.slice(0, 3).map((a, i) => `
-                    <div class="bg-gray-800 rounded p-3 text-sm">
-                        <p class="text-gray-400">Analysis ${i + 1} (Score: ${a.scores?.overall || '--'})</p>
-                        <p class="mt-1 text-gray-300 truncate">${a.adCopy?.substring(0, 80) || 'N/A'}...</p>
-                    </div>
-                `).join('');
-
-                const platformScores = {};
-                analyses.forEach(a => {
-                    const p = a.platform || 'Unknown';
-                    if (!platformScores[p]) platformScores[p] = [];
-                    platformScores[p].push(a.scores?.overall || 0);
-                });
-                document.getElementById('platformPerformanceStats').innerHTML = Object.entries(platformScores).map(([platform, scores]) => {
-                    const avg = Math.round(scores.reduce((a, b) => a + b) / scores.length);
-                    return `
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-400">${platform.toUpperCase()}</span>
-                            <div class="flex items-center gap-2">
-                                <div class="w-32 score-bar">
-                                    <div class="score-fill bg-red-500" style="width: ${avg}%"></div>
-                                </div>
-                                <span class="text-red-400 font-bold w-12">${avg}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                document.getElementById('focusAreas').innerHTML = `
-                    <ul class="space-y-2 text-sm text-gray-300">
-                        <li class="flex gap-2"><span class="text-red-400">•</span> Improve hook strength - your ads scored lowest here</li>
-                        <li class="flex gap-2"><span class="text-red-400">•</span> Enhance emotional pull - adds 5-10 points on average</li>
-                        <li class="flex gap-2"><span class="text-red-400">•</span> Strengthen CTAs - ${avgScore < 60 ? 'critical priority' : 'good opportunity'}</li>
-                        <li class="flex gap-2"><span class="text-red-400">•</span> Optimize for TikTok - typically lower scores there</li>
-                    </ul>
-                `;
-            }
-
-            if (funnelHistory.length === 0) {
-                document.getElementById('avgFunnelScore').textContent = '--';
-                document.getElementById('mostCommonDropoff').textContent = '--';
-                document.getElementById('bestFunnelPlatform').textContent = '--';
-            } else {
-                const avgFunnelScore = funnelHistory.reduce((sum, f) => sum + (f.overall_score || 0), 0) / funnelHistory.length;
-                document.getElementById('avgFunnelScore').textContent = Math.round(avgFunnelScore);
-
-                const dropoffCounts = {};
-                funnelHistory.forEach(f => {
-                    const drop = f.drop_off_point || 'Unknown';
-                    dropoffCounts[drop] = (dropoffCounts[drop] || 0) + 1;
-                });
-                const mostCommon = Object.entries(dropoffCounts).sort((a, b) => b[1] - a[1])[0];
-                document.getElementById('mostCommonDropoff').textContent = mostCommon ? mostCommon[0] : '--';
-
-                const platformScores = {};
-                funnelHistory.forEach(f => {
-                    const p = f.platform || 'Unknown';
-                    if (!platformScores[p]) platformScores[p] = [];
-                    platformScores[p].push(f.overall_score || 0);
-                });
-                const platformAvgs = Object.entries(platformScores).map(([p, scores]) => ({ platform: p, avg: scores.reduce((a, b) => a + b) / scores.length }));
-                const bestPlatform = platformAvgs.sort((a, b) => b.avg - a.avg)[0];
-                document.getElementById('bestFunnelPlatform').textContent = bestPlatform ? bestPlatform.platform.toUpperCase() : '--';
-            }
-        }
-
-        window.addEventListener('load', () => { loadBrandVoiceDropdowns(); });
     </script>
 </body>
 </html>
