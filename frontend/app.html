@@ -109,7 +109,7 @@
                                     <option value="finance">Finance</option>
                                     <option value="forex">Forex</option>
                                     <option value="crypto">Crypto</option>
-                                    <option value="realestate">Real Estate</option>
+                                    <option value="real_estate">Real Estate</option>
                                     <option value="ecommerce">E-commerce</option>
                                     <option value="saas">SaaS</option>
                                     <option value="health">Health</option>
@@ -183,21 +183,21 @@
 
                     <div id="actionsBox" class="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
                         <h3 class="text-xl font-bold mb-4 text-red-400">What to Change Right Now</h3>
-                        <ul id="actionsList" class="space-y-2"></ul>
+                        <p id="actionsText" class="text-red-300 leading-relaxed"></p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                             <h4 class="font-bold mb-3">Fear/Loss Variant</h4>
-                            <p id="variant1" class="text-sm text-gray-300 italic"></p>
+                            <p id="variant1" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
                         </div>
                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                             <h4 class="font-bold mb-3">Curiosity Gap Variant</h4>
-                            <p id="variant2" class="text-sm text-gray-300 italic"></p>
+                            <p id="variant2" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
                         </div>
                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                             <h4 class="font-bold mb-3">Social Proof Variant</h4>
-                            <p id="variant3" class="text-sm text-gray-300 italic"></p>
+                            <p id="variant3" class="text-sm text-gray-300 italic whitespace-pre-wrap"></p>
                         </div>
                     </div>
                 </div>
@@ -247,7 +247,7 @@
                                     <option value="finance">Finance</option>
                                     <option value="forex">Forex</option>
                                     <option value="crypto">Crypto</option>
-                                    <option value="realestate">Real Estate</option>
+                                    <option value="real_estate">Real Estate</option>
                                     <option value="ecommerce">E-commerce</option>
                                     <option value="saas">SaaS</option>
                                     <option value="health">Health</option>
@@ -336,7 +336,7 @@
                                     <option value="finance">Finance</option>
                                     <option value="forex">Forex</option>
                                     <option value="crypto">Crypto</option>
-                                    <option value="realestate">Real Estate</option>
+                                    <option value="real_estate">Real Estate</option>
                                     <option value="ecommerce">E-commerce</option>
                                     <option value="saas">SaaS</option>
                                     <option value="health">Health</option>
@@ -404,7 +404,7 @@
                         <div id="funnelScore" class="text-6xl font-bold mb-4"></div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                             <div class="bg-gray-800 rounded p-4">
-                                <p class="text-gray-400 text-sm">Conversion Rate</p>
+                                <p class="text-gray-400 text-sm">Predicted Conversion</p>
                                 <p id="conversionRate" class="text-2xl font-bold text-green-400"></p>
                             </div>
                             <div class="bg-gray-800 rounded p-4">
@@ -472,7 +472,7 @@
                                     <option value="finance">Finance</option>
                                     <option value="forex">Forex</option>
                                     <option value="crypto">Crypto</option>
-                                    <option value="realestate">Real Estate</option>
+                                    <option value="real_estate">Real Estate</option>
                                     <option value="ecommerce">E-commerce</option>
                                     <option value="saas">SaaS</option>
                                     <option value="health">Health</option>
@@ -510,12 +510,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                             <h3 class="text-lg font-bold mb-4 text-gray-400">Before</h3>
-                            <p id="beforeAd" class="text-gray-300"></p>
+                            <p id="beforeAd" class="text-gray-300 whitespace-pre-wrap"></p>
                         </div>
                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                             <h3 class="text-lg font-bold mb-4 text-green-400">After</h3>
                             <div class="relative">
-                                <p id="afterAd" class="text-gray-300"></p>
+                                <p id="afterAd" class="text-gray-300 whitespace-pre-wrap"></p>
                                 <button onclick="copyToClipboard('afterAd')" class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm transition-colors">
                                     Copy Rewritten Ad
                                 </button>
@@ -530,7 +530,7 @@
 
                     <div id="changesSummary" class="bg-gray-900 rounded-lg p-6 border border-gray-800">
                         <h3 class="text-xl font-bold mb-4">Changes Summary</h3>
-                        <p id="changesSummaryText" class="text-gray-300 leading-relaxed"></p>
+                        <p id="changesSummaryText" class="text-gray-300 leading-relaxed whitespace-pre-wrap"></p>
                     </div>
 
                     <div id="whyItWorks" class="bg-green-900/20 border border-green-500/30 rounded-lg p-6">
@@ -553,13 +553,15 @@
     <script>
         const API_BASE = window.location.origin;
 
+        // Store last analysis result for use in Rewrite tab
+        let lastAnalysisScores = {};
+        let lastAnalysisWeaknesses = [];
+
         function switchTab(tabName) {
-            // Hide all tabs
             document.getElementById('analysis-tab').classList.add('hidden');
             document.getElementById('funnel-tab').classList.add('hidden');
             document.getElementById('rewrite-tab').classList.add('hidden');
 
-            // Reset tab styles
             document.getElementById('tab-analysis').classList.remove('tab-active');
             document.getElementById('tab-analysis').classList.add('tab-inactive');
             document.getElementById('tab-funnel').classList.remove('tab-active');
@@ -567,7 +569,6 @@
             document.getElementById('tab-rewrite').classList.remove('tab-active');
             document.getElementById('tab-rewrite').classList.add('tab-inactive');
 
-            // Show selected tab
             document.getElementById(tabName + '-tab').classList.remove('hidden');
             document.getElementById('tab-' + tabName).classList.remove('tab-inactive');
             document.getElementById('tab-' + tabName).classList.add('tab-active');
@@ -607,7 +608,9 @@
             return 'bg-green-500';
         }
 
-        // Tab 1: Ad Analysis
+        /* ==============================
+           Tab 1: Ad Analysis
+           ============================== */
         document.getElementById('analysisForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading(true);
@@ -616,9 +619,10 @@
             formData.append('ad_copy', document.getElementById('adCopy').value);
             formData.append('platform', document.getElementById('analysisPlatform').value);
             formData.append('industry', document.getElementById('analysisIndustry').value);
-            formData.append('country', document.getElementById('analysisCountry').value);
-            formData.append('age_group', document.getElementById('analysisAge').value);
-            formData.append('income_level', document.getElementById('analysisIncome').value);
+            /* FIX #1: Field names must match backend parameter names */
+            formData.append('audience_country', document.getElementById('analysisCountry').value);
+            formData.append('audience_age', document.getElementById('analysisAge').value);
+            formData.append('audience_income', document.getElementById('analysisIncome').value);
 
             try {
                 const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -626,22 +630,30 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error('API request failed');
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `API request failed (${response.status})`);
+                }
                 const data = await response.json();
 
-                // Display results
-                const score = data.overall_score || 0;
+                /* FIX #2: Backend returns { success, analysis: { scores, ... } }
+                   Must read from data.analysis, NOT data directly */
+                const analysis = data.analysis || {};
+                const scores = analysis.scores || {};
+
+                const score = scores.overall || 0;
                 document.getElementById('overallScore').textContent = Math.round(score);
                 document.getElementById('overallScore').className = `text-7xl font-bold mb-4 ${getScoreColor(score)}`;
 
                 const interpretation = score < 40 ? 'Needs Improvement' : score < 65 ? 'Good' : 'Excellent';
                 document.getElementById('scoreInterpretation').textContent = interpretation;
 
-                // Score Breakdown
-                const breakdownHTML = Object.entries(data.scores || {}).map(([key, val]) => `
+                /* Score Breakdown — exclude "overall" from bars */
+                const dimensionScores = Object.entries(scores).filter(([key]) => key !== 'overall');
+                const breakdownHTML = dimensionScores.map(([key, val]) => `
                     <div>
                         <div class="flex justify-between mb-2">
-                            <span class="capitalize">${key.replace('_', ' ')}</span>
+                            <span class="capitalize">${key.replace(/_/g, ' ')}</span>
                             <span class="font-bold">${Math.round(val)}</span>
                         </div>
                         <div class="score-bar">
@@ -649,15 +661,31 @@
                         </div>
                     </div>
                 `).join('');
-                document.getElementById('scoreBreakdown').innerHTML = '<h3 class="text-xl font-bold mb-6">Score Breakdown</h3>' + breakdownHTML;
+                document.getElementById('scoreBreakdown').innerHTML =
+                    '<h3 class="text-xl font-bold mb-6">Score Breakdown</h3>' + breakdownHTML;
 
-                document.getElementById('strategicText').textContent = data.strategic_summary || '';
-                document.getElementById('weaknessesList').innerHTML = (data.critical_weaknesses || []).map(w => `<li class="text-gray-300">• ${w}</li>`).join('');
-                document.getElementById('actionsList').innerHTML = (data.action_items || []).map(a => `<li class="text-red-300">→ ${a}</li>`).join('');
+                document.getElementById('strategicText').textContent = analysis.strategic_summary || '';
 
-                document.getElementById('variant1').textContent = data.variants?.fear_loss || '';
-                document.getElementById('variant2').textContent = data.variants?.curiosity_gap || '';
-                document.getElementById('variant3').textContent = data.variants?.social_proof || '';
+                /* FIX #3: critical_weaknesses are objects { issue, severity, precise_fix, ... } */
+                const weaknesses = analysis.critical_weaknesses || [];
+                document.getElementById('weaknessesList').innerHTML = weaknesses.map(w => {
+                    if (typeof w === 'string') return `<li class="text-gray-300">&bull; ${w}</li>`;
+                    return `<li class="text-gray-300">&bull; <strong>${w.issue || ''}</strong> (${w.severity || 'N/A'}) &mdash; Fix: ${w.precise_fix || w.impact || ''}</li>`;
+                }).join('');
+
+                /* FIX #4: what_to_change_right_now is a string, not an array */
+                document.getElementById('actionsText').textContent = analysis.what_to_change_right_now || '';
+
+                /* FIX #5: ad_variants is an array of { hook, body, cta, angle, ... } */
+                const variants = analysis.ad_variants || [];
+                const fmtVariant = v => v ? `${v.hook || ''}\n\n${v.body || ''}\n\n${v.cta || ''}` : '';
+                document.getElementById('variant1').textContent = fmtVariant(variants[0]);
+                document.getElementById('variant2').textContent = fmtVariant(variants[1]);
+                document.getElementById('variant3').textContent = fmtVariant(variants[2]);
+
+                /* Store for the Rewrite tab */
+                lastAnalysisScores = scores;
+                lastAnalysisWeaknesses = weaknesses.map(w => typeof w === 'string' ? w : w.issue || '');
 
                 document.getElementById('analysisResults').classList.remove('hidden');
             } catch (error) {
@@ -667,21 +695,26 @@
             }
         });
 
-        // Tab 2: Video Funnel - Upload Mode
+        /* ==============================
+           Tab 2: Video Funnel — Upload
+           ============================== */
         document.getElementById('funnelUploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading(true);
 
             const formData = new FormData();
-            formData.append('ad_video', document.getElementById('adVideo').files[0]);
-            if (document.getElementById('landingVideo').files[0]) {
-                formData.append('landing_video', document.getElementById('landingVideo').files[0]);
-            }
+            const adVideoFile = document.getElementById('adVideo').files[0];
+            if (adVideoFile) formData.append('ad_video', adVideoFile);
+
+            const landingVideoFile = document.getElementById('landingVideo').files[0];
+            if (landingVideoFile) formData.append('landing_video', landingVideoFile);
+
             formData.append('platform', document.getElementById('funnelPlatform').value);
             formData.append('industry', document.getElementById('funnelIndustry').value);
-            formData.append('country', document.getElementById('funnelCountry').value);
-            formData.append('age_group', document.getElementById('funnelAge').value);
-            formData.append('income_level', document.getElementById('funnelIncome').value);
+            /* FIX #1: correct field names */
+            formData.append('audience_country', document.getElementById('funnelCountry').value);
+            formData.append('audience_age', document.getElementById('funnelAge').value);
+            formData.append('audience_income', document.getElementById('funnelIncome').value);
             formData.append('cta_destination', document.getElementById('ctaDestination').value);
 
             try {
@@ -690,10 +723,11 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error('API request failed');
-                const data = await response.json();
-
-                renderFunnelResults(data);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `API request failed (${response.status})`);
+                }
+                renderFunnelResults(await response.json());
             } catch (error) {
                 alert('Error analyzing funnel: ' + error.message);
             } finally {
@@ -701,7 +735,9 @@
             }
         });
 
-        // Tab 2: Video Funnel - Scripts Mode
+        /* ==============================
+           Tab 2: Video Funnel — Scripts
+           ============================== */
         document.getElementById('funnelScriptsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading(true);
@@ -713,9 +749,10 @@
             }
             formData.append('platform', document.getElementById('scriptPlatform').value);
             formData.append('industry', document.getElementById('scriptIndustry').value);
-            formData.append('country', document.getElementById('scriptCountry').value);
-            formData.append('age_group', document.getElementById('scriptAge').value);
-            formData.append('income_level', document.getElementById('scriptIncome').value);
+            /* FIX #1: correct field names */
+            formData.append('audience_country', document.getElementById('scriptCountry').value);
+            formData.append('audience_age', document.getElementById('scriptAge').value);
+            formData.append('audience_income', document.getElementById('scriptIncome').value);
             formData.append('cta_destination', document.getElementById('scriptCta').value);
 
             try {
@@ -724,10 +761,11 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error('API request failed');
-                const data = await response.json();
-
-                renderFunnelResults(data);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `API request failed (${response.status})`);
+                }
+                renderFunnelResults(await response.json());
             } catch (error) {
                 alert('Error analyzing scripts: ' + error.message);
             } finally {
@@ -735,88 +773,122 @@
             }
         });
 
+        /* ==============================
+           Render Funnel Results
+           FIX #6: Backend returns { success, analysis: { ad_video_analysis, landing_video_analysis,
+                   funnel_analysis, recommendations, improved_scripts }, metadata }
+           ============================== */
         function renderFunnelResults(data) {
-            const score = data.overall_score || 0;
-            document.getElementById('funnelScore').textContent = Math.round(score);
-            document.getElementById('funnelScore').className = `text-6xl font-bold mb-4 ${getScoreColor(score)}`;
-            document.getElementById('conversionRate').textContent = data.predicted_conversion_rate || '0%';
-            document.getElementById('dropoffRisk').textContent = data.dropoff_risk || 'Medium';
+            const analysis           = data.analysis || {};
+            const funnelAnalysis     = analysis.funnel_analysis || {};
+            const adVideoAnalysis    = analysis.ad_video_analysis || {};
+            const landingVideoAnalysis = analysis.landing_video_analysis || {};
 
-            // Ad Video Card
-            const adVideoData = data.ad_video || {};
-            const adVideoHTML = `
+            const score = funnelAnalysis.overall_score || 0;
+            document.getElementById('funnelScore').textContent   = Math.round(score);
+            document.getElementById('funnelScore').className     = `text-6xl font-bold mb-4 ${getScoreColor(score)}`;
+
+            const conversion = funnelAnalysis.predicted_conversion || {};
+            document.getElementById('conversionRate').textContent = conversion.range || conversion.level || 'N/A';
+            document.getElementById('dropoffRisk').textContent    = funnelAnalysis.drop_off_risk || 'N/A';
+
+            /* Ad Video Card */
+            const adScoreEntries = [
+                ['hook_score', adVideoAnalysis.hook_score],
+                ['visual_quality', adVideoAnalysis.visual_quality],
+                ['message_clarity', adVideoAnalysis.message_clarity],
+                ['curiosity_gap', adVideoAnalysis.curiosity_gap],
+                ['platform_fit', adVideoAnalysis.platform_fit]
+            ].filter(([, v]) => v !== undefined);
+
+            document.getElementById('adVideoCard').innerHTML = `
                 <h4 class="font-bold mb-4">Ad Video</h4>
                 <div class="space-y-2 mb-4">
-                    ${Object.entries(adVideoData.scores || {}).map(([k, v]) => `
+                    ${adScoreEntries.map(([k, v]) => `
                         <div class="text-sm">
-                            <span class="capitalize">${k.replace('_', ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
-                        </div>
-                    `).join('')}
+                            <span class="capitalize">${k.replace(/_/g, ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
+                        </div>`).join('')}
                 </div>
-                <p class="text-sm text-green-400 mb-2">Strengths: ${(adVideoData.strengths || []).join(', ')}</p>
-                <p class="text-sm text-red-400">Weaknesses: ${(adVideoData.weaknesses || []).join(', ')}</p>
-            `;
-            document.getElementById('adVideoCard').innerHTML = adVideoHTML;
+                <p class="text-sm text-gray-400 mb-1">${adVideoAnalysis.verdict || ''}</p>
+                <p class="text-sm text-green-400 mb-2">Strengths: ${(adVideoAnalysis.strengths || []).join(', ') || 'N/A'}</p>
+                <p class="text-sm text-red-400">Weaknesses: ${(adVideoAnalysis.weaknesses || []).join(', ') || 'N/A'}</p>`;
 
-            // Landing Video Card
-            const landingVideoData = data.landing_video || {};
-            const landingVideoHTML = `
+            /* Landing Video Card */
+            const landScoreEntries = [
+                ['continuity_score', landingVideoAnalysis.continuity_score],
+                ['depth_score', landingVideoAnalysis.depth_score],
+                ['trust_building', landingVideoAnalysis.trust_building],
+                ['cta_effectiveness', landingVideoAnalysis.cta_effectiveness],
+                ['conversion_psychology', landingVideoAnalysis.conversion_psychology]
+            ].filter(([, v]) => v !== undefined);
+
+            document.getElementById('landingVideoCard').innerHTML = `
                 <h4 class="font-bold mb-4">Landing Video</h4>
                 <div class="space-y-2 mb-4">
-                    ${Object.entries(landingVideoData.scores || {}).map(([k, v]) => `
+                    ${landScoreEntries.map(([k, v]) => `
                         <div class="text-sm">
-                            <span class="capitalize">${k.replace('_', ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
-                        </div>
-                    `).join('')}
+                            <span class="capitalize">${k.replace(/_/g, ' ')}</span>: <span class="font-bold">${Math.round(v)}</span>
+                        </div>`).join('')}
                 </div>
-                <p class="text-sm text-green-400 mb-2">Strengths: ${(landingVideoData.strengths || []).join(', ')}</p>
-                <p class="text-sm text-red-400">Weaknesses: ${(landingVideoData.weaknesses || []).join(', ')}</p>
-            `;
-            document.getElementById('landingVideoCard').innerHTML = landingVideoHTML;
+                <p class="text-sm text-gray-400 mb-1">${landingVideoAnalysis.verdict || ''}</p>
+                <p class="text-sm text-green-400 mb-2">Strengths: ${(landingVideoAnalysis.strengths || []).join(', ') || 'N/A'}</p>
+                <p class="text-sm text-red-400">Weaknesses: ${(landingVideoAnalysis.weaknesses || []).join(', ') || 'N/A'}</p>`;
 
-            // Funnel Flow Card
-            const funnelFlowData = data.funnel_flow || {};
-            const funnelFlowHTML = `
+            /* Funnel Flow Card */
+            document.getElementById('funnelFlowCard').innerHTML = `
                 <h4 class="font-bold mb-4">Funnel Flow</h4>
                 <div class="space-y-2">
-                    <p class="text-sm"><span class="text-gray-400">Escalation:</span> ${funnelFlowData.escalation || 'N/A'}</p>
-                    <p class="text-sm"><span class="text-gray-400">Audience Fit:</span> ${funnelFlowData.audience_fit || 'N/A'}</p>
-                    <p class="text-sm"><span class="text-gray-400">Drop-off Point:</span> ${funnelFlowData.dropoff_point || 'N/A'}</p>
-                </div>
-            `;
-            document.getElementById('funnelFlowCard').innerHTML = funnelFlowHTML;
+                    <p class="text-sm"><span class="text-gray-400">Message Escalation:</span> ${funnelAnalysis.message_escalation || 'N/A'}</p>
+                    <p class="text-sm"><span class="text-gray-400">Audience Funnel Fit:</span> ${funnelAnalysis.audience_funnel_fit || 'N/A'}</p>
+                    <p class="text-sm"><span class="text-gray-400">Drop-off Point:</span> ${funnelAnalysis.drop_off_point || 'N/A'}</p>
+                    <p class="text-sm"><span class="text-gray-400">Overall Score:</span> ${funnelAnalysis.overall_score || 'N/A'}</p>
+                </div>`;
 
-            // Recommendations
-            const recsHTML = (data.recommendations || []).map(rec => {
-                const priorityColor = rec.priority === 'high' ? 'bg-red-500/20 border-red-500/50' :
-                                    rec.priority === 'medium' ? 'bg-yellow-500/20 border-yellow-500/50' :
-                                    'bg-green-500/20 border-green-500/50';
-                const priorityText = rec.priority === 'high' ? 'text-red-400' :
-                                    rec.priority === 'medium' ? 'text-yellow-400' :
-                                    'text-green-400';
+            /* Recommendations */
+            const recommendations = analysis.recommendations || [];
+            document.getElementById('recommendationsList').innerHTML = recommendations.map(rec => {
+                const p = (rec.priority || '').toLowerCase();
+                const color = p === 'high' ? 'bg-red-500/20 border-red-500/50'
+                            : p === 'medium' ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-green-500/20 border-green-500/50';
+                const txt   = p === 'high' ? 'text-red-400' : p === 'medium' ? 'text-yellow-400' : 'text-green-400';
                 return `
-                    <div class="border ${priorityColor} rounded p-3">
-                        <p class="text-sm font-bold ${priorityText}">Priority: ${rec.priority}</p>
-                        <p class="text-sm mt-1">${rec.recommendation}</p>
-                    </div>
-                `;
+                    <div class="border ${color} rounded p-3">
+                        <p class="text-sm font-bold ${txt}">Priority: ${rec.priority || 'N/A'} &mdash; ${rec.area || ''}</p>
+                        <p class="text-sm mt-1"><strong>Issue:</strong> ${rec.issue || ''}</p>
+                        <p class="text-sm mt-1"><strong>Fix:</strong> ${rec.fix || ''}</p>
+                        <p class="text-sm mt-1 text-gray-400">Expected Impact: ${rec.expected_impact || ''}</p>
+                    </div>`;
             }).join('');
-            document.getElementById('recommendationsList').innerHTML = recsHTML;
 
-            // Improved Scripts
-            const scriptsHTML = (data.improved_scripts || []).map(script => `
+            /* Improved Scripts */
+            const scripts = analysis.improved_scripts || {};
+            let html = '';
+            if (scripts.ad_video_script) html += `
                 <div class="bg-gray-800 rounded p-4">
-                    <p class="text-sm font-bold mb-2">${script.type}</p>
-                    <p class="text-sm text-gray-300 mb-3">${script.script}</p>
-                    <button onclick="copyText('${script.script.replace(/'/g, "\\'")}') " class="text-red-500 hover:text-red-400 text-xs">Copy</button>
-                </div>
-            `).join('');
-            document.getElementById('improvedScriptsList').innerHTML = scriptsHTML;
-
+                    <p class="text-sm font-bold mb-2">Improved Ad Video Script</p>
+                    <p class="text-sm text-gray-300 mb-3 whitespace-pre-wrap">${scripts.ad_video_script}</p>
+                    <button onclick="copyText(this)" data-text="${encodeURIComponent(scripts.ad_video_script)}" class="text-red-500 hover:text-red-400 text-xs">Copy</button>
+                </div>`;
+            if (scripts.landing_video_script) html += `
+                <div class="bg-gray-800 rounded p-4">
+                    <p class="text-sm font-bold mb-2">Improved Landing Video Script</p>
+                    <p class="text-sm text-gray-300 mb-3 whitespace-pre-wrap">${scripts.landing_video_script}</p>
+                    <button onclick="copyText(this)" data-text="${encodeURIComponent(scripts.landing_video_script)}" class="text-red-500 hover:text-red-400 text-xs">Copy</button>
+                </div>`;
+            if (scripts.why_these_work) html += `
+                <div class="bg-green-900/20 border border-green-500/30 rounded p-4">
+                    <p class="text-sm font-bold text-green-400 mb-2">Why These Work</p>
+                    <p class="text-sm text-gray-300">${scripts.why_these_work}</p>
+                </div>`;
+            document.getElementById('improvedScriptsList').innerHTML = html;
             document.getElementById('funnelResults').classList.remove('hidden');
         }
 
-        // Tab 3: Smart Rewrite
+        /* ==============================
+           Tab 3: Smart Rewrite
+           FIX #7: Backend requires original_scores (JSON) and weaknesses (JSON) as required Form fields
+           ============================== */
         document.getElementById('rewriteForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading(true);
@@ -826,8 +898,26 @@
             formData.append('rewrite_focus', document.getElementById('rewriteFocus').value);
             formData.append('platform', document.getElementById('rewritePlatform').value);
             formData.append('industry', document.getElementById('rewriteIndustry').value);
-            formData.append('country', document.getElementById('rewriteCountry').value);
-            formData.append('weaknesses', document.getElementById('weaknessesInput').value);
+            formData.append('audience_country', document.getElementById('rewriteCountry').value);
+
+            /* Send stored scores from last analysis (or sensible defaults) */
+            const scoresToSend = Object.keys(lastAnalysisScores).length > 0
+                ? lastAnalysisScores
+                : { overall: 40, hook_strength: 40, clarity: 40, credibility: 40,
+                    emotional_pull: 40, cta_strength: 40, audience_match: 40, platform_fit: 40 };
+            formData.append('original_scores', JSON.stringify(scoresToSend));
+
+            /* Parse user-typed weaknesses into a JSON array */
+            const weakText = document.getElementById('weaknessesInput').value.trim();
+            let weakArr;
+            if (weakText) {
+                weakArr = weakText.split(/[\n,]+/).map(w => w.replace(/^[-\u2022*]\s*/, '').trim()).filter(Boolean);
+            } else if (lastAnalysisWeaknesses.length > 0) {
+                weakArr = lastAnalysisWeaknesses;
+            } else {
+                weakArr = ['No specific weaknesses identified'];
+            }
+            formData.append('weaknesses', JSON.stringify(weakArr));
 
             try {
                 const response = await fetch(`${API_BASE}/api/rewrite`, {
@@ -835,26 +925,30 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error('API request failed');
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `API request failed (${response.status})`);
+                }
                 const data = await response.json();
 
-                document.getElementById('beforeAd').textContent = data.original_ad || '';
-                document.getElementById('afterAd').textContent = data.rewritten_ad || '';
+                /* FIX: Backend returns { success, data: { rewritten_ad, ... } } */
+                const result = data.data || data;
 
-                const deltaHTML = Object.entries(data.score_delta || {}).map(([key, delta]) => `
+                document.getElementById('beforeAd').textContent = document.getElementById('originalAd').value;
+                document.getElementById('afterAd').textContent  = result.rewritten_ad || '';
+
+                document.getElementById('deltaList').innerHTML = Object.entries(result.score_delta || {}).map(([key, delta]) => `
                     <div class="flex items-center justify-between">
-                        <span class="capitalize">${key.replace('_', ' ')}</span>
+                        <span class="capitalize">${key.replace(/_/g, ' ')}</span>
                         <span class="flex items-center gap-2">
-                            <span class="font-bold">${delta > 0 ? '+' : ''}${Math.round(delta)}</span>
-                            <span class="text-green-400">↑</span>
+                            <span class="font-bold ${delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-gray-400'}">${delta > 0 ? '+' : ''}${Math.round(delta)}</span>
+                            ${delta > 0 ? '<span class="text-green-400">&#8593;</span>' : delta < 0 ? '<span class="text-red-400">&#8595;</span>' : ''}
                         </span>
-                    </div>
-                `).join('');
-                document.getElementById('deltaList').innerHTML = deltaHTML;
+                    </div>`).join('');
 
-                document.getElementById('changesSummaryText').textContent = data.changes_summary || '';
-                document.getElementById('whyItWorksText').textContent = data.why_it_works || '';
-
+                const cs = result.changes_summary;
+                document.getElementById('changesSummaryText').textContent = Array.isArray(cs) ? cs.join('\n') : (cs || '');
+                document.getElementById('whyItWorksText').textContent = result.why_it_works || '';
                 document.getElementById('rewriteResults').classList.remove('hidden');
             } catch (error) {
                 alert('Error rewriting ad: ' + error.message);
@@ -865,15 +959,12 @@
 
         function copyToClipboard(elementId) {
             const text = document.getElementById(elementId).textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied to clipboard!');
-            });
+            navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
         }
 
-        function copyText(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied to clipboard!');
-            });
+        function copyText(btn) {
+            const text = decodeURIComponent(btn.getAttribute('data-text'));
+            navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
         }
     </script>
 </body>
