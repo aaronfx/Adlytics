@@ -273,7 +273,7 @@ Return valid JSON:
                         "model": VISION_MODEL,
                         "messages": [{"role": "user", "content": message_content}],
                         "temperature": 0.7,
-                        "max_tokens": 6000
+                        "max_tokens": 12000
                     }
                 )
 
@@ -289,26 +289,48 @@ Return valid JSON:
 
                 try:
                     if not content or not content.strip():
-                        self.logger.error("OpenRouter returned empty content")
-                        raise ValueError("AI returned empty response — model may have timed out")
+                        self.logger.error(f"OpenRouter returned empty content. Full API response: {json.dumps(result)[:500]}")
+                        raise ValueError("AI returned empty response — model may have timed out. Try a shorter video.")
+
+                    self.logger.info(f"Raw response first 200 chars: {content[:200]}")
 
                     # Strip markdown code blocks if present
                     import re
                     code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
                     if code_block_match:
-                        content = code_block_match.group(1)
+                        content_to_parse = code_block_match.group(1)
+                        self.logger.info("Extracted JSON from markdown code block")
+                    else:
+                        content_to_parse = content
 
-                    json_start = content.find("{")
-                    json_end = content.rfind("}") + 1
+                    json_start = content_to_parse.find("{")
+                    json_end = content_to_parse.rfind("}") + 1
                     if json_start >= 0 and json_end > json_start:
-                        json_str = content[json_start:json_end]
+                        json_str = content_to_parse[json_start:json_end]
                         analysis = json.loads(json_str)
                     else:
-                        self.logger.error(f"No JSON braces found in response. First 500 chars: {content[:500]}")
-                        raise ValueError("No JSON found in response — AI may have returned plain text")
+                        preview = content[:300].replace('"', "'")
+                        self.logger.error(f"No JSON braces found. finish_reason={finish_reason}. Content: {content[:500]}")
+                        raise ValueError(f"No JSON in AI response (finish={finish_reason}). Preview: {preview}")
                 except json.JSONDecodeError as e:
-                    self.logger.error(f"Failed to parse AI response as JSON: {str(e)}\nFirst 500 chars: {content[:500]}")
-                    raise HTTPException(status_code=500, detail=f"Failed to parse AI analysis response: {str(e)}")
+                    # Try to fix truncated JSON by closing brackets
+                    self.logger.warning(f"JSON parse failed: {str(e)}. Attempting truncation repair...")
+                    try:
+                        # Count open/close braces and brackets
+                        open_braces = json_str.count('{') - json_str.count('}')
+                        open_brackets = json_str.count('[') - json_str.count(']')
+                        repaired = json_str
+                        # Close any open strings
+                        if repaired.rstrip()[-1] not in ']},"':
+                            repaired += '"'
+                        repaired += ']' * max(0, open_brackets)
+                        repaired += '}' * max(0, open_braces)
+                        analysis = json.loads(repaired)
+                        self.logger.info("Successfully repaired truncated JSON response")
+                    except Exception:
+                        preview = content[:300].replace('"', "'")
+                        self.logger.error(f"JSON repair failed. Original error: {str(e)}\nFirst 500 chars: {content[:500]}")
+                        raise HTTPException(status_code=500, detail=f"AI response was truncated (finish={finish_reason}). Try again or use a shorter video. Preview: {preview}")
 
                 return analysis
 

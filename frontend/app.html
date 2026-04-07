@@ -2226,7 +2226,9 @@
                 hideLoading(loadingState);
 
                 if (!result.success) {
-                    showError('funnelError', result.detail || result.error || 'Analysis failed. Please try again.');
+                    const errMsg = result.detail || result.error || 'Analysis failed. Please try again.';
+                    showError('funnelError', errMsg);
+                    console.error('Funnel API error:', JSON.stringify(result).substring(0, 1000));
                     return;
                 }
 
