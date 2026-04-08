@@ -398,7 +398,8 @@ async def get_campaigns(
             campaigns_params = {
                 "access_token": access_token,
                 "fields": "id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time",
-                "effective_status": '["ACTIVE","PAUSED"]',
+                "effective_status": '["ACTIVE","PAUSED","ARCHIVED","COMPLETED","CAMPAIGN_PAUSED"]',
+                "limit": 50,
             }
 
             campaigns_response = await client.get(campaigns_url, params=campaigns_params)
@@ -482,6 +483,7 @@ async def get_campaign_insights(
             "last_90d",
             "last_quarter",
             "last_year",
+            "maximum",
         ]
         if date_preset not in valid_presets:
             raise HTTPException(
