@@ -2455,10 +2455,37 @@
 
         function setSelectByText(select, text) {
             const lower = text.toLowerCase();
+            // Pass 1: exact match on value or text
             for (let opt of select.options) {
-                if (opt.value.toLowerCase().includes(lower) || opt.text.toLowerCase().includes(lower)) {
-                    select.value = opt.value;
-                    return;
+                if (opt.value.toLowerCase() === lower || opt.text.toLowerCase() === lower) {
+                    select.value = opt.value; return;
+                }
+            }
+            // Pass 2: scanner text contains option, or option contains scanner text
+            for (let opt of select.options) {
+                const ov = opt.value.toLowerCase(), ot = opt.text.toLowerCase();
+                if (lower.includes(ov) || lower.includes(ot) || ov.includes(lower) || ot.includes(lower)) {
+                    if (ov && ov !== '') { select.value = opt.value; return; }
+                }
+            }
+            // Pass 3: keyword mapping for common industries
+            const industryMap = {
+                'trading': 'forex', 'forex': 'forex', 'stock': 'finance', 'investment': 'finance',
+                'banking': 'finance', 'fintech': 'finance', 'crypto': 'crypto', 'blockchain': 'crypto',
+                'shop': 'ecommerce', 'store': 'ecommerce', 'retail': 'ecommerce', 'commerce': 'ecommerce',
+                'software': 'saas', 'app': 'saas', 'platform': 'tech', 'ai': 'tech',
+                'health': 'health', 'medical': 'health', 'fitness': 'health', 'wellness': 'health',
+                'learn': 'education', 'course': 'education', 'school': 'education', 'tutor': 'education',
+                'fashion': 'fashion', 'cloth': 'fashion', 'wear': 'fashion', 'beauty': 'fashion',
+                'food': 'food', 'restaurant': 'food', 'recipe': 'food',
+                'real estate': 'real_estate', 'property': 'real_estate', 'apartment': 'real_estate',
+                'travel': 'travel', 'hotel': 'travel', 'booking': 'travel',
+            };
+            for (const [keyword, value] of Object.entries(industryMap)) {
+                if (lower.includes(keyword)) {
+                    for (let opt of select.options) {
+                        if (opt.value === value) { select.value = value; return; }
+                    }
                 }
             }
         }
