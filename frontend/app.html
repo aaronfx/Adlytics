@@ -1404,6 +1404,7 @@
                 </div>
 
                 <div id="analysisError" class="hidden"></div>
+                <div id="analysisScannerResultsPanel" class="hidden"></div>
                 <div id="analysisResults"></div>
             </div>
 
@@ -1788,6 +1789,7 @@
                 </div>
 
                 <div id="creativeError" class="hidden"></div>
+                <div id="creativeScannerResultsPanel" class="hidden"></div>
                 <div id="creativeResults"></div>
             </div>
 
@@ -1912,6 +1914,7 @@
                 </div>
 
                 <div id="videoError" class="hidden"></div>
+                <div id="videoScannerResultsPanel" class="hidden"></div>
                 <div id="videoResults"></div>
             </div>
 
@@ -2114,8 +2117,8 @@
                 const brand = result.data.brand_analysis || {};
                 const desc = `${profile.business_name || ''} — ${profile.description || ''}\n\nProducts/Services:\n${mainProds || (pf.all_features || []).join(', ')}\n\nTarget Audience: ${audience.description || ''}\nPain Points: ${(audience.pain_points || []).join(', ')}\nBrand Voice: ${brand.brand_voice || ''}\nUSPs: ${(brand.competitive_advantages || []).join(', ')}`;
 
-                // Show scanner results panel
-                displayScannerResults(window.lastScanData);
+                // Show scanner results panel in the correct tab
+                displayScannerResults(window.lastScanData, target);
 
                 // Auto-fill the appropriate form fields
                 if (target === 'creative') {
@@ -2179,83 +2182,168 @@
             }
         }
 
-        function displayScannerResults(scanData) {
-            const panel = document.getElementById('scannerResultsPanel');
+        function displayScannerResults(scanData, target) {
+            // Find the correct panel based on which tab triggered the scan
+            const panelMap = {
+                'analysis': 'analysisScannerResultsPanel',
+                'audit': 'scannerResultsPanel',
+                'creative': 'creativeScannerResultsPanel',
+                'video': 'videoScannerResultsPanel',
+            };
+            const panelId = panelMap[target] || 'scannerResultsPanel';
+            const panel = document.getElementById(panelId);
             if (!panel) return;
 
             const profile = scanData.profile || {};
             const pf = scanData.products_and_features || {};
-            const topFeatures = (pf.all_features || []).slice(0, 6);
-            const mainProducts = (pf.main_products || []).slice(0, 3);
+            const allFeatures = pf.all_features || [];
+            const mainProducts = pf.main_products || [];
             const adAngles = scanData.ad_angles || [];
-            const recommendedAngle = adAngles[0] || {};
             const targetAudience = scanData.target_audience?.primary_persona || {};
             const brandAnalysis = scanData.brand_analysis || {};
+            const competitive = scanData.competitive_landscape || {};
+            const adStrategy = scanData.ad_strategy || {};
+            const creativeBrief = scanData.creative_brief || {};
+            const funnel = scanData.funnel_intelligence || {};
 
-            const featuresHtml = topFeatures.map(f =>
+            const featuresHtml = allFeatures.map(f =>
                 `<span style="display:inline-block;padding:0.3rem 0.7rem;background:rgba(99,102,241,0.12);border-radius:6px;font-size:0.75rem;color:#818cf8;">${f}</span>`
+            ).join('');
+
+            const anglesHtml = adAngles.map((a, i) => {
+                const eff = a.predicted_effectiveness || 0;
+                const barColor = eff >= 85 ? '#10b981' : eff >= 70 ? '#f59e0b' : '#ef4444';
+                const isTop = i === 0;
+                return `
+                <div style="background:${isTop ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};border:1px solid ${isTop ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.06)'};border-radius:10px;padding:0.75rem;${isTop ? 'border-left:3px solid var(--accent-indigo);' : ''}">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">
+                        <div style="font-size:0.8rem;font-weight:600;color:${isTop ? '#818cf8' : 'var(--text-primary)'};">${isTop ? '★ ' : ''}${a.angle_name || 'Angle ' + (i+1)} <span style="font-weight:400;color:var(--text-muted);font-size:0.75rem;">(${a.strategy || ''})</span></div>
+                        <span style="font-size:0.7rem;background:${barColor}22;color:${barColor};padding:0.15rem 0.5rem;border-radius:99px;font-weight:600;">${eff}%</span>
+                    </div>
+                    <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;color:var(--text-primary);">"${a.headline || ''}"</div>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;">${a.body_copy || ''}</div>
+                    <div style="display:flex;gap:1rem;margin-top:0.4rem;font-size:0.75rem;color:var(--text-muted);">
+                        ${a.cta ? `<span>CTA: <strong>${a.cta}</strong></span>` : ''}
+                        ${a.best_platform ? `<span>Best on: <strong>${a.best_platform}</strong></span>` : ''}
+                    </div>
+                    ${a.hook_line ? `<div style="margin-top:0.3rem;font-size:0.75rem;color:#a78bfa;font-style:italic;">Hook: "${a.hook_line}"</div>` : ''}
+                </div>`;
+            }).join('');
+
+            const competitorsHtml = (competitive.likely_competitors || []).map(c =>
+                `<span style="display:inline-block;padding:0.25rem 0.6rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;font-size:0.75rem;color:#f87171;">${c}</span>`
+            ).join('');
+
+            const advantagesHtml = (competitive.competitive_advantages || []).map(a =>
+                `<span style="display:inline-block;padding:0.25rem 0.6rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:6px;font-size:0.75rem;color:#34d399;">${a}</span>`
             ).join('');
 
             const html = `
                 <div class="card mb-4" style="animation:fadeInSlideUp 0.3s ease both;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-                        <div class="card-title" style="margin:0;">📊 Scanner Results</div>
+                        <div class="card-title" style="margin:0;">📊 Scanner Intelligence Report</div>
                         <button type="button" onclick="this.closest('.card').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">×</button>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+
+                    <!-- Business Profile -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
                         <div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Business Name</div>
-                            <div style="font-weight:600;">${profile.business_name || '—'}</div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.2rem;">Business</div>
+                            <div style="font-weight:600;font-size:0.95rem;">${profile.business_name || '—'}</div>
+                            ${profile.tagline ? `<div style="font-size:0.8rem;color:#a5b4fc;font-style:italic;">"${profile.tagline}"</div>` : ''}
                         </div>
                         <div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Industry</div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.2rem;">Industry</div>
                             <div style="font-weight:600;">${profile.industry || '—'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Business Model</div>
-                            <div style="font-weight:600;">${profile.business_model || '—'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Pages Crawled</div>
-                            <div style="font-weight:600;">${scanData.pages_crawled || 0}</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted);">${profile.business_model || ''}</div>
                         </div>
                     </div>
+                    ${profile.description ? `<div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;margin-bottom:1rem;padding:0.6rem;background:rgba(255,255,255,0.02);border-radius:8px;">${profile.description}</div>` : ''}
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1rem;">Pages crawled: <strong>${scanData.pages_crawled || 0}</strong></div>
+
+                    <!-- Products -->
                     ${mainProducts.length > 0 ? `
                     <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;">Key Products/Services</div>
-                        ${mainProducts.map(p => `<div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.03);border-radius:6px;font-size:0.85rem;"><strong style="color:#818cf8;">${p.name || ''}</strong> — ${p.key_benefit || p.description || ''}</div>`).join('')}
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Products / Services (${mainProducts.length})</div>
+                        ${mainProducts.map(p => `<div style="margin-bottom:0.4rem;padding:0.5rem 0.7rem;background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid #818cf8;"><strong style="color:#818cf8;font-size:0.85rem;">${p.name || ''}</strong><div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.15rem;">${p.description || ''}</div>${p.key_benefit ? `<div style="font-size:0.75rem;color:#34d399;margin-top:0.15rem;">Key benefit: ${p.key_benefit}</div>` : ''}</div>`).join('')}
+                        ${pf.pricing_model ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;">Pricing: <strong>${pf.pricing_model}</strong></div>` : ''}
                     </div>` : ''}
-                    ${topFeatures.length > 0 ? `
+
+                    <!-- All Features -->
+                    ${allFeatures.length > 0 ? `
                     <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;">Features Detected</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${featuresHtml}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Features Detected (${allFeatures.length})</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">${featuresHtml}</div>
                     </div>` : ''}
+
+                    <!-- Target Audience -->
                     ${targetAudience.description ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Target Audience</div>
-                        <div style="font-size:0.9rem;color:var(--text-secondary);">${targetAudience.description}</div>
-                        ${targetAudience.pain_points ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Pain points: ${targetAudience.pain_points.join(', ')}</div>` : ''}
+                    <div style="margin-bottom:1rem;padding:0.7rem;background:rgba(139,92,246,0.06);border-radius:10px;border:1px solid rgba(139,92,246,0.12);">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Target Audience</div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${targetAudience.description}</div>
+                        ${targetAudience.demographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Demographics: ${targetAudience.demographics}</div>` : ''}
+                        ${targetAudience.pain_points?.length ? `<div style="font-size:0.8rem;margin-top:0.4rem;"><span style="color:#f87171;font-weight:600;">Pain Points:</span> ${targetAudience.pain_points.join(' · ')}</div>` : ''}
+                        ${targetAudience.desires?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#34d399;font-weight:600;">Desires:</span> ${targetAudience.desires.join(' · ')}</div>` : ''}
+                        ${targetAudience.objections?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#f59e0b;font-weight:600;">Objections:</span> ${targetAudience.objections.join(' · ')}</div>` : ''}
                     </div>` : ''}
+
+                    <!-- Brand Analysis -->
                     ${brandAnalysis.brand_voice ? `
                     <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Brand Voice</div>
-                        <div style="font-size:0.9rem;color:var(--text-secondary);">${brandAnalysis.brand_voice} · ${brandAnalysis.tone || ''}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Brand Analysis</div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);">Voice: <strong>${brandAnalysis.brand_voice}</strong> · Tone: <strong>${brandAnalysis.tone || ''}</strong></div>
+                        ${brandAnalysis.unique_positioning ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">${brandAnalysis.unique_positioning}</div>` : ''}
+                        ${brandAnalysis.trust_signals?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Trust signals: ${brandAnalysis.trust_signals.join(', ')}</div>` : ''}
                     </div>` : ''}
-                    ${recommendedAngle.body_copy ? `
-                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;padding:0.75rem;border-left:3px solid var(--accent-indigo);">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">
-                            <div style="font-size:0.75rem;color:var(--accent-indigo);text-transform:uppercase;font-weight:600;">Recommended Ad Angle</div>
-                            ${recommendedAngle.predicted_effectiveness ? `<span style="font-size:0.75rem;background:rgba(16,185,129,0.15);color:#10b981;padding:0.15rem 0.5rem;border-radius:99px;">${recommendedAngle.predicted_effectiveness}% effective</span>` : ''}
-                        </div>
-                        ${recommendedAngle.angle_name ? `<div style="font-size:0.8rem;color:#818cf8;margin-bottom:0.3rem;font-weight:600;">${recommendedAngle.angle_name} (${recommendedAngle.strategy || ''})</div>` : ''}
-                        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${recommendedAngle.body_copy}</div>
-                        ${recommendedAngle.headline ? `<div style="margin-top:0.4rem;font-size:0.8rem;color:var(--text-muted);">Headline: "${recommendedAngle.headline}"</div>` : ''}
+
+                    <!-- Competitive Landscape -->
+                    ${(competitive.likely_competitors || []).length > 0 ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;font-weight:600;">Competitive Landscape</div>
+                        <div style="margin-bottom:0.4rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Competitors:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${competitorsHtml}</span></div>
+                        ${advantagesHtml ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Advantages:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${advantagesHtml}</span></div>` : ''}
+                        ${(competitive.market_gaps || []).length ? `<div><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' · ')}</span></div>` : ''}
+                    </div>` : ''}
+
+                    <!-- Ad Strategy -->
+                    ${adStrategy.recommended_funnel_stage ? `
+                    <div style="margin-bottom:1rem;padding:0.6rem;background:rgba(99,102,241,0.04);border-radius:8px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Ad Strategy</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">${adStrategy.recommended_funnel_stage}</div>
+                        ${adStrategy.emotional_trigger ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Emotional trigger: <strong style="color:#f472b6;">${adStrategy.emotional_trigger}</strong></div>` : ''}
+                        ${adStrategy.best_platform ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Best platform: <strong style="color:#818cf8;">${adStrategy.best_platform}</strong></div>` : ''}
+                    </div>` : ''}
+
+                    <!-- All Ad Angles -->
+                    ${adAngles.length > 0 ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Ad Angles (${adAngles.length} ranked)</div>
+                        <div style="display:flex;flex-direction:column;gap:0.6rem;">${anglesHtml}</div>
+                    </div>` : ''}
+
+                    <!-- Creative Brief -->
+                    ${creativeBrief.video_direction ? `
+                    <div style="margin-bottom:0.5rem;padding:0.6rem;background:rgba(139,92,246,0.04);border-radius:8px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Creative Brief</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">Video direction: ${creativeBrief.video_direction}</div>
+                        ${creativeBrief.voiceover_style ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Voiceover: ${creativeBrief.voiceover_style}</div>` : ''}
+                        ${creativeBrief.color_palette?.length ? `<div style="display:flex;gap:0.3rem;margin-top:0.3rem;">${creativeBrief.color_palette.map(c => `<span style="width:24px;height:24px;border-radius:4px;background:${c};display:inline-block;border:1px solid rgba(255,255,255,0.1);" title="${c}"></span>`).join('')}</div>` : ''}
+                    </div>` : ''}
+
+                    <!-- Funnel Intelligence -->
+                    ${funnel.landing_page_assessment ? `
+                    <div style="padding:0.6rem;background:rgba(245,158,11,0.04);border-radius:8px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Funnel Intelligence</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">${funnel.landing_page_assessment}</div>
+                        ${funnel.conversion_blockers?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:#f87171;">Blockers: ${funnel.conversion_blockers.join(' · ')}</div>` : ''}
+                        ${funnel.retargeting_angle ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:var(--text-muted);">Retargeting: ${funnel.retargeting_angle}</div>` : ''}
                     </div>` : ''}
                 </div>
             `;
 
             panel.innerHTML = html;
             panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function setSelectByText(select, text) {
