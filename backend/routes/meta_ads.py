@@ -399,16 +399,17 @@ async def get_campaigns(
             campaigns_params = {
                 "access_token": access_token,
                 "fields": "id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time",
-                "effective_status": '["ACTIVE","PAUSED","DELETED","ARCHIVED","CAMPAIGN_PAUSED"]',
                 "limit": 50,
             }
 
             campaigns_response = await client.get(campaigns_url, params=campaigns_params)
             campaigns_data = campaigns_response.json()
 
+            logger.info(f"Campaigns response status: {campaigns_response.status_code}")
             if campaigns_response.status_code != 200 or "error" in campaigns_data:
                 error_msg = campaigns_data.get("error", {}).get("message", "Unknown error")
-                logger.error(f"Meta API error: {error_msg}")
+                logger.error(f"Meta API error fetching campaigns: {error_msg}")
+                logger.error(f"Full error: {campaigns_data.get('error', {})}")
                 raise HTTPException(status_code=400, detail=error_msg)
 
             campaigns = campaigns_data.get("data", [])
