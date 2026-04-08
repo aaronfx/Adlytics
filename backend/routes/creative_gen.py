@@ -251,7 +251,10 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
     Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
     """
     if not OPENAI_API_KEY:
+        print("[creative_gen] No OPENAI_API_KEY set, skipping DALL-E")
         return None
+
+    print(f"[creative_gen] Attempting DALL-E 3 generation with key: {OPENAI_API_KEY[:8]}...")
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
@@ -634,4 +637,14 @@ async def get_available_styles():
             "styles": styles,
             "count": len(styles),
         },
+    }
+
+
+@router.get("/status")
+async def get_status():
+    """Check which generation backends are available."""
+    return {
+        "dalle3_available": bool(os.getenv("OPENAI_API_KEY")),
+        "openrouter_available": bool(os.getenv("OPENROUTER_API_KEY")),
+        "dalle3_key_prefix": os.getenv("OPENAI_API_KEY", "")[:8] + "..." if os.getenv("OPENAI_API_KEY") else None,
     }
