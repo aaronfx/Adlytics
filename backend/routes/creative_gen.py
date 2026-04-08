@@ -169,6 +169,7 @@ For EACH variant, provide a JSON object with:
 5. "dall_e_prompt" - detailed DALL-E 3 prompt for image generation (100+ words, very specific)
 6. "color_palette" - array of 3 hex colors (e.g., ["#FF6B6B", "#4ECDC4", "#45B7D1"])
 7. "key_message" - single most important message
+8. "image_keywords" - array of 2-3 simple, concrete NOUNS for stock photo search that visually represent this specific ad variant. Each keyword should be a single common word that a stock photo site would match well. Use DIFFERENT keywords for each variant so they get different images. Examples: for real estate use ["house", "interior", "luxury"], for food use ["restaurant", "dinner", "plate"], for tech use ["laptop", "office", "technology"].
 
 Return ONLY a valid JSON array with {num_variants} objects, no additional text.
 """
@@ -249,21 +250,30 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             )
 
 
-async def fetch_stock_image(query: str, width: int = 1080, height: int = 1080) -> Optional[str]:
+async def fetch_stock_image(keywords: list, width: int = 1080, height: int = 1080, variant_index: int = 0) -> Optional[str]:
     """
-    Fetch a relevant stock image using multiple free services.
+    Fetch a relevant stock image using loremflickr with simple keywords.
+    Uses lock parameter to get different images per variant.
     Returns a direct image URL.
     """
-    try:
-        # Clean up query - extract key visual terms
-        search_terms = query.lower()
-        for word in ["the", "a", "an", "and", "or", "of", "for", "with", "in", "on", "to", "is", "are", "our", "your"]:
-            search_terms = search_terms.replace(f" {word} ", " ")
-        terms = [t for t in search_terms.strip().split() if len(t) > 2][:4]
-        search_query = ",".join(terms)
+    import random
 
-        # Try loremflickr.com - free, keyword-based, no API key needed
-        image_url = f"https://loremflickr.com/{width}/{height}/{search_query}"
+    try:
+        # Use the provided keywords directly (already cleaned by GPT-4o)
+        if isinstance(keywords, list) and keywords:
+            search_query = ",".join(k.strip().lower() for k in keywords[:3] if k.strip())
+        elif isinstance(keywords, str):
+            # Fallback if passed a string
+            terms = [t for t in keywords.lower().split() if len(t) > 2][:3]
+            search_query = ",".join(terms)
+        else:
+            search_query = "business,modern"
+
+        # Use lock parameter to get a unique but deterministic image per variant
+        lock_seed = random.randint(1000, 9999) + variant_index * 100
+        image_url = f"https://loremflickr.com/{width}/{height}/{search_query}?lock={lock_seed}"
+
+        print(f"[creative_gen] Fetching stock image: {image_url}")
 
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             response = await client.head(image_url)
@@ -272,8 +282,8 @@ async def fetch_stock_image(query: str, width: int = 1080, height: int = 1080) -
                 print(f"[creative_gen] Stock image found: {final_url}")
                 return final_url
 
-        # Fallback: picsum.photos (random but high quality)
-        fallback_url = f"https://picsum.photos/{width}/{height}"
+        # Fallback: picsum.photos with unique seed per variant
+        fallback_url = f"https://picsum.photos/seed/adlytics{variant_index}{random.randint(1,999)}/{width}/{height}"
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.head(fallback_url)
             if response.status_code == 200:
@@ -563,7 +573,7 @@ async def generate_creatives(
         has_openai = bool(get_openai_key())
         generation_mode = "dalle3" if has_openai else "stock"
 
-        for concept in concepts:
+        for variant_idx, concept in enumerate(concepts):
             # Extract concept data
             variant_headline = concept.get("headline", "Amazing Offer")
             variant_body = concept.get(
@@ -584,14 +594,17 @@ async def generate_creatives(
                 if image_url:
                     generation_mode = "dalle3"
 
-            # Fallback: Stock photo from Unsplash
+            # Fallback: Stock photo with AI-generated keywords
             if not image_url:
                 platform_specs = get_platform_specs(platform, ad_format)
                 size_str = platform_specs["recommended_size"]
                 img_width, img_height = map(int, size_str.split("x"))
-                # Build search query from product, industry and visual concept
-                stock_query = f"{product_description[:50]} {industry} {visual_concept[:30]}"
-                image_url = await fetch_stock_image(stock_query, img_width, img_height)
+                # Use GPT-4o generated keywords if available, otherwise build from context
+                image_keywords = concept.get("image_keywords", [])
+                if not image_keywords or not isinstance(image_keywords, list):
+                    # Fallback: extract simple nouns from industry + visual concept
+                    image_keywords = [industry.replace("_", " "), visual_concept.split()[0] if visual_concept else "business"]
+                image_url = await fetch_stock_image(image_keywords, img_width, img_height, variant_index=variant_idx)
                 if image_url:
                     generation_mode = "stock"
 
