@@ -1335,6 +1335,9 @@
                             <div id="analysisScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
                         </div>
 
+                        <!-- Scanner Intelligence Report (inline) -->
+                        <div id="analysisScannerResultsPanel" class="hidden" style="max-height:600px;overflow-y:auto;border-radius:12px;"></div>
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Platform</label>
@@ -1404,7 +1407,6 @@
                 </div>
 
                 <div id="analysisError" class="hidden"></div>
-                <div id="analysisScannerResultsPanel" class="hidden"></div>
                 <div id="analysisResults"></div>
             </div>
 
@@ -1700,6 +1702,9 @@
                             <div id="creativeScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
                         </div>
 
+                        <!-- Scanner Intelligence Report (inline) -->
+                        <div id="creativeScannerResultsPanel" class="hidden" style="max-height:600px;overflow-y:auto;border-radius:12px;"></div>
+
                         <div class="form-group">
                             <label class="form-label">Product / Service Description</label>
                             <textarea class="form-textarea" name="product_description" id="creativeProductDesc" placeholder="e.g., Premium Forex trading signals for Nigerian investors. 85% win rate, daily alerts via Telegram." required style="min-height:80px;"></textarea>
@@ -1789,7 +1794,6 @@
                 </div>
 
                 <div id="creativeError" class="hidden"></div>
-                <div id="creativeScannerResultsPanel" class="hidden"></div>
                 <div id="creativeResults"></div>
             </div>
 
@@ -1812,6 +1816,9 @@
                             </div>
                             <div id="videoScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
                         </div>
+
+                        <!-- Scanner Intelligence Report (inline) -->
+                        <div id="videoScannerResultsPanel" class="hidden" style="max-height:600px;overflow-y:auto;border-radius:12px;"></div>
 
                         <div class="form-group">
                             <label class="form-label">Product / Service Description</label>
@@ -1914,7 +1921,6 @@
                 </div>
 
                 <div id="videoError" class="hidden"></div>
-                <div id="videoScannerResultsPanel" class="hidden"></div>
                 <div id="videoResults"></div>
             </div>
 
@@ -2343,7 +2349,8 @@
 
             panel.innerHTML = html;
             panel.classList.remove('hidden');
-            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Gentle scroll — panel is inline so just nudge it into view
+            setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
         }
 
         function setSelectByText(select, text) {
