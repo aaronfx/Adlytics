@@ -3211,16 +3211,19 @@
             try {
                 const res = await fetch(`${API_BASE}/api/meta/ad-accounts?access_token=${encodeURIComponent(token)}`);
                 const data = await res.json();
-                if (data.accounts) {
+                const accounts = data.ad_accounts || data.accounts || [];
+                if (accounts.length) {
                     const select = document.getElementById('metaAdAccountSelect');
                     select.innerHTML = '<option value="">Select account...</option>';
-                    data.accounts.forEach(acc => {
-                        select.innerHTML += `<option value="${acc.account_id}">${acc.name || acc.account_id} (${acc.currency || 'USD'})</option>`;
+                    accounts.forEach(acc => {
+                        select.innerHTML += `<option value="${acc.account_id || acc.id}">${acc.name || acc.account_id || acc.id} (${acc.currency || 'USD'})</option>`;
                     });
-                    if (data.accounts.length === 1) {
-                        select.value = data.accounts[0].account_id;
+                    if (accounts.length === 1) {
+                        select.value = accounts[0].account_id || accounts[0].id;
                         loadCampaigns();
                     }
+                } else {
+                    showError('campaignsError', 'No ad accounts found. Make sure your Meta account has an active ad account.');
                 }
             } catch (e) {
                 console.error('Failed to load ad accounts:', e);
