@@ -2161,12 +2161,14 @@
                         setSelectByText(industrySelect, profile.industry);
                     }
                     // Also auto-fill landing URL from scanned site
-                    const landingInput = document.querySelector('#deepAuditForm input[name="landing_page_url"]');
+                    const landingInput = document.querySelector('#deepAuditForm input[name="landing_url"]');
                     if (landingInput) landingInput.value = url.startsWith('http') ? url : 'https://' + url;
                 }
 
                 const pagesCount = window.lastScanData.pages_crawled || 0;
-                status.innerHTML = `<span style="color:#10B981;">✓ Scanned <strong>${profile.business_name || url}</strong> — ${profile.industry || 'business'} · ${pagesCount} pages · ${products ? 'Products identified' : ''}</span>`;
+                const productCount = (result.data.products_and_features?.main_products || []).length;
+                const angleCount = (result.data.ad_angles || []).length;
+                status.innerHTML = `<span style="color:#10B981;">✓ Scanned <strong>${profile.business_name || url}</strong> — ${profile.industry || 'business'} · ${pagesCount} pages · ${productCount} products · ${angleCount} ad angles generated</span>`;
 
             } catch (error) {
                 console.error('Scan error:', error);
