@@ -30,7 +30,8 @@ router = APIRouter(prefix="/video", tags=["video-generation"])
 # Constants
 OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
 GPT4O_MODEL = "openai/gpt-4o"
-FPS = 30
+FPS = 12  # Lower FPS for fast rendering — smooth enough for ads
+RENDER_SCALE = 0.5  # Render at half size, ffmpeg scales up
 MAX_DURATION = 60  # seconds
 OUTPUT_DIR = Path(tempfile.gettempdir()) / "adlytics_videos"
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -117,21 +118,28 @@ def hex_to_rgb(hex_color: str) -> tuple:
     return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
 
+# Gradient background cache to avoid regenerating every frame
+_gradient_cache = {}
+
 def create_gradient_bg(width: int, height: int, color1: str, color2: str) -> Image.Image:
-    """Create a gradient background image."""
+    """Create a gradient background image using fast vertical blend."""
+    cache_key = (width, height, color1, color2)
+    if cache_key in _gradient_cache:
+        return _gradient_cache[cache_key].copy()
+
     c1 = hex_to_rgb(color1)
     c2 = hex_to_rgb(color2)
-    img = Image.new("RGB", (width, height))
-    pixels = img.load()
-    for y in range(height):
-        for x in range(width):
-            # Diagonal gradient
-            ratio = (x / width * 0.5 + y / height * 0.5)
-            r = int(c1[0] + (c2[0] - c1[0]) * ratio)
-            g = int(c1[1] + (c2[1] - c1[1]) * ratio)
-            b = int(c1[2] + (c2[2] - c1[2]) * ratio)
-            pixels[x, y] = (r, g, b)
-    return img
+    # Fast: create two 1-pixel-wide strips and blend via resize
+    top = Image.new("RGB", (1, 1), c1)
+    bottom = Image.new("RGB", (1, 1), c2)
+    # Stack them and resize — PIL interpolation creates the gradient
+    gradient = Image.new("RGB", (1, 2))
+    gradient.putpixel((0, 0), c1)
+    gradient.putpixel((0, 1), c2)
+    gradient = gradient.resize((width, height), Image.BILINEAR)
+
+    _gradient_cache[cache_key] = gradient.copy()
+    return gradient
 
 
 def wrap_text(draw, text: str, font, max_width: int) -> list:
@@ -164,8 +172,15 @@ def draw_text_centered(draw, text: str, y: int, width: int, font, fill=(255, 255
 
 
 def draw_rounded_rect(draw, xy, radius, fill):
-    """Draw a rounded rectangle."""
-    x0, y0, x1, y1 = xy
+    """Draw a rounded rectangle with safety checks."""
+    x0, y0, x1, y1 = [int(v) for v in xy]
+    if x1 <= x0 or y1 <= y0:
+        return  # Skip if rect is too small
+    # Clamp radius to fit
+    radius = min(radius, (x1 - x0) // 2, (y1 - y0) // 2)
+    if radius < 1:
+        draw.rectangle([x0, y0, x1, y1], fill=fill)
+        return
     draw.rectangle([x0 + radius, y0, x1 - radius, y1], fill=fill)
     draw.rectangle([x0, y0 + radius, x1, y1 - radius], fill=fill)
     draw.pieslice([x0, y0, x0 + 2 * radius, y0 + 2 * radius], 180, 270, fill=fill)
@@ -584,25 +599,28 @@ async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -
 # ========== VIDEO ASSEMBLY ==========
 
 def render_frames_to_video(
-    frames_dir: str, output_path: str, fps: int = 30,
-    audio_path: Optional[str] = None
+    frames_dir: str, output_path: str, fps: int = 12,
+    audio_path: Optional[str] = None,
+    output_width: int = 1080, output_height: int = 1080
 ) -> bool:
-    """Use FFmpeg to assemble frames into MP4, optionally with audio."""
+    """Use FFmpeg to assemble frames into MP4, scale up, optionally with audio."""
     try:
         cmd = [
             "ffmpeg", "-y",
             "-framerate", str(fps),
-            "-i", f"{frames_dir}/frame_%05d.png",
+            "-i", f"{frames_dir}/frame_%05d.jpg",
         ]
 
         if audio_path and os.path.exists(audio_path):
             cmd.extend(["-i", audio_path, "-c:a", "aac", "-b:a", "128k", "-shortest"])
 
+        # Scale up to full resolution and encode
         cmd.extend([
+            "-vf", f"scale={output_width}:{output_height}:flags=lanczos",
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
-            "-preset", "fast",
-            "-crf", "23",
+            "-preset", "ultrafast",
+            "-crf", "25",
             "-movflags", "+faststart",
             output_path
         ])
@@ -735,7 +753,10 @@ async def generate_video(
         raise HTTPException(status_code=400, detail=f"Duration must be between 3 and {MAX_DURATION} seconds")
 
     voice_id = VOICE_OPTIONS.get(voice, VOICE_OPTIONS["female_us"])
-    width, height = ASPECT_SIZES[aspect_ratio]
+    full_width, full_height = ASPECT_SIZES[aspect_ratio]
+    # Render at half size for speed, ffmpeg scales up to full
+    width = int(full_width * RENDER_SCALE)
+    height = int(full_height * RENDER_SCALE)
     total_frames = duration * FPS
 
     # Generate unique job ID
@@ -789,8 +810,12 @@ async def generate_video(
             else:
                 audio_path = None
 
+        # Resize product image to render size if needed
+        if product_img:
+            product_img = product_img.resize((width, int(height * 0.5)), Image.LANCZOS)
+
         # Step 4: Render frames
-        print(f"[video_gen] Rendering {total_frames} frames at {width}x{height}...")
+        print(f"[video_gen] Rendering {total_frames} frames at {width}x{height} (will scale to {full_width}x{full_height})...")
 
         for frame_num in range(total_frames):
             if template == "product_showcase":
@@ -823,11 +848,11 @@ async def generate_video(
                     headline, body, cta, colors, product_img
                 )
 
-            frame.save(str(frames_dir / f"frame_{frame_num:05d}.png"))
+            frame.save(str(frames_dir / f"frame_{frame_num:05d}.jpg"), "JPEG", quality=85)
 
-            # Log progress every 30 frames
-            if frame_num % 30 == 0:
-                print(f"[video_gen] Frame {frame_num}/{total_frames}")
+            # Log progress
+            if frame_num % (FPS) == 0:
+                print(f"[video_gen] Frame {frame_num}/{total_frames} ({int(frame_num/total_frames*100)}%)")
 
         # Step 5: Assemble video with FFmpeg
         output_path = str(job_dir / f"adlytics_video_{job_id}.mp4")
@@ -835,7 +860,8 @@ async def generate_video(
 
         success = render_frames_to_video(
             str(frames_dir), output_path, FPS,
-            audio_path if audio_path and os.path.exists(audio_path) else None
+            audio_path if audio_path and os.path.exists(audio_path) else None,
+            output_width=full_width, output_height=full_height
         )
 
         if not success:
@@ -853,7 +879,7 @@ async def generate_video(
                 "video_id": job_id,
                 "video_url": f"/api/video/download/{job_id}",
                 "duration": duration,
-                "resolution": f"{width}x{height}",
+                "resolution": f"{full_width}x{full_height}",
                 "aspect_ratio": aspect_ratio,
                 "template": template,
                 "has_voiceover": audio_path is not None,
