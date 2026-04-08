@@ -105,31 +105,81 @@ def _discover_subpages(html: str, base_url: str) -> List[str]:
     return list(found)[:12]  # cap at 12 subpages
 
 
+async def _fetch_text(client: httpx.AsyncClient, url: str) -> Optional[str]:
+    """Fetch raw text content (for sitemap, robots.txt, etc.)."""
+    try:
+        resp = await client.get(url, headers=_headers(), follow_redirects=True, timeout=8.0)
+        if resp.status_code == 200:
+            return resp.text
+    except Exception:
+        pass
+    return None
+
+
 async def crawl_website(url: str) -> Dict[str, Any]:
-    """Crawl homepage + key subpages. Returns all extracted content."""
+    """Crawl homepage + key subpages + sitemap + robots.txt. Returns all extracted content."""
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    parsed = urlparse(url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+
     async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
-        # Fetch homepage
-        homepage_html = await _fetch_page(client, url)
-        if not homepage_html:
+        # Fetch homepage, sitemap.xml, and robots.txt in parallel
+        hp_task = _fetch_page(client, url)
+        sitemap_task = _fetch_text(client, f"{base}/sitemap.xml")
+        robots_task = _fetch_text(client, f"{base}/robots.txt")
+
+        homepage_html, sitemap_text, robots_text = await asyncio.gather(
+            hp_task, sitemap_task, robots_task, return_exceptions=True
+        )
+
+        if not isinstance(homepage_html, str) or not homepage_html:
             raise HTTPException(status_code=400, detail="Could not fetch website. Check the URL and try again.")
 
-        # Discover subpages
-        subpage_urls = _discover_subpages(homepage_html, url)
-        print(f"[scanner] Discovered {len(subpage_urls)} subpages: {subpage_urls}")
+        # Extract URLs from sitemap.xml
+        sitemap_urls = []
+        if isinstance(sitemap_text, str) and sitemap_text:
+            sitemap_urls = re.findall(r'<loc>(.*?)</loc>', sitemap_text, re.I)
+            print(f"[scanner] Found {len(sitemap_urls)} URLs in sitemap.xml")
 
-        # Fetch subpages in parallel (limit concurrency)
+        # Discover subpages from HTML links + brute-force + sitemap
+        subpage_urls = _discover_subpages(homepage_html, url)
+
+        # Add relevant sitemap URLs
+        relevance_keywords = ["about", "feature", "pricing", "service", "product", "tool",
+                              "blog", "faq", "contact", "team", "platform", "signal",
+                              "academy", "solution", "plan", "offer", "how"]
+        for surl in sitemap_urls:
+            if any(kw in surl.lower() for kw in relevance_keywords):
+                subpage_urls.append(surl)
+
+        # Deduplicate
+        subpage_urls = list(set(subpage_urls))[:12]
+        print(f"[scanner] Will try {len(subpage_urls)} subpages: {subpage_urls}")
+
+        # Fetch subpages in parallel
         subpage_htmls = {}
+        homepage_body_len = len(re.sub(r'<[^>]+>', '', homepage_html))
+
         tasks = [_fetch_page(client, sp_url) for sp_url in subpage_urls]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for sp_url, result in zip(subpage_urls, results):
             if isinstance(result, str) and result:
-                subpage_htmls[sp_url] = result
+                # Skip pages that are identical to homepage (SPA shell)
+                result_body_len = len(re.sub(r'<[^>]+>', '', result))
+                # If content length differs by >10%, it's likely a different page
+                if homepage_body_len == 0 or abs(result_body_len - homepage_body_len) / max(homepage_body_len, 1) > 0.10:
+                    subpage_htmls[sp_url] = result
+
+        print(f"[scanner] Got {len(subpage_htmls)} unique subpages (filtered SPA duplicates)")
 
     # Extract content from all pages
     homepage_data = extract_page_content(homepage_html, is_homepage=True)
+
+    # Store sitemap and robots for AI context
+    homepage_data["sitemap_urls"] = sitemap_urls[:30]
+    homepage_data["robots_txt"] = (robots_text if isinstance(robots_text, str) else "")[:1000]
 
     all_subpage_content = []
     for sp_url, sp_html in subpage_htmls.items():
@@ -393,6 +443,16 @@ def build_ai_content_package(crawl_data: Dict[str, Any]) -> str:
         for chunk in hp["embedded_app_data"][:3]:
             parts.append(f"  {chunk[:1000]}")
 
+    # Sitemap URLs (reveals site structure even when JS-rendered)
+    if hp.get("sitemap_urls"):
+        parts.append(f"\nSitemap URLs (reveals full site structure):")
+        for surl in hp["sitemap_urls"][:20]:
+            parts.append(f"  {surl}")
+
+    # Robots.txt
+    if hp.get("robots_txt") and len(hp["robots_txt"]) > 20:
+        parts.append(f"\nRobots.txt:\n{hp['robots_txt'][:500]}")
+
     parts.append(f"\nHomepage Body Text (first 4000 chars):\n{hp.get('body_text', '')[:4000]}")
 
     # Subpages
@@ -544,15 +604,34 @@ CRITICAL INSTRUCTIONS:
 - Every field must have substantial content — no empty strings or placeholder text
 - The creative_brief.recommended_angle_index refers to the array index (0-based) of the best angle
 
-IMPORTANT — DEEP INFERENCE REQUIRED:
-Many modern websites use JavaScript frameworks (React, Next.js, Vue) that render content client-side. The content provided may be sparse or incomplete. When content is limited:
-1. Use EVERY available signal: title tags, meta descriptions, OG data, headings, nav menus, domain name clues, JSON-LD data, embedded script data, and any body text fragments
-2. Cross-reference the domain name, industry signals, and any keywords found to build a complete picture
-3. If the site appears to be a fintech/trading platform, SaaS tool, or any specialized product — research your knowledge of what such platforms typically offer and infer specific features based on the signals you can see
-4. NEVER return thin or vague output. If you can see it's a "trading platform" or "forex tool," populate all fields with rich, specific, relevant content about trading platforms and what would sell
-5. Look at the navigation menu items — they often reveal the FULL feature set even when page body text is limited
-6. The products_and_features.all_features array should have AT LEAST 8-10 items, inferred from all available signals
-7. The ad_angles body_copy should sound like it was written by someone who deeply understands this specific business"""
+MANDATORY OUTPUT QUALITY RULES (FAILURE TO COMPLY = USELESS OUTPUT):
+
+1. MINIMUM REQUIREMENTS — your output MUST contain:
+   - main_products: AT LEAST 3 products/services (infer from industry if site content is thin)
+   - all_features: AT LEAST 10 features (combine what you see + what platforms in this industry always have)
+   - pain_points: AT LEAST 4 specific pain points
+   - ad_angles: EXACTLY 4 angles with 4-6 sentence body copy EACH
+   - trust_signals: AT LEAST 3 items
+   - likely_competitors: AT LEAST 3 named competitors
+
+2. JAVASCRIPT-RENDERED SITES:
+   Many modern websites use React/Next.js/Vue and return empty HTML shells to server-side fetches. The content above may be sparse. THIS IS NOT AN EXCUSE FOR THIN OUTPUT.
+
+   When content is limited, you MUST:
+   - Use sitemap URLs to understand the full site structure (each URL path reveals a feature or page)
+   - Use navigation menu items as your PRIMARY source of feature discovery
+   - Use the domain name, title tag, meta description, and OG data as positioning signals
+   - Use your training knowledge: if this is a "forex trading platform," you KNOW what features these platforms have (signals, chart analysis, copy trading, risk calculators, education, journals, etc.) — LIST THEM ALL as inferred features
+   - If you recognize the brand from your training data, USE that knowledge fully
+   - The business_profile.description must be 4-6 rich sentences, not 2 vague ones
+
+3. AD COPY QUALITY:
+   - Each ad angle body_copy must be 4-6 FULL sentences that reference SPECIFIC features by name
+   - No angle should contain generic phrases like "comprehensive platform" or "cutting-edge tools" without naming the actual tools
+   - Each angle must use a different marketing strategy (one Benefit-Led, one Pain-Agitate-Solution, one Social Proof, one Scarcity/Urgency)
+   - Headlines must be punchy, specific, and under 10 words
+
+4. If the products_and_features section has fewer than 3 main_products or fewer than 8 all_features, your output is REJECTED."""
 
     async with httpx.AsyncClient(timeout=90.0) as client:
         response = await client.post(
@@ -566,7 +645,7 @@ Many modern websites use JavaScript frameworks (React, Next.js, Vue) that render
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.6,
-                "max_tokens": 4500,
+                "max_tokens": 6000,
             },
         )
 
