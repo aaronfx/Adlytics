@@ -133,6 +133,7 @@ async def generate_creative_concepts(
     cta_text: Optional[str],
     primary_color: Optional[str],
     num_variants: int,
+    scanner_brief: Optional[str] = None,
 ) -> dict:
     """
     Use GPT-4o via OpenRouter to generate creative concepts, headlines, copy, and DALL-E prompts.
@@ -149,7 +150,14 @@ async def generate_creative_concepts(
         f"Primary color should be {primary_color}." if primary_color else ""
     )
 
-    prompt = f"""You are an expert ad creative director. Generate {num_variants} ad creative variants.
+    scanner_context = ""
+    if scanner_brief:
+        scanner_context = f"""
+SCANNER INTELLIGENCE (use as primary creative direction):
+{scanner_brief}
+Use the recommended angle, specific features, brand voice, and audience pain points above to create ads that are specific to this business — NOT generic templates."""
+
+    prompt = f"""You are an expert ad creative director working for ADLYTICS. Generate {num_variants} ad creative variants.
 
 Product/Service: {product_description}
 Brand: {brand_name or "Not specified"}
@@ -160,6 +168,7 @@ Industry: {industry_description}
 {color_constraint}
 {'Headline must be: ' + headline if headline else ''}
 {'CTA text must be: ' + cta_text if cta_text else 'Suggest compelling CTA text'}
+{scanner_context}
 
 For EACH variant, provide a JSON object with:
 1. "headline" - compelling, platform-optimized headline (max 10 words)
@@ -510,6 +519,7 @@ async def generate_creatives(
     industry: str = Form("general"),
     brand_name: Optional[str] = Form(None),
     num_variants: int = Form(2),
+    scanner_brief: Optional[str] = Form(None),
 ):
     """
     Generate ad creative variants with AI-generated concepts and images.
@@ -563,6 +573,7 @@ async def generate_creatives(
             cta_text=cta_text,
             primary_color=primary_color,
             num_variants=num_variants,
+            scanner_brief=scanner_brief,
         )
 
         concepts = concepts_result.get("concepts", [])

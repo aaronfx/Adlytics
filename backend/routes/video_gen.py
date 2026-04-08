@@ -796,27 +796,38 @@ def render_frames_to_video(
 
 async def generate_video_script(
     product_description: str, industry: str, template: str,
-    brand_name: Optional[str], duration: int
+    brand_name: Optional[str], duration: int,
+    scanner_brief: Optional[str] = None,
 ) -> dict:
-    """Use GPT-4o to generate video ad script content."""
+    """Use GPT-4o to generate video ad script content, optionally powered by scanner intelligence."""
     if not get_openrouter_key():
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
 
     template_info = TEMPLATES.get(template, TEMPLATES["product_showcase"])
 
-    prompt = f"""You are an expert video ad creative director. Generate a video ad script for:
+    # Build scanner intelligence context if available
+    scanner_context = ""
+    if scanner_brief:
+        scanner_context = f"""
+IMPORTANT — SCANNER INTELLIGENCE (use this as your primary creative direction):
+{scanner_brief}
+
+Use the recommended ad angle, specific product features, brand voice, and audience pain points from the scanner data above to craft the video script. The script must reference actual products/features — not generic filler."""
+
+    prompt = f"""You are an expert video ad creative director working for ADLYTICS, an AI marketing intelligence platform. Generate a video ad script for:
 
 Product/Service: {product_description}
 Brand: {brand_name or "Not specified"}
 Industry: {industry}
 Template Style: {template_info['name']} - {template_info['description']}
 Duration: {duration} seconds
+{scanner_context}
 
 Return a JSON object with these fields:
-1. "headline" - main headline text (5-8 words, punchy)
-2. "body_copy" - supporting text (1-2 sentences, max 80 words)
+1. "headline" - main headline text (5-8 words, punchy, specific to this business)
+2. "body_copy" - supporting text (1-2 sentences, max 80 words, referencing actual product benefits)
 3. "cta_text" - call-to-action button text (2-4 words)
-4. "voiceover_script" - natural speech for voiceover narration that fits in {duration} seconds (~{duration * 2.5} words). Make it conversational and compelling.
+4. "voiceover_script" - natural speech for voiceover narration that fits in {duration} seconds (~{duration * 2.5} words). Make it conversational and compelling. Open with a hook that addresses the audience's biggest pain point, then present the solution with specific features, end with urgency and CTA.
 5. "words_for_kinetic" - array of 3-4 impactful words for kinetic text animation (if template is kinetic_text)
 6. "before_text" - pain point description (if template is before_after, max 15 words)
 7. "after_text" - solution description (if template is before_after, max 15 words)
@@ -894,8 +905,9 @@ async def generate_video(
     brand_name: Optional[str] = Form(None),
     enable_voiceover: bool = Form(True),
     uploaded_image: Optional[UploadFile] = File(None),
+    scanner_brief: Optional[str] = Form(None),
 ):
-    """Generate a video ad with optional voiceover and user image."""
+    """Generate a video ad with optional voiceover and user image. Accepts scanner_brief JSON for intelligence-powered generation."""
 
     # Validate
     if template not in TEMPLATES:
@@ -929,6 +941,7 @@ async def generate_video(
             template=template,
             brand_name=brand_name,
             duration=duration,
+            scanner_brief=scanner_brief,
         )
 
         headline = script.get("headline", "Amazing Offer")

@@ -621,3 +621,281 @@ async def analyze_video_funnel_script(
     except Exception as e:
         logger.error(f"Unexpected error in script-based analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ENHANCED FUNNEL AUDIT — Deep Ad-to-Landing-Page Analysis
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.post("/deep-audit")
+async def deep_funnel_audit(
+    ad_copy: str = Form(..., description="The ad copy/text being audited"),
+    landing_url: Optional[str] = Form(None, description="Landing page URL for message-match analysis"),
+    platform: str = Form("facebook"),
+    industry: str = Form("finance"),
+    audience_country: str = Form("nigeria"),
+    audience_age: str = Form("25-34"),
+    audience_income: str = Form("middle"),
+    audience_description: Optional[str] = Form(None, description="Free-text audience description"),
+    scanner_data: Optional[str] = Form(None, description="JSON string of scanner intelligence data"),
+) -> Dict[str, Any]:
+    """
+    Deep funnel audit with stage-by-stage scoring.
+    Scans the landing page, checks message match with the ad,
+    uses scanner intelligence for competitive context, and generates auto-fixes.
+    """
+    logger.info(f"[deep-audit] Starting for {platform}/{industry}")
+
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+
+    # Optionally fetch and extract landing page content
+    landing_page_content = ""
+    if landing_url:
+        landing_url = landing_url.strip()
+        if not landing_url.startswith(("http://", "https://")):
+            landing_url = "https://" + landing_url
+        try:
+            async with httpx.AsyncClient(timeout=12.0, verify=False, follow_redirects=True) as client:
+                resp = await client.get(landing_url, headers={
+                    "User-Agent": "Mozilla/5.0 (compatible; Adlytics/1.0)",
+                    "Accept": "text/html",
+                })
+                if resp.status_code == 200:
+                    import re as _re
+                    html = resp.text
+                    # Strip scripts/styles
+                    for tag in ["script", "style", "nav", "footer", "noscript", "svg"]:
+                        html = _re.sub(f"<{tag}[^>]*>.*?</{tag}>", "", html, flags=_re.I | _re.S)
+                    # Extract headings
+                    headings = []
+                    for m in _re.finditer(r"<h[1-3][^>]*>(.*?)</h[1-3]>", html, _re.I | _re.S):
+                        t = _re.sub(r"<[^>]+>", "", m.group(1)).strip()
+                        if t and len(t) < 200:
+                            headings.append(t)
+                    # CTAs
+                    ctas = []
+                    for m in _re.finditer(r'<(?:button|a)[^>]*class=["\'][^"\']*(?:btn|button|cta)[^"\']*["\'][^>]*>(.*?)</(?:button|a)>', html, _re.I | _re.S):
+                        t = _re.sub(r"<[^>]+>", "", m.group(1)).strip()
+                        if t and len(t) < 50:
+                            ctas.append(t)
+                    body = _re.sub(r"<[^>]+>", " ", html)
+                    body = _re.sub(r"\s+", " ", body).strip()[:3000]
+                    landing_page_content = f"Landing Page URL: {landing_url}\nHeadings: {', '.join(headings[:10])}\nCTAs: {', '.join(ctas[:5])}\nContent: {body}"
+                    logger.info(f"[deep-audit] Fetched landing page: {len(landing_page_content)} chars")
+        except Exception as e:
+            logger.warning(f"[deep-audit] Landing page fetch failed: {e}")
+            landing_page_content = f"Landing page at {landing_url} could not be fetched."
+
+    # Parse scanner data if provided
+    scanner_context = ""
+    if scanner_data:
+        try:
+            sd = json.loads(scanner_data)
+            parts = []
+            if sd.get("business_profile"):
+                parts.append(f"Business: {sd['business_profile'].get('business_name', '')} — {sd['business_profile'].get('description', '')}")
+            if sd.get("target_audience", {}).get("primary_persona"):
+                persona = sd["target_audience"]["primary_persona"]
+                parts.append(f"Target Audience: {persona.get('description', '')} | Pain Points: {', '.join(persona.get('pain_points', []))}")
+            if sd.get("brand_analysis"):
+                parts.append(f"Brand Voice: {sd['brand_analysis'].get('brand_voice', '')} | Tone: {sd['brand_analysis'].get('tone', '')}")
+            if sd.get("competitive_landscape", {}).get("likely_competitors"):
+                parts.append(f"Competitors: {', '.join(sd['competitive_landscape']['likely_competitors'])}")
+            if sd.get("ad_angles"):
+                best = sd["ad_angles"][0] if sd["ad_angles"] else {}
+                parts.append(f"Recommended Angle: {best.get('angle_name', '')} — {best.get('strategy', '')}")
+            scanner_context = "\n".join(parts)
+        except Exception:
+            pass
+
+    benchmarks = get_benchmarks(platform, industry)
+    benchmark_block = build_benchmark_context(platform, industry)
+
+    prompt = f"""You are ADLYTICS FUNNEL AUDITOR v2.0 — a senior conversion rate optimization specialist. You audit advertising funnels stage-by-stage and provide specific, actionable fixes.
+
+AD COPY BEING AUDITED:
+\"\"\"{ad_copy}\"\"\"
+
+{f"LANDING PAGE ANALYSIS:{chr(10)}{landing_page_content}" if landing_page_content else "No landing page provided."}
+
+{f"BUSINESS INTELLIGENCE (from scanner):{chr(10)}{scanner_context}" if scanner_context else ""}
+
+CONTEXT:
+- Platform: {platform}
+- Industry: {industry}
+- Target Country: {audience_country}
+- Target Age: {audience_age}
+- Target Income: {audience_income}
+{f"- Audience Description: {audience_description}" if audience_description else ""}
+
+{benchmark_block}
+
+PERFORM A 6-STAGE FUNNEL AUDIT. For each stage, score 0-100 and give SPECIFIC observations about THIS ad (not generic advice):
+
+Return ONLY valid JSON:
+{{
+  "overall_score": 0,
+  "overall_verdict": "2-3 sentences summarizing the funnel's strengths and critical weaknesses",
+
+  "stages": {{
+    "attention": {{
+      "score": 0,
+      "label": "Hook / Attention",
+      "observation": "Does the first line stop the scroll? Reference the actual opening words.",
+      "strength": "What works about the hook",
+      "weakness": "What fails about the hook",
+      "fix": "Specific rewrite of the hook line"
+    }},
+    "interest": {{
+      "score": 0,
+      "label": "Interest / Body",
+      "observation": "Does the body create desire? Reference actual claims, features, or storytelling used.",
+      "strength": "",
+      "weakness": "",
+      "fix": "Specific improvement to body copy"
+    }},
+    "trust": {{
+      "score": 0,
+      "label": "Trust / Social Proof",
+      "observation": "Is there social proof, credibility, or authority signals? Reference what's present or missing.",
+      "strength": "",
+      "weakness": "",
+      "fix": "What social proof to add and where"
+    }},
+    "action": {{
+      "score": 0,
+      "label": "CTA / Action",
+      "observation": "Is the call-to-action clear, compelling, and urgent? Reference the actual CTA.",
+      "strength": "",
+      "weakness": "",
+      "fix": "Specific CTA rewrite"
+    }},
+    "landing": {{
+      "score": 0,
+      "label": "Landing Page Match",
+      "observation": "Does the landing page continue the ad's promise? Identify message match or disconnect.",
+      "strength": "",
+      "weakness": "",
+      "fix": "Specific landing page recommendation"
+    }},
+    "conversion": {{
+      "score": 0,
+      "label": "Conversion Path",
+      "observation": "Is the path from ad click to conversion frictionless? Identify barriers.",
+      "strength": "",
+      "weakness": "",
+      "fix": "Specific conversion optimization"
+    }}
+  }},
+
+  "message_match": {{
+    "score": 0,
+    "ad_promise": "What the ad promises in one sentence",
+    "landing_delivers": "What the landing page actually delivers",
+    "disconnect": "Where the message breaks between ad and landing page",
+    "fix": "How to align them"
+  }},
+
+  "audience_fit": {{
+    "score": 0,
+    "target_alignment": "How well the ad speaks to the target audience",
+    "language_match": "Does the language/tone match the audience's expectations?",
+    "emotional_trigger_used": "What emotional trigger the ad uses",
+    "recommended_trigger": "What emotional trigger would work better and why"
+  }},
+
+  "competitive_edge": {{
+    "differentiation_score": 0,
+    "observation": "How this ad stands out (or doesn't) against competitors in the space",
+    "missing_angles": ["Angles competitors likely use that this ad misses"],
+    "unique_advantage": "What this ad does that competitors probably don't"
+  }},
+
+  "auto_fixes": {{
+    "improved_headline": "Rewritten headline that scores higher",
+    "improved_body": "Rewritten body copy (4-6 sentences) that addresses all weaknesses found",
+    "improved_cta": "Rewritten CTA",
+    "improved_hook": "Rewritten opening line for video/social",
+    "why_these_work": "2-3 sentences explaining why the rewrites are better"
+  }},
+
+  "predicted_performance": {{
+    "predicted_ctr": "X.X% - X.X%",
+    "predicted_cvr": "X.X% - X.X%",
+    "benchmark_position": "Above Average / Average / Below Average relative to {industry} on {platform}",
+    "biggest_lever": "The single change that would improve performance the most"
+  }},
+
+  "platform_specific": {{
+    "platform_score": 0,
+    "best_practices_met": ["Which platform best practices this ad follows"],
+    "best_practices_violated": ["Which platform best practices this ad violates"],
+    "format_recommendation": "Best ad format for this content on {platform}"
+  }}
+}}
+
+CRITICAL: Every observation and fix must reference SPECIFIC words, phrases, or elements from the actual ad copy. No generic advice like 'make it more compelling.' Tell them EXACTLY what to change and what to change it to."""
+
+    try:
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            response = await client.post(
+                f"{OPENROUTER_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": TEXT_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.6,
+                    "max_tokens": 4000,
+                },
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"AI audit failed: {response.text[:300]}")
+
+            result = response.json()
+            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+            # Parse JSON
+            import re as _re
+            md_match = _re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content)
+            if md_match:
+                content = md_match.group(1)
+            content = content.strip()
+            if not content.startswith("{"):
+                obj_match = _re.search(r"\{[\s\S]*\}", content)
+                if obj_match:
+                    content = obj_match.group(0)
+
+            try:
+                audit = json.loads(content)
+            except json.JSONDecodeError:
+                # Repair truncated JSON
+                open_b = content.count("{") - content.count("}")
+                open_br = content.count("[") - content.count("]")
+                repaired = content
+                if repaired.rstrip()[-1] not in ']},"':
+                    repaired += '"'
+                repaired += "]" * max(0, open_br) + "}" * max(0, open_b)
+                audit = json.loads(repaired)
+
+            return {
+                "success": True,
+                "audit": audit,
+                "metadata": {
+                    "platform": platform,
+                    "industry": industry,
+                    "has_landing_page": bool(landing_url),
+                    "has_scanner_data": bool(scanner_data),
+                    "audience": {"country": audience_country, "age": audience_age, "income": audience_income},
+                },
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[deep-audit] Failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Funnel audit failed: {str(e)}")

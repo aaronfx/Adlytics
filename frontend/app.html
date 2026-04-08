@@ -1409,6 +1409,78 @@
 
             <!-- ===== VIDEO FUNNEL TAB ===== -->
             <div class="tab-panel" id="panel-funnel">
+                <!-- Deep Funnel Audit Section -->
+                <div class="card mb-4">
+                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Text-Based Funnel Audit</div>
+                    <form id="deepAuditForm" class="form-section">
+                        <div class="form-group">
+                            <label class="form-label">Website URL (Auto-fill form)</label>
+                            <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+                                <input type="url" id="auditWebsiteUrl" class="form-input" placeholder="https://example.com" style="flex:1;">
+                                <button type="button" id="auditScanBtn" onclick="scanWebsite('audit')" class="btn btn-secondary">Scan Site</button>
+                            </div>
+                            <div id="auditScanStatus" style="font-size:0.85rem;margin-bottom:0.5rem;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Ad Copy</label>
+                            <textarea class="form-input" name="ad_copy" placeholder="Paste your ad headline and body copy..." required style="min-height:100px;"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Landing Page URL</label>
+                            <input type="url" class="form-input" name="landing_url" placeholder="https://your-landing.com">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Platform</label>
+                                <select class="form-select" name="platform" required>
+                                    <option value="">Select platform...</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="google">Google Ads</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select class="form-select" name="industry" required>
+                                    <option value="">Select industry...</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="crypto">Crypto</option>
+                                    <option value="ecommerce">E-commerce</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="health">Health</option>
+                                    <option value="education">Education</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="food">Food</option>
+                                    <option value="tech">Tech</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Target Audience</label>
+                                <input type="text" class="form-input" name="audience_description" placeholder="e.g., Busy professionals, age 25-45" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;">
+                            <span id="deepAuditButtonText">Deep Audit</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="deepAuditError" class="hidden"></div>
+                <div id="deepAuditResults"></div>
+                <div id="scannerResultsPanel" class="hidden"></div>
+
+                <!-- Video Funnel Audit Section -->
                 <div class="card mb-4">
                     <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg> Video Funnel Audit</div>
                     <form id="funnelForm" class="form-section">
@@ -1996,6 +2068,7 @@
         let currentFormData = {};
         let brandVoices = [];
         let lastScanProfile = null;  // Store last website scan result
+        window.lastScanData = null;  // Store full scanner response data
 
         // ===== WEBSITE SCANNER =====
         async function scanWebsite(target) {
@@ -2011,7 +2084,7 @@
 
             btn.disabled = true;
             btn.textContent = 'Scanning...';
-            status.innerHTML = '<span style="color:#a5b4fc;">Scanning website and analyzing business...</span>';
+            status.innerHTML = '<span style="color:#a5b4fc;">Crawling pages...</span>';
 
             try {
                 const formData = new FormData();
@@ -2029,47 +2102,71 @@
                     return;
                 }
 
+                // Store full scanner result
+                window.lastScanData = result.data;
                 const profile = result.data.profile;
                 lastScanProfile = profile;
 
-                // Build a rich product description from the profile
-                const desc = `${profile.business_name || ''} — ${profile.description || ''}\n\nKey offerings: ${(profile.products_services || []).join(', ')}\nTarget: ${profile.target_audience || ''}\nUSPs: ${(profile.unique_selling_points || []).join(', ')}`;
+                // Build a richer product description from the new data structure
+                const pf = result.data.products_and_features || {};
+                const mainProds = (pf.main_products || []).map(p => `${p.name}: ${p.description || p.key_benefit || ''}`).join('\n');
+                const audience = result.data.target_audience?.primary_persona || {};
+                const brand = result.data.brand_analysis || {};
+                const desc = `${profile.business_name || ''} — ${profile.description || ''}\n\nProducts/Services:\n${mainProds || (pf.all_features || []).join(', ')}\n\nTarget Audience: ${audience.description || ''}\nPain Points: ${(audience.pain_points || []).join(', ')}\nBrand Voice: ${brand.brand_voice || ''}\nUSPs: ${(brand.competitive_advantages || []).join(', ')}`;
+
+                // Show scanner results panel
+                displayScannerResults(window.lastScanData);
 
                 // Auto-fill the appropriate form fields
                 if (target === 'creative') {
                     const descEl = document.getElementById('creativeProductDesc');
                     if (descEl) descEl.value = desc.trim();
-                    // Try to set industry select
                     const industrySelect = document.querySelector('#creativeForm select[name="industry"]');
                     if (industrySelect && profile.industry) {
                         setSelectByText(industrySelect, profile.industry);
                     }
-                    // Set brand name if field exists
                     const brandInput = document.querySelector('#creativeForm input[name="brand_name"]');
                     if (brandInput && profile.business_name) brandInput.value = profile.business_name;
                 }
                 else if (target === 'video') {
                     const descEl = document.getElementById('videoProductDesc');
                     if (descEl) descEl.value = desc.trim();
-                    // Set industry
                     const industrySelect = document.querySelector('#videoForm select[name="industry"]');
                     if (industrySelect && profile.industry) {
                         setSelectByText(industrySelect, profile.industry);
                     }
-                    // Set brand name
                     const brandInput = document.querySelector('#videoForm input[name="brand_name"]');
                     if (brandInput && profile.business_name) brandInput.value = profile.business_name;
                 }
                 else if (target === 'analysis') {
                     const adCopyEl = document.querySelector('#analysisForm textarea[name="ad_copy"]');
-                    if (adCopyEl && profile.ad_copy_suggestion) adCopyEl.value = profile.ad_copy_suggestion;
+                    // Use best ad angle's body_copy if available, otherwise use suggestion
+                    const bestAngleBody = (window.lastScanData.ad_angles && window.lastScanData.ad_angles[0])
+                        ? window.lastScanData.ad_angles[0].body_copy
+                        : profile.ad_copy_suggestion;
+                    if (adCopyEl && bestAngleBody) adCopyEl.value = bestAngleBody;
                     const industrySelect = document.querySelector('#analysisForm select[name="industry"]');
                     if (industrySelect && profile.industry) {
                         setSelectByText(industrySelect, profile.industry);
                     }
                 }
+                else if (target === 'audit') {
+                    const adCopyEl = document.querySelector('#deepAuditForm textarea[name="ad_copy"]');
+                    const bestAngleBody = (window.lastScanData.ad_angles && window.lastScanData.ad_angles[0])
+                        ? window.lastScanData.ad_angles[0].body_copy
+                        : profile.ad_copy_suggestion;
+                    if (adCopyEl && bestAngleBody) adCopyEl.value = bestAngleBody;
+                    const industrySelect = document.querySelector('#deepAuditForm select[name="industry"]');
+                    if (industrySelect && profile.industry) {
+                        setSelectByText(industrySelect, profile.industry);
+                    }
+                    // Also auto-fill landing URL from scanned site
+                    const landingInput = document.querySelector('#deepAuditForm input[name="landing_page_url"]');
+                    if (landingInput) landingInput.value = url.startsWith('http') ? url : 'https://' + url;
+                }
 
-                status.innerHTML = `<span style="color:#10B981;">Scanned <strong>${profile.business_name || url}</strong> — ${profile.industry || 'business'} · ${(profile.products_services || []).length} products found · Form auto-filled</span>`;
+                const pagesCount = window.lastScanData.pages_crawled || 0;
+                status.innerHTML = `<span style="color:#10B981;">✓ Scanned <strong>${profile.business_name || url}</strong> — ${profile.industry || 'business'} · ${pagesCount} pages · ${products ? 'Products identified' : ''}</span>`;
 
             } catch (error) {
                 console.error('Scan error:', error);
@@ -2078,6 +2175,85 @@
                 btn.disabled = false;
                 btn.textContent = 'Scan Site';
             }
+        }
+
+        function displayScannerResults(scanData) {
+            const panel = document.getElementById('scannerResultsPanel');
+            if (!panel) return;
+
+            const profile = scanData.profile || {};
+            const pf = scanData.products_and_features || {};
+            const topFeatures = (pf.all_features || []).slice(0, 6);
+            const mainProducts = (pf.main_products || []).slice(0, 3);
+            const adAngles = scanData.ad_angles || [];
+            const recommendedAngle = adAngles[0] || {};
+            const targetAudience = scanData.target_audience?.primary_persona || {};
+            const brandAnalysis = scanData.brand_analysis || {};
+
+            const featuresHtml = topFeatures.map(f =>
+                `<span style="display:inline-block;padding:0.3rem 0.7rem;background:rgba(99,102,241,0.12);border-radius:6px;font-size:0.75rem;color:#818cf8;">${f}</span>`
+            ).join('');
+
+            const html = `
+                <div class="card mb-4" style="animation:fadeInSlideUp 0.3s ease both;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                        <div class="card-title" style="margin:0;">📊 Scanner Results</div>
+                        <button type="button" onclick="this.closest('.card').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">×</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Business Name</div>
+                            <div style="font-weight:600;">${profile.business_name || '—'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Industry</div>
+                            <div style="font-weight:600;">${profile.industry || '—'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Business Model</div>
+                            <div style="font-weight:600;">${profile.business_model || '—'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Pages Crawled</div>
+                            <div style="font-weight:600;">${scanData.pages_crawled || 0}</div>
+                        </div>
+                    </div>
+                    ${mainProducts.length > 0 ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;">Key Products/Services</div>
+                        ${mainProducts.map(p => `<div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.03);border-radius:6px;font-size:0.85rem;"><strong style="color:#818cf8;">${p.name || ''}</strong> — ${p.key_benefit || p.description || ''}</div>`).join('')}
+                    </div>` : ''}
+                    ${topFeatures.length > 0 ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;">Features Detected</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${featuresHtml}</div>
+                    </div>` : ''}
+                    ${targetAudience.description ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Target Audience</div>
+                        <div style="font-size:0.9rem;color:var(--text-secondary);">${targetAudience.description}</div>
+                        ${targetAudience.pain_points ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Pain points: ${targetAudience.pain_points.join(', ')}</div>` : ''}
+                    </div>` : ''}
+                    ${brandAnalysis.brand_voice ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.25rem;">Brand Voice</div>
+                        <div style="font-size:0.9rem;color:var(--text-secondary);">${brandAnalysis.brand_voice} · ${brandAnalysis.tone || ''}</div>
+                    </div>` : ''}
+                    ${recommendedAngle.body_copy ? `
+                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;padding:0.75rem;border-left:3px solid var(--accent-indigo);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">
+                            <div style="font-size:0.75rem;color:var(--accent-indigo);text-transform:uppercase;font-weight:600;">Recommended Ad Angle</div>
+                            ${recommendedAngle.predicted_effectiveness ? `<span style="font-size:0.75rem;background:rgba(16,185,129,0.15);color:#10b981;padding:0.15rem 0.5rem;border-radius:99px;">${recommendedAngle.predicted_effectiveness}% effective</span>` : ''}
+                        </div>
+                        ${recommendedAngle.angle_name ? `<div style="font-size:0.8rem;color:#818cf8;margin-bottom:0.3rem;font-weight:600;">${recommendedAngle.angle_name} (${recommendedAngle.strategy || ''})</div>` : ''}
+                        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${recommendedAngle.body_copy}</div>
+                        ${recommendedAngle.headline ? `<div style="margin-top:0.4rem;font-size:0.8rem;color:var(--text-muted);">Headline: "${recommendedAngle.headline}"</div>` : ''}
+                    </div>` : ''}
+                </div>
+            `;
+
+            panel.innerHTML = html;
+            panel.classList.remove('hidden');
         }
 
         function setSelectByText(select, text) {
@@ -2127,6 +2303,7 @@
         function setupEventListeners() {
             document.getElementById('analysisForm')?.addEventListener('submit', handleAnalysisSubmit);
             document.getElementById('funnelForm')?.addEventListener('submit', handleFunnelSubmit);
+            document.getElementById('deepAuditForm')?.addEventListener('submit', handleDeepAuditSubmit);
             document.getElementById('rewriteForm')?.addEventListener('submit', handleRewriteSubmit);
             document.getElementById('brandVoiceForm')?.addEventListener('submit', handleBrandVoiceSubmit);
             document.getElementById('creativeForm')?.addEventListener('submit', handleCreativeSubmit);
@@ -2602,6 +2779,183 @@
             if (score < 40) return ['#EF4444', '#DC2626'];
             if (score < 65) return ['#FBBF24', '#F59E0B'];
             return ['#10B981', '#059669'];
+        }
+
+        function displayDeepAuditResults(audit) {
+            const container = document.getElementById('deepAuditResults');
+            if (!container) return;
+
+            const stages = audit.stages || {};
+            const messageMatch = audit.message_match || {};
+            const audienceFit = audit.audience_fit || {};
+            const competitiveEdge = audit.competitive_edge || {};
+            const autoFixes = audit.auto_fixes || {};
+            const predictedPerf = audit.predicted_performance || {};
+            const platformSpec = audit.platform_specific || {};
+
+            // Helper function to create stage color
+            function getStageColor(score) {
+                if (score >= 75) return '#10B981';
+                if (score >= 50) return '#F59E0B';
+                return '#EF4444';
+            }
+
+            // Build stage pipeline
+            const stageOrder = ['attention', 'interest', 'trust', 'action', 'landing', 'conversion'];
+            const pipelineHtml = stageOrder.map(stageName => {
+                const stage = stages[stageName] || {};
+                const score = stage.score || 0;
+                const color = getStageColor(score);
+                const label = stage.label || stageName.charAt(0).toUpperCase() + stageName.slice(1);
+                return `
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:0.5rem;">
+                        <div style="width:60px;height:60px;border-radius:50%;background:conic-gradient(${color} ${score*3.6}deg, rgba(255,255,255,0.1) 0deg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:${color};">${score}</div>
+                        <div style="font-size:0.7rem;text-align:center;color:var(--text-muted);text-transform:uppercase;">${label}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Build expandable stages
+            const stagesHtml = stageOrder.map(stageName => {
+                const stage = stages[stageName] || {};
+                const score = stage.score || 0;
+                const color = getStageColor(score);
+                const label = stage.label || stageName.charAt(0).toUpperCase() + stageName.slice(1);
+                return `
+                    <div class="accordion-item">
+                        <button class="accordion-trigger" aria-expanded="false" type="button">
+                            <span style="display:flex;align-items:center;gap:0.5rem;">
+                                <span style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;">${score}</span>
+                                ${label}
+                            </span>
+                            <span class="accordion-chevron">▼</span>
+                        </button>
+                        <div class="accordion-content">
+                            ${stage.observation ? `<div style="margin-bottom:0.75rem;"><strong style="color:var(--accent-indigo);">Observation:</strong> ${stage.observation}</div>` : ''}
+                            ${stage.strength ? `<div style="margin-bottom:0.75rem;"><strong style="color:#10B981;">✓ Strength:</strong> ${stage.strength}</div>` : ''}
+                            ${stage.weakness ? `<div style="margin-bottom:0.75rem;"><strong style="color:#EF4444;">✗ Weakness:</strong> ${stage.weakness}</div>` : ''}
+                            ${stage.fix ? `<div style="padding:0.75rem;background:rgba(99,102,241,0.06);border-left:3px solid var(--accent-indigo);border-radius:6px;"><strong style="color:#818cf8;">Fix:</strong> ${stage.fix}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Message match section
+            const messageMatchHtml = `
+                <div class="accordion-item">
+                    <button class="accordion-trigger" aria-expanded="false" type="button">
+                        <span style="display:flex;align-items:center;gap:0.5rem;">
+                            <span style="width:24px;height:24px;border-radius:50%;background:${getStageColor(messageMatch.score || 0)};display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;">${messageMatch.score || 0}</span>
+                            Message & Landing Alignment
+                        </span>
+                        <span class="accordion-chevron">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        ${messageMatch.ad_promise ? `<div style="margin-bottom:0.75rem;"><strong>Ad Promise:</strong> "${messageMatch.ad_promise}"</div>` : ''}
+                        ${messageMatch.landing_delivers ? `<div style="margin-bottom:0.75rem;"><strong style="color:#10B981;">✓ Landing Delivers:</strong> ${messageMatch.landing_delivers}</div>` : ''}
+                        ${messageMatch.disconnect ? `<div style="margin-bottom:0.75rem;"><strong style="color:#EF4444;">⚠ Disconnect:</strong> ${messageMatch.disconnect}</div>` : ''}
+                        ${messageMatch.fix ? `<div style="padding:0.75rem;background:rgba(99,102,241,0.06);border-left:3px solid var(--accent-indigo);border-radius:6px;"><strong style="color:#818cf8;">Fix:</strong> ${messageMatch.fix}</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Auto-fixes section
+            const autoFixesHtml = autoFixes.improved_headline || autoFixes.improved_body ? `
+                <div class="accordion-item">
+                    <button class="accordion-trigger" aria-expanded="false" type="button">
+                        <span>🔧 AI-Generated Improvements</span>
+                        <span class="accordion-chevron">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        ${autoFixes.improved_headline ? `
+                        <div style="margin-bottom:1rem;padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:#10B981;text-transform:uppercase;margin-bottom:0.25rem;font-weight:600;">Improved Headline</div>
+                            <textarea style="width:100%;border:none;background:transparent;color:var(--text-primary);resize:vertical;font-family:inherit;font-size:0.9rem;" rows="2">${autoFixes.improved_headline}</textarea>
+                        </div>` : ''}
+                        ${autoFixes.improved_body ? `
+                        <div style="margin-bottom:1rem;padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:#10B981;text-transform:uppercase;margin-bottom:0.25rem;font-weight:600;">Improved Body</div>
+                            <textarea style="width:100%;border:none;background:transparent;color:var(--text-primary);resize:vertical;font-family:inherit;font-size:0.9rem;" rows="3">${autoFixes.improved_body}</textarea>
+                        </div>` : ''}
+                        ${autoFixes.improved_cta ? `
+                        <div style="margin-bottom:1rem;padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:#10B981;text-transform:uppercase;margin-bottom:0.25rem;font-weight:600;">Improved CTA</div>
+                            <textarea style="width:100%;border:none;background:transparent;color:var(--text-primary);resize:vertical;font-family:inherit;font-size:0.9rem;" rows="2">${autoFixes.improved_cta}</textarea>
+                        </div>` : ''}
+                        ${autoFixes.why_these_work ? `<div style="font-size:0.85rem;color:var(--text-secondary);padding:0.75rem;background:rgba(99,102,241,0.06);border-radius:8px;"><strong style="color:#818cf8;">Why these work:</strong> ${autoFixes.why_these_work}</div>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            // Predicted performance section
+            const perfHtml = predictedPerf.predicted_ctr || predictedPerf.predicted_cvr ? `
+                <div class="accordion-item">
+                    <button class="accordion-trigger" aria-expanded="false" type="button">
+                        <span>📈 Predicted Performance</span>
+                        <span class="accordion-chevron">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;">
+                            ${predictedPerf.predicted_ctr ? `<div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Predicted CTR</div><div style="font-size:1.25rem;font-weight:700;color:var(--accent-indigo);">${predictedPerf.predicted_ctr}</div></div>` : ''}
+                            ${predictedPerf.predicted_cvr ? `<div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Predicted CVR</div><div style="font-size:1.25rem;font-weight:700;color:var(--accent-indigo);">${predictedPerf.predicted_cvr}</div></div>` : ''}
+                        </div>
+                        ${predictedPerf.benchmark_position ? `<div style="margin-top:1rem;padding:0.75rem;background:rgba(99,102,241,0.06);border-radius:8px;"><strong>Benchmark:</strong> ${predictedPerf.benchmark_position}</div>` : ''}
+                        ${predictedPerf.biggest_lever ? `<div style="margin-top:0.75rem;padding:0.75rem;background:rgba(16,185,129,0.08);border-left:3px solid #10B981;border-radius:8px;"><strong style="color:#10B981;">Biggest Opportunity:</strong> ${predictedPerf.biggest_lever}</div>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            // Competitive edge section
+            const compHtml = competitiveEdge.observation ? `
+                <div class="accordion-item">
+                    <button class="accordion-trigger" aria-expanded="false" type="button">
+                        <span>⚡ Competitive Edge</span>
+                        <span class="accordion-chevron">▼</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div style="margin-bottom:0.75rem;"><strong>Differentiation Score:</strong> <span style="font-size:1.1rem;font-weight:700;color:var(--accent-indigo);">${competitiveEdge.differentiation_score || '—'}</span></div>
+                        ${competitiveEdge.observation ? `<div style="margin-bottom:0.75rem;color:var(--text-secondary);">${competitiveEdge.observation}</div>` : ''}
+                        ${competitiveEdge.unique_advantage ? `<div style="padding:0.75rem;background:rgba(16,185,129,0.08);border-left:3px solid #10B981;border-radius:8px;margin-bottom:0.75rem;"><strong style="color:#10B981;">✓ Unique Advantage:</strong> ${competitiveEdge.unique_advantage}</div>` : ''}
+                        ${competitiveEdge.missing_angles ? `<div style="padding:0.75rem;background:rgba(239,68,68,0.08);border-left:3px solid #EF4444;border-radius:8px;"><strong style="color:#EF4444;">Missing Angles:</strong> ${competitiveEdge.missing_angles}</div>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            container.innerHTML = `
+                <div class="card mb-4" style="animation:fadeInSlideUp 0.4s ease both;">
+                    <div class="card-title">Deep Funnel Audit Results</div>
+                    ${createScoreGauge(audit.overall_score || 0, 'Overall Score')}
+                    ${audit.overall_verdict ? `
+                    <div style="padding:1rem;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;margin-bottom:1rem;text-align:center;">
+                        <div style="font-size:0.85rem;color:var(--accent-indigo);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Verdict</div>
+                        <div style="font-size:1rem;color:var(--text-secondary);">${audit.overall_verdict}</div>
+                    </div>` : ''}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-title">Funnel Pipeline</div>
+                    <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;overflow-x:auto;">${pipelineHtml}</div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;">
+                        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+                            ${stageOrder.map(s => `<div style="height:3px;flex:1;background:${getStageColor(stages[s]?.score || 0)};border-radius:2px;"></div>`).join('')}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;">From ad impression through conversion</div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-title">Detailed Analysis</div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                        ${stagesHtml}
+                        ${messageMatchHtml}
+                        ${autoFixesHtml}
+                        ${perfHtml}
+                        ${compHtml}
+                    </div>
+                </div>
+            `;
+
+            setupAccordion();
         }
 
         // ===== VIDEO FUNNEL =====
@@ -3135,6 +3489,65 @@
             setupAccordion();
         }
 
+        async function handleDeepAuditSubmit(e) {
+            e.preventDefault();
+            clearError('deepAuditError');
+
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const btnText = document.getElementById('deepAuditButtonText');
+            const originalText = btnText.textContent;
+
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner-icon"></span> Running audit...';
+
+            try {
+                const formData = new FormData(form);
+
+                // Add scanner data if available
+                if (window.lastScanData) {
+                    const scannerBrief = {
+                        creative_brief: window.lastScanData.creative_brief,
+                        ad_angle: window.lastScanData.ad_angles?.[0],
+                        target_audience: window.lastScanData.target_audience,
+                        brand_analysis: window.lastScanData.brand_analysis
+                    };
+                    formData.append('scanner_data', JSON.stringify(scannerBrief));
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+                const response = await fetch(`${API_BASE}/api/video-funnel/deep-audit`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+                btn.disabled = false;
+                btnText.textContent = originalText;
+
+                if (!response.ok || !result.success) {
+                    showError('deepAuditError', result.detail || result.error || 'Audit failed.');
+                    return;
+                }
+
+                displayDeepAuditResults(result.audit);
+
+            } catch (error) {
+                btn.disabled = false;
+                btnText.textContent = originalText;
+                if (error.name === 'AbortError') {
+                    showError('deepAuditError', 'Request timed out. Please try again.');
+                } else {
+                    showError('deepAuditError', 'Network error. Please try again.');
+                }
+                console.error(error);
+            }
+        }
+
         function createVideoAnalysisContent(videoAnalysis) {
             // Determine which scores to show based on what's present
             const isAd = videoAnalysis.hook_score !== undefined;
@@ -3494,6 +3907,18 @@
 
             try {
                 const formData = new FormData(form);
+
+                // Add scanner brief if scanner data exists
+                if (window.lastScanData) {
+                    const scannerBrief = {
+                        creative_brief: window.lastScanData.creative_brief,
+                        ad_angle: window.lastScanData.ad_angles?.[0],
+                        target_audience: window.lastScanData.target_audience,
+                        brand_analysis: window.lastScanData.brand_analysis
+                    };
+                    formData.append('scanner_brief', JSON.stringify(scannerBrief));
+                }
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 120000);
 
@@ -3624,6 +4049,17 @@
                     formData.set('enable_voiceover', 'false');
                 } else {
                     formData.set('enable_voiceover', 'true');
+                }
+
+                // Add scanner brief if scanner data exists
+                if (window.lastScanData) {
+                    const scannerBrief = {
+                        creative_brief: window.lastScanData.creative_brief,
+                        ad_angle: window.lastScanData.ad_angles?.[0],
+                        target_audience: window.lastScanData.target_audience,
+                        brand_analysis: window.lastScanData.brand_analysis
+                    };
+                    formData.append('scanner_brief', JSON.stringify(scannerBrief));
                 }
 
                 const controller = new AbortController();
