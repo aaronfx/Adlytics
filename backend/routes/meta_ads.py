@@ -10,8 +10,10 @@ Environment variables required:
 - META_REDIRECT_URI: OAuth callback URL (e.g., https://adlytics.onrender.com/api/meta/callback)
 """
 
+import json
 import logging
 import os
+import re
 from typing import Optional
 from urllib.parse import urlencode
 
@@ -37,6 +39,11 @@ router = APIRouter(prefix="/meta", tags=["meta-ads"])
 
 # HTTP client timeout configuration
 TIMEOUT_CONFIG = httpx.Timeout(30.0, connect=10.0)
+AI_TIMEOUT = httpx.Timeout(90.0, connect=10.0)
+
+# OpenRouter for AI analysis
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
 
 
 def validate_env_vars() -> None:
@@ -660,29 +667,112 @@ async def analyze_campaign(
                 f"Prepared analysis data for campaign {campaign_id} with {len(all_ads)} creatives"
             )
 
-            # Prepare analysis payload
-            analysis_payload = {
-                "campaign": campaign_data,
-                "insights": campaign_insights,
-                "creatives": all_ads,
-            }
+            # Prepare data summary for AI
+            insights_summary = ""
+            if campaign_insights:
+                ins = campaign_insights[0]
+                insights_summary = f"""
+Performance Data:
+- Impressions: {ins.get('impressions', 'N/A')}
+- Clicks: {ins.get('clicks', 'N/A')}
+- CTR: {ins.get('ctr', 'N/A')}%
+- CPC: ${ins.get('cpc', 'N/A')}
+- CPM: ${ins.get('cpm', 'N/A')}
+- Spend: ${ins.get('spend', 'N/A')}
+- Reach: {ins.get('reach', 'N/A')}
+- Frequency: {ins.get('frequency', 'N/A')}"""
+            else:
+                insights_summary = "No performance data available for this date range."
 
-            # TODO: Call Adlytics' AI analysis engine here
-            # For now, return the raw data structure that would be analyzed
-            # Example:
-            # analysis_result = await call_ai_analysis_engine(analysis_payload)
-            # return {"analysis": analysis_result}
+            creatives_summary = ""
+            for i, ad in enumerate(all_ads[:5]):
+                creative = ad.get("creative", {})
+                ad_insights = ad.get("insights", {}).get("data", [{}])
+                ad_ins = ad_insights[0] if ad_insights else {}
+                creatives_summary += f"""
+Ad {i+1}: {ad.get('name', 'Unnamed')}
+  Title: {creative.get('title', 'N/A')}
+  Body: {creative.get('body', 'N/A')[:200]}
+  Impressions: {ad_ins.get('impressions', 'N/A')} | Clicks: {ad_ins.get('clicks', 'N/A')} | CTR: {ad_ins.get('ctr', 'N/A')}%
+"""
 
-            return {
-                "analysis": {
-                    "status": "ready_for_analysis",
-                    "campaign_id": campaign_id,
-                    "campaign_name": campaign_data.get("name"),
-                    "num_creatives": len(all_ads),
-                    "data_prepared": True,
-                    "message": "Campaign data prepared. Ready for AI analysis.",
-                }
-            }
+            # Call GPT-4o for analysis
+            if not OPENROUTER_API_KEY:
+                raise HTTPException(status_code=500, detail="AI analysis requires OPENROUTER_API_KEY")
+
+            prompt = f"""You are an expert digital advertising analyst. Analyze this Meta Ads campaign and provide actionable insights.
+
+Campaign: {campaign_data.get('name', 'Unknown')}
+Objective: {campaign_data.get('objective', 'Unknown')}
+Status: {campaign_data.get('status', 'Unknown')}
+{insights_summary}
+
+Creatives ({len(all_ads)} total):
+{creatives_summary if creatives_summary else 'No creative data available.'}
+
+Return a JSON object with:
+{{
+  "overall_score": <0-100 integer>,
+  "grade": "<A+/A/B+/B/C+/C/D/F>",
+  "summary": "<2-3 sentence executive summary>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+  "recommendations": ["<specific action 1>", "<specific action 2>", "<specific action 3>"],
+  "creative_feedback": "<specific feedback on the ad copy and creative strategy>",
+  "targeting_suggestion": "<suggestion for audience targeting improvement>",
+  "budget_advice": "<advice on budget allocation and bid strategy>"
+}}
+
+Return ONLY valid JSON, no additional text.
+"""
+
+            async with httpx.AsyncClient(timeout=AI_TIMEOUT) as ai_client:
+                ai_response = await ai_client.post(
+                    OPENROUTER_API,
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "HTTP-Referer": "https://adlytics.ai",
+                        "X-Title": "Adlytics Campaign Analysis",
+                    },
+                    json={
+                        "model": "openai/gpt-4o",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.7,
+                        "max_tokens": 2000,
+                    },
+                )
+
+                if ai_response.status_code != 200:
+                    logger.error(f"OpenRouter error: {ai_response.text[:300]}")
+                    raise HTTPException(status_code=500, detail="AI analysis service unavailable")
+
+                ai_result = ai_response.json()
+                content = ai_result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+                # Strip markdown code blocks
+                md_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+                if md_match:
+                    content = md_match.group(1)
+
+                try:
+                    analysis = json.loads(content.strip())
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse AI response: {content[:300]}")
+                    analysis = {
+                        "overall_score": 50,
+                        "grade": "C",
+                        "summary": content[:500] if content else "Analysis could not be parsed.",
+                        "strengths": [],
+                        "weaknesses": [],
+                        "recommendations": [],
+                    }
+
+            analysis["campaign_id"] = campaign_id
+            analysis["campaign_name"] = campaign_data.get("name")
+            analysis["num_creatives"] = len(all_ads)
+            analysis["has_insights"] = len(campaign_insights) > 0
+
+            return {"analysis": analysis}
 
     except httpx.HTTPError as e:
         logger.error(f"HTTP error analyzing campaign: {e}")

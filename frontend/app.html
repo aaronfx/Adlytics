@@ -3311,8 +3311,65 @@
             const token = getMetaToken();
             if (!token) return;
 
-            showError('campaignsError', ''); // clear
-            alert('Campaign analysis coming soon! This will run your live ad through Adlytics AI scoring.');
+            clearError('campaignsError');
+            const btn = event.target;
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/meta/analyze-campaign?access_token=${encodeURIComponent(token)}&campaign_id=${campaignId}`, { method: 'POST' });
+                const data = await res.json();
+
+                if (!res.ok || !data.analysis) {
+                    showError('campaignsError', data.detail || 'Analysis failed');
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                    return;
+                }
+
+                const a = data.analysis;
+                const scoreColor = a.overall_score >= 75 ? '#10B981' : a.overall_score >= 55 ? '#F59E0B' : '#EF4444';
+
+                const analysisHtml = `
+                <div class="card" style="margin-top:1rem;border:1px solid ${scoreColor}33;">
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                        <div style="width:60px;height:60px;border-radius:50%;background:${scoreColor}22;border:3px solid ${scoreColor};display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:${scoreColor};">${a.overall_score || '—'}</div>
+                        <div>
+                            <div style="font-size:1.1rem;font-weight:600;color:var(--text-primary);">${a.campaign_name || 'Campaign'} — Grade: ${a.grade || 'N/A'}</div>
+                            <div style="color:var(--text-muted);font-size:0.85rem;">${a.num_creatives || 0} creatives analyzed</div>
+                        </div>
+                    </div>
+                    <p style="color:var(--text-secondary);margin-bottom:1rem;">${a.summary || ''}</p>
+                    ${a.strengths && a.strengths.length ? `<div style="margin-bottom:0.75rem;"><strong style="color:#10B981;">Strengths:</strong><ul style="margin:0.25rem 0 0 1.2rem;color:var(--text-secondary);">${a.strengths.map(s => `<li>${s}</li>`).join('')}</ul></div>` : ''}
+                    ${a.weaknesses && a.weaknesses.length ? `<div style="margin-bottom:0.75rem;"><strong style="color:#EF4444;">Weaknesses:</strong><ul style="margin:0.25rem 0 0 1.2rem;color:var(--text-secondary);">${a.weaknesses.map(s => `<li>${s}</li>`).join('')}</ul></div>` : ''}
+                    ${a.recommendations && a.recommendations.length ? `<div style="margin-bottom:0.75rem;"><strong style="color:#6366F1;">Recommendations:</strong><ul style="margin:0.25rem 0 0 1.2rem;color:var(--text-secondary);">${a.recommendations.map(s => `<li>${s}</li>`).join('')}</ul></div>` : ''}
+                    ${a.creative_feedback ? `<div style="margin-bottom:0.5rem;"><strong style="color:var(--text-primary);">Creative Feedback:</strong> <span style="color:var(--text-secondary);">${a.creative_feedback}</span></div>` : ''}
+                    ${a.targeting_suggestion ? `<div style="margin-bottom:0.5rem;"><strong style="color:var(--text-primary);">Targeting:</strong> <span style="color:var(--text-secondary);">${a.targeting_suggestion}</span></div>` : ''}
+                    ${a.budget_advice ? `<div><strong style="color:var(--text-primary);">Budget:</strong> <span style="color:var(--text-secondary);">${a.budget_advice}</span></div>` : ''}
+                </div>`;
+
+                // Insert after the campaign card
+                const campaignCard = btn.closest('.card');
+                if (campaignCard) {
+                    const existingAnalysis = campaignCard.nextElementSibling;
+                    if (existingAnalysis && existingAnalysis.classList.contains('analysis-result')) {
+                        existingAnalysis.remove();
+                    }
+                    const wrapper = document.createElement('div');
+                    wrapper.classList.add('analysis-result');
+                    wrapper.innerHTML = analysisHtml;
+                    campaignCard.after(wrapper);
+                }
+
+                btn.textContent = 'Re-analyze';
+                btn.disabled = false;
+            } catch (e) {
+                console.error('Analysis error:', e);
+                showError('campaignsError', 'Network error during analysis. Please try again.');
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
         }
 
         // Check if already connected on page load
