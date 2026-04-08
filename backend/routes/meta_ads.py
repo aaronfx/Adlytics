@@ -398,7 +398,7 @@ async def get_campaigns(
             campaigns_params = {
                 "access_token": access_token,
                 "fields": "id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time",
-                "effective_status": '["ACTIVE","PAUSED","ARCHIVED","COMPLETED","CAMPAIGN_PAUSED"]',
+                "effective_status": '["ACTIVE","PAUSED","DELETED","ARCHIVED","CAMPAIGN_PAUSED"]',
                 "limit": 50,
             }
 
