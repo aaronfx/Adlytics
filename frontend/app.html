@@ -1098,6 +1098,12 @@
                 <button class="tab-button" data-tab="rewrite" onclick="switchTab('rewrite')">
                     <span class="tab-icon">✨</span> <span class="tab-label">Rewrite</span>
                 </button>
+                <button class="tab-button" data-tab="create" onclick="switchTab('create')">
+                    <span class="tab-icon">🖼️</span> <span class="tab-label">Create</span>
+                </button>
+                <button class="tab-button" data-tab="campaigns" onclick="switchTab('campaigns')">
+                    <span class="tab-icon">📡</span> <span class="tab-label">Campaigns</span>
+                </button>
                 <button class="tab-button" data-tab="brand" onclick="switchTab('brand')">
                     <span class="tab-icon">🎨</span> <span class="tab-label">Brand</span>
                 </button>
@@ -1397,6 +1403,159 @@
                 <div id="rewriteResults"></div>
             </div>
 
+            <!-- ===== CREATE TAB ===== -->
+            <div class="tab-panel" id="panel-create">
+                <div class="card mb-4">
+                    <div class="card-title">🖼️ AI Creative Generator <span style="font-size:0.7rem;background:linear-gradient(135deg,#F97316,#EF4444);padding:2px 8px;border-radius:99px;margin-left:8px;font-weight:500;">NEW</span></div>
+                    <form id="creativeForm" class="form-section">
+                        <div class="form-group">
+                            <label class="form-label">Product / Service Description</label>
+                            <textarea class="form-textarea" name="product_description" placeholder="e.g., Premium Forex trading signals for Nigerian investors. 85% win rate, daily alerts via Telegram." required style="min-height:80px;"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Platform</label>
+                                <select class="form-select" name="platform" required>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="google">Google</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ad Format</label>
+                                <select class="form-select" name="ad_format">
+                                    <option value="feed_square">Feed Square (1080x1080)</option>
+                                    <option value="feed_landscape">Feed Landscape (1200x628)</option>
+                                    <option value="story_vertical">Story Vertical (1080x1920)</option>
+                                    <option value="banner_horizontal">Banner (728x90)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Visual Style</label>
+                                <select class="form-select" name="style">
+                                    <option value="modern">Modern & Clean</option>
+                                    <option value="bold">Bold & High-Energy</option>
+                                    <option value="minimal">Minimalist</option>
+                                    <option value="luxury">Luxury & Premium</option>
+                                    <option value="playful">Playful & Fun</option>
+                                    <option value="corporate">Corporate & Professional</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select class="form-select" name="industry">
+                                    <option value="finance">Finance</option>
+                                    <option value="forex">Forex</option>
+                                    <option value="crypto">Crypto</option>
+                                    <option value="ecommerce">E-Commerce</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="health">Health</option>
+                                    <option value="education">Education</option>
+                                    <option value="fashion">Fashion</option>
+                                    <option value="food">Food</option>
+                                    <option value="tech">Tech</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Headline (optional)</label>
+                                <input type="text" class="form-input" name="headline" placeholder="AI will generate if blank">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">CTA Text</label>
+                                <input type="text" class="form-input" name="cta_text" placeholder="e.g., Start Trading Now" value="Learn More">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Brand Name (optional)</label>
+                                <input type="text" class="form-input" name="brand_name" placeholder="e.g., Adlytics">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Primary Color</label>
+                                <div style="display:flex;gap:0.5rem;align-items:center;">
+                                    <input type="color" name="primary_color" value="#E94560" style="width:44px;height:38px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+                                    <input type="text" class="form-input" id="colorHex" value="#E94560" style="flex:1;" oninput="document.querySelector('[name=primary_color]').value=this.value" placeholder="#E94560">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;">
+                            <span id="creativeButtonText">Generate 2 AI Ad Creatives</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="creativeError" class="hidden"></div>
+                <div id="creativeResults"></div>
+            </div>
+
+            <!-- ===== CAMPAIGNS TAB (META ADS) ===== -->
+            <div class="tab-panel" id="panel-campaigns">
+                <div class="card mb-4">
+                    <div class="card-title">📡 Live Campaign Dashboard <span style="font-size:0.7rem;background:linear-gradient(135deg,#3B82F6,#6366F1);padding:2px 8px;border-radius:99px;margin-left:8px;font-weight:500;">META ADS</span></div>
+
+                    <!-- Not Connected State -->
+                    <div id="metaNotConnected">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔗</div>
+                            <div class="empty-state-title">Connect Meta Ads</div>
+                            <div class="empty-state-message">Link your Facebook Ads account to see live campaign performance, validate Adlytics scores against real data, and get AI recommendations for active campaigns.</div>
+                            <button type="button" class="btn btn-primary" onclick="connectMetaAds()" id="metaConnectBtn">
+                                Connect Facebook Ads
+                            </button>
+                            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;">Free &bull; Read-only access &bull; We never modify your ads</p>
+                        </div>
+                    </div>
+
+                    <!-- Connected State -->
+                    <div id="metaConnected" class="hidden">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <div>
+                                <span style="color:#10B981;font-weight:600;">● Connected</span>
+                                <span style="color:var(--text-muted);margin-left:0.5rem;" id="metaAccountName"></span>
+                            </div>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="disconnectMetaAds()">Disconnect</button>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom:1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Ad Account</label>
+                                <select class="form-select" id="metaAdAccountSelect" onchange="loadCampaigns()">
+                                    <option value="">Select account...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Date Range</label>
+                                <select class="form-select" id="metaDateRange" onchange="loadCampaigns()">
+                                    <option value="last_7d">Last 7 Days</option>
+                                    <option value="last_30d" selected>Last 30 Days</option>
+                                    <option value="this_month">This Month</option>
+                                    <option value="last_month">Last Month</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="campaignsError" class="hidden"></div>
+                <div id="campaignsLoading" class="hidden" style="text-align:center;padding:2rem;">
+                    <div class="spinner-icon" style="margin:0 auto;width:32px;height:32px;border-width:3px;"></div>
+                    <p style="color:var(--text-muted);margin-top:0.75rem;">Loading campaigns...</p>
+                </div>
+                <div id="campaignsResults"></div>
+            </div>
+
             <!-- ===== BRAND VOICE TAB ===== -->
             <div class="tab-panel" id="panel-brand">
                 <div class="card mb-4">
@@ -1513,6 +1672,7 @@
             document.getElementById('funnelForm')?.addEventListener('submit', handleFunnelSubmit);
             document.getElementById('rewriteForm')?.addEventListener('submit', handleRewriteSubmit);
             document.getElementById('brandVoiceForm')?.addEventListener('submit', handleBrandVoiceSubmit);
+            document.getElementById('creativeForm')?.addEventListener('submit', handleCreativeSubmit);
 
             document.getElementById('adVideoInput')?.addEventListener('change', (e) => {
                 showFileInfo(e.target, 'adVideoInfo');
@@ -2859,6 +3019,298 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ===== CREATIVE GENERATION =====
+
+        // Sync color picker with hex input
+        document.querySelector('[name="primary_color"]')?.addEventListener('input', function() {
+            document.getElementById('colorHex').value = this.value;
+        });
+
+        async function handleCreativeSubmit(e) {
+            e.preventDefault();
+            clearError('creativeError');
+            const form = e.target;
+            const loadingState = showLoading(form.querySelector('button[type="submit"]'));
+
+            try {
+                const formData = new FormData(form);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+                const response = await fetch(`${API_BASE}/api/creative/generate`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+                hideLoading(loadingState);
+
+                if (!result.success) {
+                    showError('creativeError', result.detail || result.error || 'Generation failed.');
+                    return;
+                }
+
+                displayCreativeResults(result.data);
+            } catch (error) {
+                hideLoading(loadingState);
+                if (error.name === 'AbortError') {
+                    showError('creativeError', 'Request timed out. AI is generating visuals — try again.');
+                } else {
+                    showError('creativeError', 'Network error. Please try again.');
+                }
+                console.error(error);
+            }
+        }
+
+        function displayCreativeResults(data) {
+            const container = document.getElementById('creativeResults');
+            const variants = data.variants || [];
+            const mode = data.generation_mode || 'mockup';
+
+            if (!variants.length) {
+                container.innerHTML = '<div class="card"><p style="color:var(--text-muted);">No creatives generated. Try again.</p></div>';
+                return;
+            }
+
+            function scoreColor(s) {
+                if (s >= 75) return '#10B981';
+                if (s >= 55) return '#F59E0B';
+                return '#EF4444';
+            }
+
+            const variantsHtml = variants.map((v, i) => {
+                const s = v.scores || {};
+                const overall = s.overall_score || 50;
+
+                const imageHtml = v.image_url
+                    ? `<img src="${v.image_url}" alt="Ad Creative Variant ${i+1}" style="width:100%;border-radius:8px;margin-bottom:0.75rem;">`
+                    : `<div style="padding:1rem;background:rgba(99,102,241,0.06);border-radius:8px;margin-bottom:0.75rem;text-align:center;color:var(--text-muted);font-size:0.8rem;">Set OPENAI_API_KEY for DALL-E image generation</div>`;
+
+                const colorsHtml = (v.color_palette || []).map(c =>
+                    `<div style="width:28px;height:28px;border-radius:6px;background:${c};border:1px solid rgba(255,255,255,0.1);" title="${c}"></div>`
+                ).join('');
+
+                const scoreEntries = Object.entries(s).filter(([k]) => k !== 'overall_score').map(([k, val]) => {
+                    const c = scoreColor(val);
+                    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;">
+                        <span style="font-size:0.75rem;color:var(--text-muted);text-transform:capitalize;">${k.replace(/_/g, ' ')}</span>
+                        <span style="font-size:0.75rem;font-weight:600;color:${c};">${val}</span>
+                    </div>`;
+                }).join('');
+
+                return `
+                <div class="variant-card" style="animation:fadeInSlideUp 0.4s ease ${i*0.15}s both;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+                        <div class="score-ring" style="background:conic-gradient(${scoreColor(overall)} ${overall*3.6}deg, rgba(255,255,255,0.06) 0deg);width:48px;height:48px;">
+                            <div style="width:38px;height:38px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;">${overall}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;">Creative ${i+1}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">${mode === 'dalle3' ? 'DALL-E 3' : 'AI Mockup'} &bull; CTR: ${v.predicted_ctr || '—'}%</div>
+                        </div>
+                    </div>
+
+                    ${imageHtml}
+
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="font-weight:700;font-size:1rem;margin-bottom:0.3rem;">${v.headline || ''}</div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;margin-bottom:0.5rem;">${v.body_copy || ''}</div>
+                        ${v.cta_text ? `<div style="display:inline-block;padding:0.4rem 1rem;background:var(--accent-red);color:white;border-radius:6px;font-size:0.82rem;font-weight:600;">${v.cta_text}</div>` : ''}
+                    </div>
+
+                    ${colorsHtml ? `<div style="display:flex;gap:0.4rem;margin-bottom:0.75rem;">${colorsHtml}</div>` : ''}
+
+                    <div style="background:rgba(255,255,255,0.02);border-radius:6px;padding:0.6rem;">${scoreEntries}</div>
+
+                    ${v.visual_concept ? `<div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:3px solid var(--accent-indigo);font-size:0.78rem;color:var(--text-secondary);line-height:1.4;">${v.visual_concept}</div>` : ''}
+
+                    <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+                        <button type="button" onclick="navigator.clipboard.writeText('${(v.headline||'').replace(/'/g,"\\'")}\\n${(v.body_copy||'').replace(/'/g,"\\'")}\\n${(v.cta_text||'').replace(/'/g,"\\'")}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Text',1500);" style="flex:1;padding:0.45rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:6px;color:var(--accent-indigo);font-weight:600;font-size:0.78rem;cursor:pointer;">Copy Text</button>
+                        ${v.image_url ? `<button type="button" onclick="const a=document.createElement('a');a.href='${v.image_url}';a.download='adlytics-creative-${i+1}.png';a.click();" style="flex:1;padding:0.45rem;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:6px;color:#10B981;font-weight:600;font-size:0.78rem;cursor:pointer;">Download Image</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="card mb-4">
+                    <div class="card-title">Generated Creatives</div>
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                        <span style="font-size:0.78rem;color:var(--text-muted);">Platform: <strong style="color:var(--text-primary);">${(data.platform||'').toUpperCase()}</strong></span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);">Mode: <strong style="color:var(--accent-indigo);">${mode === 'dalle3' ? 'DALL-E 3' : 'AI Mockup'}</strong></span>
+                    </div>
+                    <div class="variants-grid">${variantsHtml}</div>
+                </div>
+            `;
+        }
+
+        // ===== META ADS CAMPAIGNS =====
+        function getMetaToken() {
+            return localStorage.getItem('adlytics_meta_token') || '';
+        }
+
+        function connectMetaAds() {
+            const btn = document.getElementById('metaConnectBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-icon"></span> Connecting...';
+
+            fetch(`${API_BASE}/api/meta/auth-url`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.auth_url) {
+                        const popup = window.open(data.auth_url, 'metaAuth', 'width=600,height=700');
+                        window.addEventListener('message', function handler(event) {
+                            if (event.data && event.data.type === 'meta_auth') {
+                                window.removeEventListener('message', handler);
+                                if (event.data.access_token) {
+                                    localStorage.setItem('adlytics_meta_token', event.data.access_token);
+                                    onMetaConnected();
+                                } else {
+                                    showError('campaignsError', event.data.error || 'Authentication failed');
+                                    btn.disabled = false;
+                                    btn.textContent = 'Connect Facebook Ads';
+                                }
+                            }
+                        });
+                    } else {
+                        showError('campaignsError', data.detail || 'Meta Ads not configured. Set META_APP_ID on server.');
+                        btn.disabled = false;
+                        btn.textContent = 'Connect Facebook Ads';
+                    }
+                })
+                .catch(() => {
+                    showError('campaignsError', 'Failed to connect. Meta Ads integration may not be configured yet.');
+                    btn.disabled = false;
+                    btn.textContent = 'Connect Facebook Ads';
+                });
+        }
+
+        function onMetaConnected() {
+            document.getElementById('metaNotConnected').classList.add('hidden');
+            document.getElementById('metaConnected').classList.remove('hidden');
+            loadAdAccounts();
+        }
+
+        function disconnectMetaAds() {
+            localStorage.removeItem('adlytics_meta_token');
+            document.getElementById('metaNotConnected').classList.remove('hidden');
+            document.getElementById('metaConnected').classList.add('hidden');
+            document.getElementById('campaignsResults').innerHTML = '';
+            const btn = document.getElementById('metaConnectBtn');
+            btn.disabled = false;
+            btn.textContent = 'Connect Facebook Ads';
+        }
+
+        async function loadAdAccounts() {
+            const token = getMetaToken();
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/meta/ad-accounts?access_token=${encodeURIComponent(token)}`);
+                const data = await res.json();
+                if (data.accounts) {
+                    const select = document.getElementById('metaAdAccountSelect');
+                    select.innerHTML = '<option value="">Select account...</option>';
+                    data.accounts.forEach(acc => {
+                        select.innerHTML += `<option value="${acc.account_id}">${acc.name || acc.account_id} (${acc.currency || 'USD'})</option>`;
+                    });
+                    if (data.accounts.length === 1) {
+                        select.value = data.accounts[0].account_id;
+                        loadCampaigns();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load ad accounts:', e);
+            }
+        }
+
+        async function loadCampaigns() {
+            const token = getMetaToken();
+            const accountId = document.getElementById('metaAdAccountSelect').value;
+            const dateRange = document.getElementById('metaDateRange').value;
+            if (!token || !accountId) return;
+
+            document.getElementById('campaignsLoading').classList.remove('hidden');
+            document.getElementById('campaignsResults').innerHTML = '';
+            clearError('campaignsError');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/meta/campaigns?access_token=${encodeURIComponent(token)}&ad_account_id=${accountId}&date_preset=${dateRange}`);
+                const data = await res.json();
+                document.getElementById('campaignsLoading').classList.add('hidden');
+
+                if (data.campaigns) {
+                    displayCampaigns(data.campaigns);
+                } else {
+                    showError('campaignsError', data.detail || 'Failed to load campaigns');
+                }
+            } catch (e) {
+                document.getElementById('campaignsLoading').classList.add('hidden');
+                showError('campaignsError', 'Network error loading campaigns');
+            }
+        }
+
+        function displayCampaigns(campaigns) {
+            const container = document.getElementById('campaignsResults');
+            if (!campaigns.length) {
+                container.innerHTML = '<div class="card"><p style="color:var(--text-muted);">No active campaigns found for this account.</p></div>';
+                return;
+            }
+
+            function fmtNum(n) { return n ? Number(n).toLocaleString() : '—'; }
+            function fmtMoney(n) { return n ? '$' + Number(n).toFixed(2) : '—'; }
+            function fmtPct(n) { return n ? Number(n).toFixed(2) + '%' : '—'; }
+
+            const campaignCards = campaigns.map(c => {
+                const insights = c.insights || {};
+                const statusColor = c.status === 'ACTIVE' ? '#10B981' : '#F59E0B';
+                return `
+                <div class="variant-card" style="margin-bottom:0.75rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;">${c.name || 'Untitled Campaign'}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">${c.objective || ''} &bull; <span style="color:${statusColor};">${c.status}</span></div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-small" onclick="analyzeCampaign('${c.id}')" style="font-size:0.72rem;">Analyze with AI</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
+                        <div style="text-align:center;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;">Impressions</div>
+                            <div style="font-weight:700;font-size:0.9rem;">${fmtNum(insights.impressions)}</div>
+                        </div>
+                        <div style="text-align:center;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;">CTR</div>
+                            <div style="font-weight:700;font-size:0.9rem;">${fmtPct(insights.ctr)}</div>
+                        </div>
+                        <div style="text-align:center;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;">CPC</div>
+                            <div style="font-weight:700;font-size:0.9rem;">${fmtMoney(insights.cpc)}</div>
+                        </div>
+                        <div style="text-align:center;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;">Spend</div>
+                            <div style="font-weight:700;font-size:0.9rem;">${fmtMoney(insights.spend)}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = `<div class="card"><div class="card-title">Active Campaigns (${campaigns.length})</div>${campaignCards}</div>`;
+        }
+
+        async function analyzeCampaign(campaignId) {
+            const token = getMetaToken();
+            if (!token) return;
+
+            showError('campaignsError', ''); // clear
+            alert('Campaign analysis coming soon! This will run your live ad through Adlytics AI scoring.');
+        }
+
+        // Check if already connected on page load
+        if (getMetaToken()) {
+            onMetaConnected();
         }
 
         // ===== BRAND VOICE =====

@@ -40,12 +40,16 @@ try:
     from backend.routes.analyze import router as analyze_router
     from backend.routes.rewrite import router as rewrite_router
     from backend.routes.video_funnel import router as video_funnel_router
+    from backend.routes.meta_ads import router as meta_router
+    from backend.routes.creative_gen import router as creative_router
     logger.info("Successfully imported all routers")
 except ImportError as e:
     logger.warning(f"Failed to import routers: {e}")
     analyze_router = None
     rewrite_router = None
     video_funnel_router = None
+    meta_router = None
+    creative_router = None
 
 # Mount routers
 if analyze_router:
@@ -54,6 +58,10 @@ if rewrite_router:
     app.include_router(rewrite_router, prefix="/api")
 if video_funnel_router:
     app.include_router(video_funnel_router, prefix="/api")
+if meta_router:
+    app.include_router(meta_router, prefix="/api")
+if creative_router:
+    app.include_router(creative_router, prefix="/api")
 
 # Health endpoint
 @app.get("/health")
