@@ -21,9 +21,12 @@ from backend.services.benchmarks import get_benchmarks, calculate_percentile
 
 router = APIRouter(prefix="/creative", tags=["creative-generation"])
 
-# Environment variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Environment variables - read at runtime via functions to pick up changes
+def get_openai_key():
+    return os.getenv("OPENAI_API_KEY")
+
+def get_openrouter_key():
+    return os.getenv("OPENROUTER_API_KEY")
 
 # API endpoints
 OPENAI_IMAGES_API = "https://api.openai.com/v1/images/generations"
@@ -134,7 +137,7 @@ async def generate_creative_concepts(
     """
     Use GPT-4o via OpenRouter to generate creative concepts, headlines, copy, and DALL-E prompts.
     """
-    if not OPENROUTER_API_KEY:
+    if not get_openrouter_key():
         raise HTTPException(
             status_code=500,
             detail="OPENROUTER_API_KEY not configured. Creative generation requires OpenRouter API access.",
@@ -174,7 +177,7 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
         response = await client.post(
             OPENROUTER_API,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {get_openrouter_key()}",
                 "HTTP-Referer": "https://adlytics.ai",
                 "X-Title": "Adlytics Creative Generation",
             },
@@ -250,17 +253,18 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
     Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
     """
-    if not OPENAI_API_KEY:
+    api_key = get_openai_key()
+    if not api_key:
         print("[creative_gen] No OPENAI_API_KEY set, skipping DALL-E")
         return None
 
-    print(f"[creative_gen] Attempting DALL-E 3 generation with key: {OPENAI_API_KEY[:8]}...")
+    print(f"[creative_gen] Attempting DALL-E 3 generation with key: {api_key[:8]}...")
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
                 OPENAI_IMAGES_API,
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                headers={"Authorization": f"Bearer {api_key}"},
                 json={
                     "model": DALL_E_MODEL,
                     "prompt": prompt,
@@ -517,7 +521,7 @@ async def generate_creatives(
 
         # Step 2: Generate images or mockups, and score each variant
         variants = []
-        generation_mode = "dalle3" if OPENAI_API_KEY else "mockup"
+        generation_mode = "dalle3" if get_openai_key() else "mockup"
 
         for concept in concepts:
             # Extract concept data
