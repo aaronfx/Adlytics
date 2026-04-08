@@ -7,6 +7,7 @@ Supports two backends:
 """
 
 import os
+import re
 import base64
 import json
 from typing import Optional, List
@@ -198,7 +199,38 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             )
 
         result = response.json()
+
+        # Check for API-level errors in response body
+        if "error" in result:
+            error_msg = result["error"].get("message", str(result["error"]))
+            raise HTTPException(
+                status_code=500,
+                detail=f"OpenRouter API error: {error_msg}",
+            )
+
         content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        if not content or not content.strip():
+            print(f"[creative_gen] Empty response from OpenRouter. Full result: {json.dumps(result)[:500]}")
+            raise HTTPException(
+                status_code=500,
+                detail="OpenRouter returned an empty response. Please try again.",
+            )
+
+        print(f"[creative_gen] Response preview: {content[:300]}")
+
+        # Strip markdown code blocks if present (GPT-4o often wraps JSON)
+        md_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+        if md_match:
+            content = md_match.group(1)
+
+        # Try to find JSON array in content
+        content = content.strip()
+        if not content.startswith('['):
+            # Try to find the array within the text
+            array_match = re.search(r'\[[\s\S]*\]', content)
+            if array_match:
+                content = array_match.group(0)
 
         # Parse JSON from response
         try:
@@ -207,6 +239,7 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
                 raise ValueError("Expected array of concepts")
             return {"concepts": concepts[:num_variants]}
         except json.JSONDecodeError as e:
+            print(f"[creative_gen] JSON parse error. Content: {content[:500]}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to parse creative concepts from OpenRouter: {str(e)}",

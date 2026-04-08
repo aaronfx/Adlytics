@@ -3049,7 +3049,7 @@
                 const result = await response.json();
                 hideLoading(loadingState);
 
-                if (!result.success) {
+                if (!response.ok || !result.success) {
                     showError('creativeError', result.detail || result.error || 'Generation failed.');
                     return;
                 }
