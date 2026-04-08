@@ -328,6 +328,15 @@
             padding: 1rem; border-radius: 8px; line-height: 1.7; white-space: pre-wrap;
             font-size: 0.9rem;
         }
+        .variants-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+        }
+        .comparison-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;
+        }
+        .score-detail-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem;
+        }
 
         /* ===== BUTTONS ===== */
         .btn {
@@ -922,20 +931,20 @@
             .variant-card { padding: 0.9rem; }
             .variant-card .comparison-col { font-size: 0.78rem; line-height: 1.5; }
 
-            /* Stack variant cards vertically */
-            #rewriteResults .card > div[style*="grid-template-columns: 1fr 1fr"] {
+            /* Stack variant cards vertically on mobile */
+            .variants-grid {
                 grid-template-columns: 1fr !important;
                 gap: 0.75rem !important;
             }
 
             /* Stack side-by-side comparison inside variants */
-            .variant-card > div[style*="grid-template-columns: 1fr 1fr"] {
+            .comparison-grid {
                 grid-template-columns: 1fr !important;
                 gap: 0.5rem !important;
             }
 
             /* Score breakdown inside variant: single column */
-            .variant-card div[style*="grid-template-columns: 1fr 1fr"] {
+            .score-detail-grid {
                 grid-template-columns: 1fr !important;
             }
 
@@ -2578,7 +2587,7 @@
                     ${scoreBarHtml}
                     ${verdict}
                     ${strengthsHtml || weaknessesHtml ? `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="comparison-grid">
                         ${strengthsHtml ? `<div style="background: rgba(16, 185, 129, 0.05); border-radius: 8px; padding: 0.75rem;">
                             <div style="font-weight: 600; font-size: 0.8rem; color: #10B981; text-transform: uppercase; margin-bottom: 0.5rem;">Strengths</div>
                             ${strengthsHtml}
@@ -2796,7 +2805,7 @@
                     </div>
 
                     <!-- Side-by-Side -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                    <div class="comparison-grid">
                         <div>
                             <div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Original · ${origScore}</div>
                             <div class="comparison-col" style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.1);">${originalAd}</div>
@@ -2810,7 +2819,7 @@
                     <!-- Score Breakdown -->
                     <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
                         <div style="font-size:0.78rem;font-weight:600;margin-bottom:0.6rem;color:var(--text-muted);text-transform:uppercase;">Score Breakdown</div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                        <div class="score-detail-grid">
                             ${buildScoreBar('Emotion', s.emotion_score || 0)}
                             ${buildScoreBar('Clarity', s.clarity_score || 0)}
                             ${buildScoreBar('CTA Strength', s.cta_strength || 0)}
@@ -2845,7 +2854,7 @@
                 <div class="card mb-4">
                     <div class="card-title">AI Rewrite Variants</div>
                     ${benchmarkBar}
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="variants-grid">
                         ${variants.map((v, i) => buildVariantCard(v, i)).join('')}
                     </div>
                 </div>
