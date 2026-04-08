@@ -30,7 +30,7 @@ GRAPH_API_VERSION = "v21.0"
 GRAPH_API_BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
 # OAuth scopes
-META_SCOPES = ["ads_read", "read_insights", "business_management"]
+META_SCOPES = ["ads_read", "business_management"]
 
 # Create router
 router = APIRouter(prefix="/meta", tags=["meta-ads"])
