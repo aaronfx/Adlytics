@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 # Configure logging
 logging.basicConfig(
@@ -109,10 +109,10 @@ else:
 # Root endpoint - serve app.html
 @app.get("/")
 async def root():
-    """Serve the main app.html"""
+    """Serve the main app.html with no-cache headers"""
     app_html = frontend_dir / "app.html"
     if app_html.exists():
-        return FileResponse(app_html)
+        return FileResponse(app_html, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"})
     return {"message": "ADLYTICS API v8.0.0"}
 
 # SPA catch-all - serve app.html for any unmatched routes
