@@ -30,8 +30,8 @@ router = APIRouter(prefix="/video", tags=["video-generation"])
 # Constants
 OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
 GPT4O_MODEL = "openai/gpt-4o"
-FPS = 24  # Smooth animation
-RENDER_SCALE = 1.0  # Full resolution rendering
+FPS = 18  # Good balance of smooth + fast rendering
+RENDER_SCALE = 0.67  # Render at 720p, FFmpeg upscales to 1080p
 MAX_DURATION = 60  # seconds
 OUTPUT_DIR = Path(tempfile.gettempdir()) / "adlytics_videos"
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -1074,8 +1074,10 @@ async def generate_video(
     except Exception as e:
         # Clean up on error
         shutil.rmtree(str(job_dir), ignore_errors=True)
-        print(f"[video_gen] Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[video_gen] Error: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Video generation failed: {type(e).__name__}: {str(e)}")
 
 
 @router.get("/download/{video_id}")
@@ -1130,3 +1132,68 @@ async def get_video_status():
         "templates_count": len(TEMPLATES),
         "max_duration": MAX_DURATION,
     }
+
+
+@router.get("/test")
+async def test_video_pipeline():
+    """Test each step of the video pipeline to diagnose issues."""
+    results = {}
+
+    # Test 1: FFmpeg
+    try:
+        r = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
+        results["ffmpeg"] = "ok" if r.returncode == 0 else f"error: {r.stderr[:100]}"
+    except Exception as e:
+        results["ffmpeg"] = f"failed: {e}"
+
+    # Test 2: TTS
+    try:
+        test_audio = str(OUTPUT_DIR / "tts_test.mp3")
+        vo_ok = await generate_voiceover("Testing one two three", "en-US-GuyNeural", test_audio)
+        if vo_ok and os.path.exists(test_audio):
+            results["tts"] = f"ok ({os.path.getsize(test_audio)} bytes)"
+            os.remove(test_audio)
+        else:
+            results["tts"] = "failed - no audio produced"
+    except Exception as e:
+        results["tts"] = f"error: {type(e).__name__}: {e}"
+
+    # Test 3: Image fetch
+    try:
+        img = await fetch_stock_image_for_video(["office", "business"], 800, 600)
+        results["image_fetch"] = f"ok ({img.size})" if img else "failed"
+    except Exception as e:
+        results["image_fetch"] = f"error: {type(e).__name__}: {e}"
+
+    # Test 4: OpenRouter API
+    try:
+        key = get_openrouter_key()
+        if key:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    OPENROUTER_API,
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={"model": GPT4O_MODEL, "messages": [{"role": "user", "content": "Say hello in 3 words"}], "max_tokens": 20},
+                )
+                results["openrouter"] = f"ok (status {resp.status_code})"
+        else:
+            results["openrouter"] = "no API key"
+    except Exception as e:
+        results["openrouter"] = f"error: {type(e).__name__}: {e}"
+
+    # Test 5: Frame rendering
+    try:
+        frame = render_product_showcase_frame(0, 10, 360, 360, "Test", "Body", "CTA", ["#1a1c2e", "#0f1119", "#6366F1"])
+        results["frame_render"] = f"ok ({frame.size})"
+    except Exception as e:
+        results["frame_render"] = f"error: {type(e).__name__}: {e}"
+
+    # Test 6: Memory
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        results["memory"] = f"{mem.available // (1024*1024)}MB available of {mem.total // (1024*1024)}MB"
+    except ImportError:
+        results["memory"] = "psutil not installed"
+
+    return {"pipeline_test": results}
