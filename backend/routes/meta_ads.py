@@ -84,14 +84,24 @@ async def get_auth_url() -> dict[str, str]:
 
     except RuntimeError as e:
         logger.error(f"Configuration error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Meta Ads not configured. Please set environment variables on Render: {str(e)}"
+        )
     except Exception as e:
         logger.error(f"Error generating auth URL: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate authentication URL")
 
 
 @router.get("/callback")
-async def oauth_callback(code: str = Query(...), state: str = Query(...)) -> HTMLResponse:
+async def oauth_callback(
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error_code: Optional[str] = Query(None),
+    error_message: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+    error_reason: Optional[str] = Query(None),
+) -> HTMLResponse:
     """
     OAuth callback endpoint.
 
@@ -101,11 +111,62 @@ async def oauth_callback(code: str = Query(...), state: str = Query(...)) -> HTM
     Args:
         code: Authorization code from Meta
         state: State parameter for CSRF protection
+        error_code: Error code if user denied permissions
+        error_message: Error message from Meta
+        error: OAuth error type
+        error_reason: Reason for OAuth error
 
     Returns:
         HTMLResponse: HTML page that handles token extraction and window messaging
     """
     try:
+        # Handle Meta error responses (e.g., user denied permissions)
+        if error or error_code:
+            err_msg = error_message or error_reason or error or "Authentication was cancelled"
+            logger.warning(f"Meta OAuth error: {error_code} - {err_msg}")
+            return HTMLResponse(
+                f"""
+                <!DOCTYPE html>
+                <html>
+                <head><title>Adlytics - Auth Cancelled</title>
+                <style>
+                    body {{ font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f2f5; }}
+                    .container {{ text-align: center; max-width: 400px; padding: 2rem; }}
+                    h1 {{ color: #e74c3c; font-size: 1.5rem; }}
+                    p {{ color: #65676b; }}
+                </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Authentication Cancelled</h1>
+                        <p>{err_msg}</p>
+                        <p>You can close this window and try again.</p>
+                    </div>
+                    <script>
+                        if (window.opener) {{
+                            window.opener.postMessage({{ type: 'META_AUTH_ERROR', error: '{err_msg}' }}, '*');
+                        }}
+                        setTimeout(() => window.close(), 3000);
+                    </script>
+                </body>
+                </html>
+                """,
+                status_code=200,
+            )
+
+        # Validate required params for success flow
+        if not code:
+            return HTMLResponse(
+                """
+                <html><body>
+                <h1>Authentication Failed</h1>
+                <p>No authorization code received. Please try again.</p>
+                <script>setTimeout(() => window.close(), 2000);</script>
+                </body></html>
+                """,
+                status_code=400,
+            )
+
         validate_env_vars()
 
         # Validate state parameter
