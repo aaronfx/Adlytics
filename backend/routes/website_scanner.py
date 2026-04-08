@@ -124,7 +124,7 @@ async def crawl_website(url: str) -> Dict[str, Any]:
     parsed = urlparse(url)
     base = f"{parsed.scheme}://{parsed.netloc}"
 
-    async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
+    async with httpx.AsyncClient(timeout=20.0, verify=False) as client:
         # Fetch homepage, sitemap.xml, and robots.txt in parallel
         hp_task = _fetch_page(client, url)
         sitemap_task = _fetch_text(client, f"{base}/sitemap.xml")
@@ -133,6 +133,23 @@ async def crawl_website(url: str) -> Dict[str, Any]:
         homepage_html, sitemap_text, robots_text = await asyncio.gather(
             hp_task, sitemap_task, robots_task, return_exceptions=True
         )
+
+        # Fallback: try www. prefix if bare domain failed
+        if not isinstance(homepage_html, str) or not homepage_html:
+            if not parsed.netloc.startswith("www."):
+                www_url = f"{parsed.scheme}://www.{parsed.netloc}{parsed.path}"
+                print(f"[scanner] Bare domain failed, trying www: {www_url}")
+                homepage_html = await _fetch_page(client, www_url)
+                if isinstance(homepage_html, str) and homepage_html:
+                    url = www_url
+                    parsed = urlparse(url)
+                    base = f"{parsed.scheme}://{parsed.netloc}"
+                    # Also re-fetch sitemap/robots from www domain
+                    sitemap_text, robots_text = await asyncio.gather(
+                        _fetch_text(client, f"{base}/sitemap.xml"),
+                        _fetch_text(client, f"{base}/robots.txt"),
+                        return_exceptions=True,
+                    )
 
         if not isinstance(homepage_html, str) or not homepage_html:
             raise HTTPException(status_code=400, detail="Could not fetch website. Check the URL and try again.")
