@@ -30,8 +30,8 @@ router = APIRouter(prefix="/video", tags=["video-generation"])
 # Constants
 OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
 GPT4O_MODEL = "openai/gpt-4o"
-FPS = 12  # Lower FPS for fast rendering — smooth enough for ads
-RENDER_SCALE = 0.5  # Render at half size, ffmpeg scales up
+FPS = 24  # Smooth animation
+RENDER_SCALE = 1.0  # Full resolution rendering
 MAX_DURATION = 60  # seconds
 OUTPUT_DIR = Path(tempfile.gettempdir()) / "adlytics_videos"
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -224,30 +224,33 @@ def render_product_showcase_frame(
     draw = ImageDraw.Draw(bg)
     t = frame_num / total_frames  # 0 to 1
 
-    # Phase timings
+    # Phase timings — image visible for most of the video
     logo_start, logo_end = 0.0, 0.08
-    img_start, img_end = 0.05, 0.30
-    headline_start, headline_end = 0.25, 0.50
-    body_start, body_end = 0.45, 0.60
-    cta_start, cta_end = 0.55, 0.75
+    img_start, img_end = 0.03, 0.20
+    headline_start, headline_end = 0.20, 0.40
+    body_start, body_end = 0.35, 0.50
+    cta_start, cta_end = 0.45, 0.65
 
     # Logo
     if t >= logo_start:
         logo_t = min(1, (t - logo_start) / (logo_end - logo_start))
-        alpha = int(255 * ease_out_cubic(logo_t))
         font_logo = get_font("bold", int(width * 0.035))
         draw.text((int(width * 0.04), int(height * 0.03)), brand_name, font=font_logo, fill=hex_to_rgb(accent))
 
-    # Product image
+    # Product image — large and visible for most of the video
     if t >= img_start and product_img:
         img_t = min(1, (t - img_start) / (img_end - img_start))
-        scale = ease_out_back(img_t) * 0.55
-        img_w = int(width * scale)
-        img_h = int(height * scale * 0.6)
-        if img_w > 0 and img_h > 0:
+        scale = ease_out_back(img_t)
+        # Image fills ~80% width and ~45% height
+        target_w = int(width * 0.80)
+        target_h = int(height * 0.45)
+        img_w = int(target_w * scale)
+        img_h = int(target_h * scale)
+        if img_w > 10 and img_h > 10:
             resized = product_img.resize((img_w, img_h), Image.LANCZOS)
             x = (width - img_w) // 2
-            y = int(height * 0.1)
+            y = int(height * 0.08)
+            # Add a subtle rounded border effect
             bg.paste(resized, (x, y))
 
     # Headline
@@ -474,17 +477,18 @@ def render_story_reel_frame(
             draw_rounded_rect(draw, (bx, by, bx + bw, by + bh), 15, (245, 158, 11))
             draw_text_centered(draw, badge_text, by + int(bh * 0.1), width, font_badge)
 
-    # Product image
-    img_start = 0.08
+    # Product image — large hero image
+    img_start = 0.05
     if t >= img_start and product_img:
-        it = min(1, (t - img_start) / 0.2)
-        alpha = ease_out_cubic(it)
-        img_w = int(width * 0.85)
-        img_h = int(height * 0.35)
-        resized = product_img.resize((img_w, img_h), Image.LANCZOS)
-        x = (width - img_w) // 2
-        y = int(height * 0.1)
-        bg.paste(resized, (x, y))
+        it = min(1, (t - img_start) / 0.15)
+        scale = ease_out_cubic(it)
+        img_w = int(width * 0.90 * scale)
+        img_h = int(height * 0.40 * scale)
+        if img_w > 10 and img_h > 10:
+            resized = product_img.resize((img_w, img_h), Image.LANCZOS)
+            x = (width - img_w) // 2
+            y = int(height * 0.08)
+            bg.paste(resized, (x, y))
 
     # Headline
     hl_start = 0.3
@@ -565,72 +569,120 @@ async def get_audio_duration(audio_path: str) -> float:
 # ========== STOCK IMAGE FETCH ==========
 
 async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -> Optional[Image.Image]:
-    """Fetch a stock image and return as PIL Image."""
+    """Fetch a stock image and return as PIL Image. Tries multiple sources."""
     import random
-    try:
-        search_query = ",".join(k.strip().lower() for k in keywords[:3] if k.strip())
-        if not search_query:
-            search_query = "business,modern"
+    from io import BytesIO
 
-        lock_seed = random.randint(1000, 9999)
-        url = f"https://loremflickr.com/{width}/{height}/{search_query}?lock={lock_seed}"
+    search_query = ",".join(k.strip().lower() for k in keywords[:3] if k.strip())
+    if not search_query:
+        search_query = "business,modern"
 
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            response = await client.get(url)
-            if response.status_code == 200:
-                from io import BytesIO
-                img = Image.open(BytesIO(response.content)).convert("RGB")
-                return img
+    # Fetch at reasonable size (at least 800px wide for quality)
+    fetch_w = max(width, 800)
+    fetch_h = max(height, 600)
 
-        # Fallback
-        url = f"https://picsum.photos/seed/vid{random.randint(1,9999)}/{width}/{height}"
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            response = await client.get(url)
-            if response.status_code == 200:
-                from io import BytesIO
-                return Image.open(BytesIO(response.content)).convert("RGB")
+    sources = [
+        # Source 1: Unsplash Source API (high quality, reliable)
+        f"https://source.unsplash.com/{fetch_w}x{fetch_h}/?{search_query.replace(',', ',')}",
+        # Source 2: loremflickr
+        f"https://loremflickr.com/{fetch_w}/{fetch_h}/{search_query}?lock={random.randint(1000, 9999)}",
+        # Source 3: Picsum (random but reliable)
+        f"https://picsum.photos/seed/{search_query[:5]}{random.randint(1,999)}/{fetch_w}/{fetch_h}",
+        # Source 4: Picsum random fallback
+        f"https://picsum.photos/{fetch_w}/{fetch_h}?random={random.randint(1, 9999)}",
+    ]
 
-        return None
-    except Exception as e:
-        print(f"[video_gen] Stock image fetch failed: {e}")
-        return None
+    for i, url in enumerate(sources):
+        try:
+            print(f"[video_gen] Trying image source {i+1}: {url[:80]}...")
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+                response = await client.get(url)
+                if response.status_code == 200 and len(response.content) > 5000:
+                    img = Image.open(BytesIO(response.content)).convert("RGB")
+                    print(f"[video_gen] Got image from source {i+1}: {img.size}")
+                    return img
+                else:
+                    print(f"[video_gen] Source {i+1} returned status {response.status_code}, size {len(response.content)}")
+        except Exception as e:
+            print(f"[video_gen] Source {i+1} failed: {e}")
+            continue
+
+    # Last resort: generate a colored placeholder
+    print("[video_gen] All image sources failed, generating placeholder")
+    placeholder = Image.new("RGB", (fetch_w, fetch_h), (40, 40, 60))
+    draw = ImageDraw.Draw(placeholder)
+    font = get_font("bold", 48)
+    text = search_query.split(",")[0].upper()
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw = bbox[2] - bbox[0]
+    draw.text(((fetch_w - tw) // 2, fetch_h // 2 - 30), text, font=font, fill=(120, 120, 160))
+    return placeholder
 
 
 # ========== VIDEO ASSEMBLY ==========
 
 def render_frames_to_video(
-    frames_dir: str, output_path: str, fps: int = 12,
+    frames_dir: str, output_path: str, fps: int = 24,
     audio_path: Optional[str] = None,
     output_width: int = 1080, output_height: int = 1080
 ) -> bool:
-    """Use FFmpeg to assemble frames into MP4, scale up, optionally with audio."""
+    """Use FFmpeg to assemble frames into MP4, optionally with audio."""
     try:
-        cmd = [
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", f"{frames_dir}/frame_%05d.jpg",
-        ]
+        has_audio = audio_path and os.path.exists(audio_path)
 
-        if audio_path and os.path.exists(audio_path):
-            cmd.extend(["-i", audio_path, "-c:a", "aac", "-b:a", "128k", "-shortest"])
+        cmd = ["ffmpeg", "-y"]
 
-        # Scale up to full resolution and encode
+        # Video input
+        cmd.extend(["-framerate", str(fps), "-i", f"{frames_dir}/frame_%05d.jpg"])
+
+        # Audio input (must come right after video input, before output options)
+        if has_audio:
+            cmd.extend(["-i", audio_path])
+
+        # Video encoding
         cmd.extend([
             "-vf", f"scale={output_width}:{output_height}:flags=lanczos",
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
-            "-preset", "ultrafast",
-            "-crf", "25",
-            "-movflags", "+faststart",
-            output_path
+            "-preset", "fast",
+            "-crf", "22",
         ])
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        # Audio encoding
+        if has_audio:
+            cmd.extend([
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-map", "0:v:0",   # Map video from first input
+                "-map", "1:a:0",   # Map audio from second input
+                "-shortest",       # Stop when shortest stream ends
+            ])
+
+        cmd.extend(["-movflags", "+faststart", output_path])
+
+        print(f"[video_gen] FFmpeg cmd: {' '.join(cmd[:15])}...")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if result.returncode != 0:
-            print(f"[video_gen] FFmpeg error: {result.stderr[:500]}")
+            print(f"[video_gen] FFmpeg error: {result.stderr[:800]}")
+            # Retry without audio if muxing failed
+            if has_audio:
+                print("[video_gen] Retrying without audio...")
+                cmd_noaudio = [
+                    "ffmpeg", "-y",
+                    "-framerate", str(fps),
+                    "-i", f"{frames_dir}/frame_%05d.jpg",
+                    "-vf", f"scale={output_width}:{output_height}:flags=lanczos",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                    "-preset", "fast", "-crf", "22",
+                    "-movflags", "+faststart", output_path
+                ]
+                result2 = subprocess.run(cmd_noaudio, capture_output=True, text=True, timeout=120)
+                if result2.returncode == 0:
+                    print("[video_gen] Video rendered without audio (fallback)")
+                    return True
             return False
 
-        print(f"[video_gen] Video rendered: {output_path}")
+        print(f"[video_gen] Video rendered: {output_path} (audio={'yes' if has_audio else 'no'})")
         return True
     except Exception as e:
         print(f"[video_gen] FFmpeg failed: {e}")
@@ -783,7 +835,7 @@ async def generate_video(
         colors = script.get("color_palette", ["#6366F1", "#1a1c2e", "#8B5CF6"])
         image_keywords = script.get("image_keywords", ["business", "modern"])
 
-        # Step 2: Handle user image or fetch stock
+        # Step 2: Handle user image or fetch stock (at full resolution)
         product_img = None
         if uploaded_image and uploaded_image.filename:
             print(f"[video_gen] Using uploaded image: {uploaded_image.filename}")
@@ -792,7 +844,7 @@ async def generate_video(
             product_img = Image.open(BytesIO(img_data)).convert("RGB")
         else:
             print(f"[video_gen] Fetching stock image with keywords: {image_keywords}")
-            product_img = await fetch_stock_image_for_video(image_keywords, width, int(height * 0.5))
+            product_img = await fetch_stock_image_for_video(image_keywords, full_width, int(full_height * 0.5))
 
         # Step 3: Generate voiceover
         audio_path = None
@@ -810,9 +862,12 @@ async def generate_video(
             else:
                 audio_path = None
 
-        # Resize product image to render size if needed
+        # Resize product image to render dimensions
         if product_img:
-            product_img = product_img.resize((width, int(height * 0.5)), Image.LANCZOS)
+            img_target_w = int(width * 0.80)
+            img_target_h = int(height * 0.45)
+            product_img = product_img.resize((img_target_w, img_target_h), Image.LANCZOS)
+            print(f"[video_gen] Product image resized to {img_target_w}x{img_target_h}")
 
         # Step 4: Render frames
         print(f"[video_gen] Rendering {total_frames} frames at {width}x{height} (will scale to {full_width}x{full_height})...")
