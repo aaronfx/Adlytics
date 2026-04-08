@@ -603,90 +603,72 @@ async def get_audio_duration(audio_path: str) -> float:
 # ========== STOCK IMAGE FETCH ==========
 
 async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -> Optional[Image.Image]:
-    """Fetch a relevant stock image. Uses Pexels API (free) then Pixabay, then fallback."""
+    """Fetch a relevant stock image using free APIs (no keys needed)."""
     import random
     from io import BytesIO
 
-    search_query = " ".join(k.strip().lower() for k in keywords[:3] if k.strip())
-    if not search_query:
-        search_query = "business modern"
+    search_terms = [k.strip().lower() for k in keywords[:3] if k.strip()]
+    if not search_terms:
+        search_terms = ["business", "modern"]
 
     fetch_w = max(width, 800)
     fetch_h = max(height, 600)
-    orientation = "landscape" if fetch_w >= fetch_h else "portrait"
-    if abs(fetch_w - fetch_h) < 100:
-        orientation = "square"
 
-    # Source 1: Pexels API (free, great quality, relevant results)
-    pexels_key = os.getenv("PEXELS_API_KEY")
-    if pexels_key:
+    async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+
+        # Source 1: Lexica.art API (free, no key, AI-generated high quality)
         try:
-            print(f"[video_gen] Trying Pexels API: '{search_query}'...")
-            async with httpx.AsyncClient(timeout=12.0) as client:
-                response = await client.get(
-                    "https://api.pexels.com/v1/search",
-                    params={"query": search_query, "per_page": 5, "orientation": orientation},
-                    headers={"Authorization": pexels_key},
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    photos = data.get("photos", [])
-                    if photos:
-                        # Pick a random one from top 5 for variety
-                        photo = random.choice(photos)
-                        img_url = photo.get("src", {}).get("large2x") or photo.get("src", {}).get("large")
-                        if img_url:
-                            img_resp = await client.get(img_url, follow_redirects=True)
-                            if img_resp.status_code == 200 and len(img_resp.content) > 5000:
-                                img = Image.open(BytesIO(img_resp.content)).convert("RGB")
-                                print(f"[video_gen] Pexels image: {img.size} from '{photo.get('alt', '')}'")
-                                return img
+            query = " ".join(search_terms)
+            print(f"[video_gen] Trying Lexica API: '{query}'...")
+            response = await client.get(
+                f"https://lexica.art/api/v1/search",
+                params={"q": query},
+            )
+            if response.status_code == 200:
+                data = response.json()
+                images = data.get("images", [])
+                if images:
+                    pick = random.choice(images[:8])
+                    img_url = pick.get("src") or pick.get("srcSmall")
+                    if img_url:
+                        img_resp = await client.get(img_url)
+                        if img_resp.status_code == 200 and len(img_resp.content) > 5000:
+                            img = Image.open(BytesIO(img_resp.content)).convert("RGB")
+                            print(f"[video_gen] Lexica image: {img.size}")
+                            return img
         except Exception as e:
-            print(f"[video_gen] Pexels failed: {e}")
+            print(f"[video_gen] Lexica failed: {e}")
 
-    # Source 2: Pixabay API (free, good search)
-    pixabay_key = os.getenv("PIXABAY_API_KEY")
-    if pixabay_key:
+        # Source 2: loremflickr with specific single keyword (works better)
+        for keyword in search_terms[:2]:
+            try:
+                lock = random.randint(1000, 9999)
+                url = f"https://loremflickr.com/{fetch_w}/{fetch_h}/{keyword}?lock={lock}"
+                print(f"[video_gen] Trying loremflickr: '{keyword}' (lock={lock})...")
+                response = await client.get(url)
+                if response.status_code == 200 and len(response.content) > 5000:
+                    img = Image.open(BytesIO(response.content)).convert("RGB")
+                    print(f"[video_gen] loremflickr image: {img.size}")
+                    return img
+            except Exception as e:
+                print(f"[video_gen] loremflickr '{keyword}' failed: {e}")
+
+        # Source 3: Picsum (random but reliable — always works)
         try:
-            print(f"[video_gen] Trying Pixabay API: '{search_query}'...")
-            async with httpx.AsyncClient(timeout=12.0) as client:
-                response = await client.get(
-                    "https://pixabay.com/api/",
-                    params={"key": pixabay_key, "q": search_query, "per_page": 5,
-                            "image_type": "photo", "min_width": 800},
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    hits = data.get("hits", [])
-                    if hits:
-                        hit = random.choice(hits)
-                        img_url = hit.get("largeImageURL") or hit.get("webformatURL")
-                        if img_url:
-                            img_resp = await client.get(img_url, follow_redirects=True)
-                            if img_resp.status_code == 200:
-                                img = Image.open(BytesIO(img_resp.content)).convert("RGB")
-                                print(f"[video_gen] Pixabay image: {img.size}")
-                                return img
-        except Exception as e:
-            print(f"[video_gen] Pixabay failed: {e}")
-
-    # Source 3: loremflickr (no key needed, but inconsistent)
-    try:
-        simple_q = keywords[0].strip().lower() if keywords else "business"
-        url = f"https://loremflickr.com/{fetch_w}/{fetch_h}/{simple_q}?lock={random.randint(1000, 9999)}"
-        print(f"[video_gen] Trying loremflickr: {url[:70]}...")
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            seed = "".join(search_terms)[:10]
+            url = f"https://picsum.photos/seed/{seed}{random.randint(1,99)}/{fetch_w}/{fetch_h}"
+            print(f"[video_gen] Trying Picsum: {url[:60]}...")
             response = await client.get(url)
             if response.status_code == 200 and len(response.content) > 5000:
                 img = Image.open(BytesIO(response.content)).convert("RGB")
-                print(f"[video_gen] loremflickr image: {img.size}")
+                print(f"[video_gen] Picsum image: {img.size}")
                 return img
-    except Exception as e:
-        print(f"[video_gen] loremflickr failed: {e}")
+        except Exception as e:
+            print(f"[video_gen] Picsum failed: {e}")
 
-    # Source 4: Generate a professional gradient placeholder
+    # Source 4: Generate a professional styled placeholder (offline fallback)
     print("[video_gen] All image sources failed, generating styled placeholder")
-    return _generate_styled_placeholder(fetch_w, fetch_h, search_query, keywords)
+    return _generate_styled_placeholder(fetch_w, fetch_h, " ".join(search_terms), search_terms)
 
 
 def _generate_styled_placeholder(width: int, height: int, query: str, keywords: list) -> Image.Image:
@@ -1127,8 +1109,7 @@ async def get_video_status():
         "gtts_available": has_gtts,
         "tts_available": has_edge_tts or has_gtts,
         "openrouter_available": bool(get_openrouter_key()),
-        "pexels_available": bool(os.getenv("PEXELS_API_KEY")),
-        "pixabay_available": bool(os.getenv("PIXABAY_API_KEY")),
+        "image_sources": "lexica, loremflickr, picsum, placeholder",
         "templates_count": len(TEMPLATES),
         "max_duration": MAX_DURATION,
     }
