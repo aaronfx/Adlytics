@@ -3114,7 +3114,7 @@
                         </div>
                         <div>
                             <div style="font-weight:600;">Creative ${i+1}</div>
-                            <div style="font-size:0.75rem;color:var(--text-muted);">${mode === 'dalle3' ? 'DALL-E 3' : 'AI Mockup'} &bull; CTR: ${v.predicted_ctr || '—'}%</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">${mode === 'dalle3' ? 'DALL-E 3' : mode === 'stock' ? 'Stock Photo' : 'AI Mockup'} &bull; CTR: ${v.predicted_ctr || '—'}%</div>
                         </div>
                     </div>
 
@@ -3144,7 +3144,7 @@
                     <div class="card-title">Generated Creatives</div>
                     <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
                         <span style="font-size:0.78rem;color:var(--text-muted);">Platform: <strong style="color:var(--text-primary);">${(data.platform||'').toUpperCase()}</strong></span>
-                        <span style="font-size:0.78rem;color:var(--text-muted);">Mode: <strong style="color:var(--accent-indigo);">${mode === 'dalle3' ? 'DALL-E 3' : 'AI Mockup'}</strong></span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);">Mode: <strong style="color:var(--accent-indigo);">${mode === 'dalle3' ? 'DALL-E 3' : mode === 'stock' ? 'Stock Photo' : 'AI Mockup'}</strong></span>
                     </div>
                     <div class="variants-grid">${variantsHtml}</div>
                 </div>

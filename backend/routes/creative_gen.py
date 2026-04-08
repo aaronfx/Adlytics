@@ -249,6 +249,37 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             )
 
 
+async def fetch_stock_image(query: str, width: int = 1080, height: int = 1080) -> Optional[str]:
+    """
+    Fetch a relevant stock image from Unsplash Source (no API key needed).
+    Returns a direct image URL.
+    """
+    try:
+        # Clean up query - extract key visual terms
+        search_terms = query.lower()
+        # Remove common filler words for better search
+        for word in ["the", "a", "an", "and", "or", "of", "for", "with", "in", "on", "to", "is", "are"]:
+            search_terms = search_terms.replace(f" {word} ", " ")
+        # Take first few meaningful words
+        terms = search_terms.strip().split()[:4]
+        search_query = ",".join(terms)
+
+        # Unsplash Source gives random relevant photos - no API key needed
+        image_url = f"https://source.unsplash.com/{width}x{height}/?{search_query}"
+
+        # Verify the URL resolves (Unsplash redirects to actual image)
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            response = await client.head(image_url)
+            if response.status_code == 200:
+                # Return the final redirected URL
+                return str(response.url)
+
+        return None
+    except Exception as e:
+        print(f"[creative_gen] Stock image fetch failed: {e}")
+        return None
+
+
 async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
     Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
@@ -519,9 +550,11 @@ async def generate_creatives(
 
         concepts = concepts_result.get("concepts", [])
 
-        # Step 2: Generate images or mockups, and score each variant
+        # Step 2: Generate images and score each variant
+        # Priority: DALL-E 3 → Stock Photo → SVG Mockup
         variants = []
-        generation_mode = "dalle3" if get_openai_key() else "mockup"
+        has_openai = bool(get_openai_key())
+        generation_mode = "dalle3" if has_openai else "stock"
 
         for concept in concepts:
             # Extract concept data
@@ -535,25 +568,39 @@ async def generate_creatives(
             color_palette = concept.get(
                 "color_palette", ["#FF6B6B", "#4ECDC4", "#45B7D1"]
             )
+            key_message = concept.get("key_message", variant_headline)
 
-            # Generate image or mockup
+            # Try DALL-E 3 first
             image_url = None
-            if generation_mode == "dalle3":
+            if has_openai:
                 image_url = await generate_dalle_image(dall_e_prompt)
+                if image_url:
+                    generation_mode = "dalle3"
 
-            # Fallback to SVG mockup if no image
+            # Fallback: Stock photo from Unsplash
             if not image_url:
-                generation_mode = "mockup"  # Switch mode if DALL-E fails
                 platform_specs = get_platform_specs(platform, ad_format)
                 size_str = platform_specs["recommended_size"]
-                width, height = map(int, size_str.split("x"))
+                img_width, img_height = map(int, size_str.split("x"))
+                # Build search query from product, industry and visual concept
+                stock_query = f"{product_description[:50]} {industry} {visual_concept[:30]}"
+                image_url = await fetch_stock_image(stock_query, img_width, img_height)
+                if image_url:
+                    generation_mode = "stock"
+
+            # Final fallback: SVG mockup
+            if not image_url:
+                generation_mode = "mockup"
+                platform_specs = get_platform_specs(platform, ad_format)
+                size_str = platform_specs["recommended_size"]
+                img_width, img_height = map(int, size_str.split("x"))
                 image_url = generate_svg_mockup(
                     headline=variant_headline,
                     body_copy=variant_body,
                     cta_text=variant_cta,
                     color_palette=color_palette,
-                    width=width,
-                    height=height,
+                    width=img_width,
+                    height=img_height,
                 )
 
             # Calculate scores
