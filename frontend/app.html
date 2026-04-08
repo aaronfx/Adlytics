@@ -3163,9 +3163,9 @@
                     if (data.auth_url) {
                         const popup = window.open(data.auth_url, 'metaAuth', 'width=600,height=700');
                         window.addEventListener('message', function handler(event) {
-                            if (event.data && event.data.type === 'meta_auth') {
+                            if (event.data && (event.data.type === 'META_AUTH_SUCCESS' || event.data.type === 'META_AUTH_ERROR')) {
                                 window.removeEventListener('message', handler);
-                                if (event.data.access_token) {
+                                if (event.data.type === 'META_AUTH_SUCCESS' && event.data.access_token) {
                                     localStorage.setItem('adlytics_meta_token', event.data.access_token);
                                     onMetaConnected();
                                 } else {
