@@ -251,28 +251,35 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
 
 async def fetch_stock_image(query: str, width: int = 1080, height: int = 1080) -> Optional[str]:
     """
-    Fetch a relevant stock image from Unsplash Source (no API key needed).
+    Fetch a relevant stock image using multiple free services.
     Returns a direct image URL.
     """
     try:
         # Clean up query - extract key visual terms
         search_terms = query.lower()
-        # Remove common filler words for better search
-        for word in ["the", "a", "an", "and", "or", "of", "for", "with", "in", "on", "to", "is", "are"]:
+        for word in ["the", "a", "an", "and", "or", "of", "for", "with", "in", "on", "to", "is", "are", "our", "your"]:
             search_terms = search_terms.replace(f" {word} ", " ")
-        # Take first few meaningful words
-        terms = search_terms.strip().split()[:4]
+        terms = [t for t in search_terms.strip().split() if len(t) > 2][:4]
         search_query = ",".join(terms)
 
-        # Unsplash Source gives random relevant photos - no API key needed
-        image_url = f"https://source.unsplash.com/{width}x{height}/?{search_query}"
+        # Try loremflickr.com - free, keyword-based, no API key needed
+        image_url = f"https://loremflickr.com/{width}/{height}/{search_query}"
 
-        # Verify the URL resolves (Unsplash redirects to actual image)
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             response = await client.head(image_url)
             if response.status_code == 200:
-                # Return the final redirected URL
-                return str(response.url)
+                final_url = str(response.url)
+                print(f"[creative_gen] Stock image found: {final_url}")
+                return final_url
+
+        # Fallback: picsum.photos (random but high quality)
+        fallback_url = f"https://picsum.photos/{width}/{height}"
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            response = await client.head(fallback_url)
+            if response.status_code == 200:
+                final_url = str(response.url)
+                print(f"[creative_gen] Picsum fallback image: {final_url}")
+                return final_url
 
         return None
     except Exception as e:
