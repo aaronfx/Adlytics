@@ -2116,60 +2116,160 @@
                 const profile = result.data.profile;
                 lastScanProfile = profile;
 
-                // Build a richer product description from the new data structure
+                // ─── Extract ALL scanner intelligence ───
                 const pf = result.data.products_and_features || {};
                 const mainProds = (pf.main_products || []).map(p => `${p.name}: ${p.description || p.key_benefit || ''}`).join('\n');
                 const audience = result.data.target_audience?.primary_persona || {};
                 const brand = result.data.brand_analysis || {};
-                const desc = `${profile.business_name || ''} — ${profile.description || ''}\n\nProducts/Services:\n${mainProds || (pf.all_features || []).join(', ')}\n\nTarget Audience: ${audience.description || ''}\nPain Points: ${(audience.pain_points || []).join(', ')}\nBrand Voice: ${brand.brand_voice || ''}\nUSPs: ${(brand.competitive_advantages || []).join(', ')}`;
+                const strategy = result.data.ad_strategy || {};
+                const angles = result.data.ad_angles || [];
+                const brief = result.data.creative_brief || {};
+                const competitive = result.data.competitive_landscape || {};
+                const bestAngle = angles[brief.recommended_angle_index || 0] || angles[0] || {};
+
+                // Rich product description with scanner intelligence baked in
+                const desc = `${profile.business_name || ''} — ${profile.description || ''}\n\nProducts/Services:\n${mainProds || (pf.all_features || []).join(', ')}\n\nTarget Audience: ${audience.description || ''}\nPain Points: ${(audience.pain_points || []).join(', ')}\nDesires: ${(audience.desires || []).join(', ')}\nBrand Voice: ${brand.brand_voice || ''}\nUSPs: ${(brand.competitive_advantages || competitive.competitive_advantages || []).join(', ')}\nCompetitors: ${(competitive.likely_competitors || []).join(', ')}\n\nBest Ad Angle: ${bestAngle.angle_name || ''} (${bestAngle.strategy || ''})\nHook: ${bestAngle.hook_line || ''}\nEmotional Trigger: ${strategy.emotional_trigger || ''}`;
+
+                // Helper: extract platform keyword from scanner's best_platform string
+                function matchPlatform(scannerPlatform, selectEl) {
+                    if (!scannerPlatform || !selectEl) return;
+                    const p = scannerPlatform.toLowerCase();
+                    const platformMap = {facebook:'facebook', meta:'facebook', instagram:'instagram', tiktok:'tiktok', youtube:'youtube', google:'google'};
+                    for (const [keyword, value] of Object.entries(platformMap)) {
+                        if (p.includes(keyword)) { selectEl.value = value; return; }
+                    }
+                }
+
+                // Helper: extract age range from demographics string like "Age 25-45, middle income"
+                function extractAge(demographics) {
+                    if (!demographics) return '';
+                    const m = demographics.match(/(\d{2})\s*[-–]\s*(\d{2,3})/);
+                    return m ? `${m[1]}-${m[2]}` : '';
+                }
+
+                // Helper: guess income level from demographics
+                function extractIncome(demographics) {
+                    if (!demographics) return '';
+                    const d = demographics.toLowerCase();
+                    if (d.includes('high') || d.includes('affluent') || d.includes('premium')) return 'high';
+                    if (d.includes('low')) return 'low';
+                    return 'middle';
+                }
 
                 // Show scanner results panel in the correct tab
                 displayScannerResults(window.lastScanData, target);
 
-                // Auto-fill the appropriate form fields
+                // ═══════════════════════════════════════════════════════
+                // AUTO-FILL: Push ALL scanner intelligence into forms
+                // The scanner has done the hard work — now every form
+                // field should reflect its best recommendations.
+                // ═══════════════════════════════════════════════════════
+
                 if (target === 'creative') {
+                    // Product description — full intelligence
                     const descEl = document.getElementById('creativeProductDesc');
                     if (descEl) descEl.value = desc.trim();
+                    // Industry
                     const industrySelect = document.querySelector('#creativeForm select[name="industry"]');
-                    if (industrySelect && profile.industry) {
-                        setSelectByText(industrySelect, profile.industry);
-                    }
+                    if (industrySelect && profile.industry) setSelectByText(industrySelect, profile.industry);
+                    // Brand name
                     const brandInput = document.querySelector('#creativeForm input[name="brand_name"]');
                     if (brandInput && profile.business_name) brandInput.value = profile.business_name;
+                    // Headline — from best ad angle
+                    const headlineInput = document.querySelector('#creativeForm input[name="headline"]');
+                    if (headlineInput && bestAngle.headline) headlineInput.value = bestAngle.headline;
+                    // CTA — from best ad angle
+                    const ctaInput = document.querySelector('#creativeForm input[name="cta_text"]');
+                    if (ctaInput && bestAngle.cta) ctaInput.value = bestAngle.cta;
+                    // Platform — from scanner's best_platform recommendation
+                    const platformSelect = document.querySelector('#creativeForm select[name="platform"]');
+                    matchPlatform(bestAngle.best_platform || strategy.best_platform, platformSelect);
+                    // Primary color — from creative brief color palette
+                    const colors = brief.color_palette || [];
+                    if (colors.length > 0) {
+                        const colorPicker = document.querySelector('#creativeForm input[name="primary_color"]');
+                        const colorHex = document.getElementById('colorHex');
+                        if (colorPicker) colorPicker.value = colors[0];
+                        if (colorHex) colorHex.value = colors[0];
+                    }
+                    // Visual style — map brand tone to style
+                    const styleSelect = document.querySelector('#creativeForm select[name="style"]');
+                    if (styleSelect && brand.tone) {
+                        const t = brand.tone.toLowerCase();
+                        if (t.includes('luxur') || t.includes('premium') || t.includes('elegant')) styleSelect.value = 'luxury';
+                        else if (t.includes('bold') || t.includes('energi') || t.includes('dynamic')) styleSelect.value = 'bold';
+                        else if (t.includes('minimal') || t.includes('clean')) styleSelect.value = 'minimal';
+                        else if (t.includes('playful') || t.includes('fun')) styleSelect.value = 'playful';
+                        else if (t.includes('corporate') || t.includes('professional')) styleSelect.value = 'corporate';
+                        else styleSelect.value = 'modern';
+                    }
                 }
                 else if (target === 'video') {
+                    // Product description — full intelligence
                     const descEl = document.getElementById('videoProductDesc');
                     if (descEl) descEl.value = desc.trim();
+                    // Industry
                     const industrySelect = document.querySelector('#videoForm select[name="industry"]');
-                    if (industrySelect && profile.industry) {
-                        setSelectByText(industrySelect, profile.industry);
-                    }
+                    if (industrySelect && profile.industry) setSelectByText(industrySelect, profile.industry);
+                    // Brand name
                     const brandInput = document.querySelector('#videoForm input[name="brand_name"]');
                     if (brandInput && profile.business_name) brandInput.value = profile.business_name;
+                    // Template — map from creative brief video_direction
+                    const templateSelect = document.querySelector('#videoForm select[name="template"]');
+                    if (templateSelect && brief.video_direction) {
+                        const vd = brief.video_direction.toLowerCase();
+                        if (vd.includes('text') || vd.includes('kinetic') || vd.includes('typograph')) templateSelect.value = 'kinetic_text';
+                        else if (vd.includes('before') || vd.includes('after') || vd.includes('comparison')) templateSelect.value = 'before_after';
+                        else if (vd.includes('story') || vd.includes('reel') || vd.includes('vertical')) templateSelect.value = 'story_reel';
+                        else templateSelect.value = 'product_showcase';
+                    }
                 }
                 else if (target === 'analysis') {
+                    // Ad copy — use BEST ranked angle's full body_copy with headline + hook
                     const adCopyEl = document.querySelector('#analysisForm textarea[name="ad_copy"]');
-                    // Use best ad angle's body_copy if available, otherwise use suggestion
-                    const bestAngleBody = (window.lastScanData.ad_angles && window.lastScanData.ad_angles[0])
-                        ? window.lastScanData.ad_angles[0].body_copy
-                        : profile.ad_copy_suggestion;
-                    if (adCopyEl && bestAngleBody) adCopyEl.value = bestAngleBody;
-                    const industrySelect = document.querySelector('#analysisForm select[name="industry"]');
-                    if (industrySelect && profile.industry) {
-                        setSelectByText(industrySelect, profile.industry);
+                    if (adCopyEl && bestAngle.body_copy) {
+                        const fullCopy = `${bestAngle.hook_line || ''}\n\n${bestAngle.headline || ''}\n\n${bestAngle.body_copy}\n\n${bestAngle.cta || ''}`;
+                        adCopyEl.value = fullCopy.trim();
                     }
+                    // Industry
+                    const industrySelect = document.querySelector('#analysisForm select[name="industry"]');
+                    if (industrySelect && profile.industry) setSelectByText(industrySelect, profile.industry);
+                    // Platform — from best angle or strategy
+                    const platformSelect = document.querySelector('#analysisForm select[name="platform"]');
+                    matchPlatform(bestAngle.best_platform || strategy.best_platform, platformSelect);
+                    // Audience country — from demographics
+                    const countryInput = document.querySelector('#analysisForm input[name="audience_country"]');
+                    if (countryInput && audience.demographics) {
+                        // Try to extract country; default to general description
+                        const demo = audience.demographics || '';
+                        const countryMatch = demo.match(/(?:location|country|based in|from)\s*[:\-]?\s*([A-Z][a-zA-Z\s]+)/i);
+                        if (countryMatch) countryInput.value = countryMatch[1].trim();
+                        else if (demo.toLowerCase().includes('nigeria')) countryInput.value = 'Nigeria';
+                        else if (demo.toLowerCase().includes('us') || demo.toLowerCase().includes('united states') || demo.toLowerCase().includes('america')) countryInput.value = 'United States';
+                        else countryInput.value = demo.split(',').pop()?.trim() || '';
+                    }
+                    // Audience age — extract from demographics
+                    const ageInput = document.querySelector('#analysisForm input[name="audience_age"]');
+                    const extractedAge = extractAge(audience.demographics);
+                    if (ageInput && extractedAge) ageInput.value = extractedAge;
+                    // Income level
+                    const incomeSelect = document.querySelector('#analysisForm select[name="audience_income"]');
+                    const extractedIncome = extractIncome(audience.demographics);
+                    if (incomeSelect && extractedIncome) incomeSelect.value = extractedIncome;
+                    // Brand voice
+                    const brandVoiceInput = document.querySelector('#analysisForm input[name="brand_voice"]');
+                    if (brandVoiceInput && brand.brand_voice) brandVoiceInput.value = `${brand.brand_voice}${brand.tone ? ', ' + brand.tone : ''}`;
                 }
                 else if (target === 'audit') {
+                    // Ad copy — full best angle
                     const adCopyEl = document.querySelector('#deepAuditForm textarea[name="ad_copy"]');
-                    const bestAngleBody = (window.lastScanData.ad_angles && window.lastScanData.ad_angles[0])
-                        ? window.lastScanData.ad_angles[0].body_copy
-                        : profile.ad_copy_suggestion;
-                    if (adCopyEl && bestAngleBody) adCopyEl.value = bestAngleBody;
-                    const industrySelect = document.querySelector('#deepAuditForm select[name="industry"]');
-                    if (industrySelect && profile.industry) {
-                        setSelectByText(industrySelect, profile.industry);
+                    if (adCopyEl && bestAngle.body_copy) {
+                        const fullCopy = `${bestAngle.hook_line || ''}\n\n${bestAngle.headline || ''}\n\n${bestAngle.body_copy}\n\n${bestAngle.cta || ''}`;
+                        adCopyEl.value = fullCopy.trim();
                     }
-                    // Also auto-fill landing URL from scanned site
+                    const industrySelect = document.querySelector('#deepAuditForm select[name="industry"]');
+                    if (industrySelect && profile.industry) setSelectByText(industrySelect, profile.industry);
+                    // Landing URL
                     const landingInput = document.querySelector('#deepAuditForm input[name="landing_url"]');
                     if (landingInput) landingInput.value = url.startsWith('http') ? url : 'https://' + url;
                 }
@@ -3836,6 +3936,21 @@
                     if (match) submitData.append('brand_voice', JSON.stringify(match));
                 }
 
+                // Add scanner intelligence so rewrite uses real product data, not generic filler
+                if (window.lastScanData) {
+                    const scannerBrief = {
+                        business_name: window.lastScanData.profile?.business_name,
+                        ad_angles: window.lastScanData.ad_angles,
+                        recommended_angle: window.lastScanData.ad_angles?.[window.lastScanData.creative_brief?.recommended_angle_index || 0],
+                        target_audience: window.lastScanData.target_audience,
+                        brand_analysis: window.lastScanData.brand_analysis,
+                        ad_strategy: window.lastScanData.ad_strategy,
+                        products: window.lastScanData.products_and_features?.main_products,
+                        competitive_advantages: window.lastScanData.competitive_landscape?.competitive_advantages
+                    };
+                    submitData.append('scanner_brief', JSON.stringify(scannerBrief));
+                }
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 90000);
 
@@ -4005,13 +4120,18 @@
             try {
                 const formData = new FormData(form);
 
-                // Add scanner brief if scanner data exists
+                // Add FULL scanner intelligence so AI generates specific, not generic ads
                 if (window.lastScanData) {
                     const scannerBrief = {
+                        business_name: window.lastScanData.profile?.business_name,
                         creative_brief: window.lastScanData.creative_brief,
-                        ad_angle: window.lastScanData.ad_angles?.[0],
+                        ad_angles: window.lastScanData.ad_angles,
+                        recommended_angle: window.lastScanData.ad_angles?.[window.lastScanData.creative_brief?.recommended_angle_index || 0],
                         target_audience: window.lastScanData.target_audience,
-                        brand_analysis: window.lastScanData.brand_analysis
+                        brand_analysis: window.lastScanData.brand_analysis,
+                        ad_strategy: window.lastScanData.ad_strategy,
+                        competitive_advantages: window.lastScanData.competitive_landscape?.competitive_advantages,
+                        products: window.lastScanData.products_and_features?.main_products
                     };
                     formData.append('scanner_brief', JSON.stringify(scannerBrief));
                 }
@@ -4148,13 +4268,18 @@
                     formData.set('enable_voiceover', 'true');
                 }
 
-                // Add scanner brief if scanner data exists
+                // Add FULL scanner intelligence so AI generates specific, not generic video scripts
                 if (window.lastScanData) {
                     const scannerBrief = {
+                        business_name: window.lastScanData.profile?.business_name,
                         creative_brief: window.lastScanData.creative_brief,
-                        ad_angle: window.lastScanData.ad_angles?.[0],
+                        ad_angles: window.lastScanData.ad_angles,
+                        recommended_angle: window.lastScanData.ad_angles?.[window.lastScanData.creative_brief?.recommended_angle_index || 0],
                         target_audience: window.lastScanData.target_audience,
-                        brand_analysis: window.lastScanData.brand_analysis
+                        brand_analysis: window.lastScanData.brand_analysis,
+                        ad_strategy: window.lastScanData.ad_strategy,
+                        competitive_advantages: window.lastScanData.competitive_landscape?.competitive_advantages,
+                        products: window.lastScanData.products_and_features?.main_products
                     };
                     formData.append('scanner_brief', JSON.stringify(scannerBrief));
                 }

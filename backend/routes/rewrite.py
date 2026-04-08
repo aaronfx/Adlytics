@@ -77,7 +77,8 @@ def _build_rewrite_prompt(
     target_age: Optional[str],
     target_tone: Optional[str],
     brand_voice_context: str,
-    benchmark_context: str
+    benchmark_context: str,
+    scanner_context: str = ""
 ) -> str:
     """Build the prompt for GPT-4o to rewrite the ad."""
 
@@ -126,7 +127,7 @@ CONTEXT:
 {weaknesses_text}{demographic_context}
 
 {benchmark_context}
-
+{scanner_context}
 {mode_instruction}{brand_voice_context}
 
 You will provide TWO rewrite variants. For each variant, respond with PURE JSON (no markdown, no extra text) in this exact format:
@@ -311,6 +312,7 @@ async def rewrite_ad(
     prepare_voiceover: str = Form("false", description="Generate voiceover script"),
     voice_style: str = Form("professional", description="Voice style for voiceover"),
     brand_voice: Optional[str] = Form(None, description="JSON string with brand voice guidelines"),
+    scanner_brief: Optional[str] = Form(None, description="JSON string with scanner intelligence data"),
 ):
     """
     Rewrite ad copy with multiple variants and AI-powered scoring.
@@ -384,6 +386,39 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
         benchmark_context = build_benchmark_context(platform, industry)
         benchmarks = get_benchmarks(platform, industry)
 
+        # Parse scanner intelligence if available
+        scanner_context = ""
+        if scanner_brief:
+            try:
+                sb = json.loads(scanner_brief)
+                parts = []
+                if sb.get("business_name"):
+                    parts.append(f"Business: {sb['business_name']}")
+                if sb.get("recommended_angle"):
+                    ra = sb["recommended_angle"]
+                    parts.append(f"Best Ad Angle: {ra.get('angle_name', '')} ({ra.get('strategy', '')})")
+                    parts.append(f"Hook: {ra.get('hook_line', '')}")
+                if sb.get("target_audience", {}).get("primary_persona"):
+                    pa = sb["target_audience"]["primary_persona"]
+                    parts.append(f"Audience: {pa.get('description', '')}")
+                    parts.append(f"Pain Points: {', '.join(pa.get('pain_points', []))}")
+                    parts.append(f"Desires: {', '.join(pa.get('desires', []))}")
+                if sb.get("brand_analysis"):
+                    ba = sb["brand_analysis"]
+                    parts.append(f"Brand Voice: {ba.get('brand_voice', '')} / {ba.get('tone', '')}")
+                if sb.get("products"):
+                    prods = [p.get("name", "") for p in sb["products"][:5]]
+                    parts.append(f"Products: {', '.join(prods)}")
+                if sb.get("competitive_advantages"):
+                    parts.append(f"USPs: {', '.join(sb['competitive_advantages'][:3])}")
+                if sb.get("ad_strategy"):
+                    parts.append(f"Emotional Trigger: {sb['ad_strategy'].get('emotional_trigger', '')}")
+                if parts:
+                    scanner_context = "\nSCANNER INTELLIGENCE (use real product names, features, and audience data below):\n" + "\n".join(f"- {p}" for p in parts)
+                    scanner_context += "\n\nIMPORTANT: Rewrite must reference ACTUAL products/features from the scanner data — not generic filler."
+            except (json.JSONDecodeError, KeyError):
+                pass
+
         # Build and call prompt
         prompt = _build_rewrite_prompt(
             original_ad=original_ad,
@@ -396,7 +431,8 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
             target_age=target_age,
             target_tone=target_tone,
             brand_voice_context=brand_voice_context,
-            benchmark_context=benchmark_context
+            benchmark_context=benchmark_context,
+            scanner_context=scanner_context
         )
 
         gpt_response = await _call_gpt4o(prompt)
