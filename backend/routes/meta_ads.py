@@ -377,6 +377,7 @@ async def get_ad_accounts(access_token: str = Query(...)) -> dict:
 async def get_campaigns(
     access_token: str = Query(...),
     ad_account_id: str = Query(...),
+    date_preset: str = Query("last_year"),
 ) -> dict:
     """
     Get active campaigns for an ad account with performance data.
@@ -420,7 +421,7 @@ async def get_campaigns(
                     insights_params = {
                         "access_token": access_token,
                         "fields": "impressions,clicks,ctr,cpc,cpm,spend,actions,cost_per_action_type,reach,frequency",
-                        "date_preset": "last_30d",
+                        "date_preset": date_preset,
                     }
 
                     insights_response = await client.get(insights_url, params=insights_params)
