@@ -493,145 +493,81 @@ WEBSITE CONTENT (crawled from multiple pages):
 
 YOUR MISSION: Analyze this business deeply and produce a JSON report. DO NOT give shallow generic info — dig into what makes this business specific. If the website content is limited, make strategic inferences from the industry, positioning, and any signals you can find.
 
-Return ONLY valid JSON (no markdown, no extra text) with this exact structure:
+Return ONLY valid JSON with this structure (keep values concise to fit within token limits):
 
 {{
   "business_profile": {{
-    "business_name": "The exact brand/company name (cross-reference title, copyright, OG data, headings)",
-    "tagline": "Their tagline or slogan if found, otherwise craft one from their positioning",
-    "industry": "Specific industry (e.g., 'Forex Copy Trading', 'B2B SaaS - Project Management', 'DTC Skincare')",
-    "sub_industry": "More specific niche within the industry",
-    "business_model": "How they make money (subscription, commission, freemium, one-time, etc.)",
-    "company_stage": "Startup / Growth / Established / Enterprise — infer from signals",
-    "description": "4-6 sentence detailed description of what the business does, who they serve, and what makes them different. Be specific, not generic."
+    "business_name": "Brand name",
+    "tagline": "Tagline or crafted slogan",
+    "industry": "Specific industry niche",
+    "business_model": "Revenue model",
+    "description": "4-5 sentence description of business, audience, and differentiator"
   }},
-
   "products_and_features": {{
     "main_products": [
-      {{
-        "name": "Product/service name",
-        "description": "What it does in 2-3 sentences",
-        "key_benefit": "The #1 benefit to the customer",
-        "best_selling_angle": "Why this would sell best in an ad"
-      }}
+      {{"name": "Product name", "description": "1-2 sentences", "key_benefit": "Top benefit"}}
     ],
-    "all_features": ["List every feature/capability mentioned on the site"],
-    "pricing_model": "Free / Freemium / Paid / Contact Sales / etc.",
-    "pricing_details": "Any pricing info found (plans, amounts, tiers)"
+    "all_features": ["feature1", "feature2", "...at least 10 items"],
+    "pricing_model": "Pricing approach"
   }},
-
   "target_audience": {{
     "primary_persona": {{
-      "description": "2-3 sentence description of the ideal customer",
-      "demographics": "Age range, income level, location, occupation",
-      "psychographics": "Values, lifestyle, motivations",
-      "pain_points": ["3-5 specific pain points this business solves"],
-      "desires": ["3-5 specific outcomes they want"],
-      "objections": ["3-4 likely objections or hesitations before buying"]
-    }},
-    "secondary_persona": {{
-      "description": "Alternative customer segment",
-      "demographics": "Demographics for this segment"
+      "description": "2-3 sentences about ideal customer",
+      "demographics": "Age, income, location",
+      "pain_points": ["point1", "point2", "point3", "point4"],
+      "desires": ["desire1", "desire2", "desire3"],
+      "objections": ["objection1", "objection2", "objection3"]
     }}
   }},
-
   "brand_analysis": {{
-    "brand_voice": "How the brand communicates (e.g., 'Professional yet approachable', 'Bold and aspirational')",
-    "tone": "The emotional tone (Trustworthy / Exciting / Calm / Urgent / Friendly / Authoritative)",
-    "personality_traits": ["3-4 brand personality traits"],
-    "color_mood": "Visual brand feel (e.g., 'Dark sophisticated with gold accents', 'Clean white with blue trust tones')",
-    "trust_signals": ["All trust/credibility signals found — certifications, partnerships, client logos, numbers, awards"],
-    "social_proof": ["Any testimonials, reviews, stats, user counts found"],
-    "unique_positioning": "What makes this brand different from competitors in 2-3 sentences"
+    "brand_voice": "Communication style",
+    "tone": "Emotional tone",
+    "trust_signals": ["signal1", "signal2", "signal3"],
+    "unique_positioning": "2 sentence differentiator",
+    "color_mood": "Visual brand feel"
   }},
-
   "competitive_landscape": {{
-    "likely_competitors": ["3-5 likely competitors based on the industry and positioning"],
-    "competitive_advantages": ["What this business does better than the alternatives"],
-    "market_gaps": ["Opportunities the brand could exploit in ads that competitors likely miss"]
+    "likely_competitors": ["competitor1", "competitor2", "competitor3"],
+    "competitive_advantages": ["advantage1", "advantage2"],
+    "market_gaps": ["gap1", "gap2"]
   }},
-
   "ad_strategy": {{
-    "recommended_funnel_stage": "Awareness / Consideration / Conversion — which stage needs the most help and why",
-    "platform_recommendations": [
-      {{
-        "platform": "Facebook/Instagram/TikTok/YouTube/Google",
-        "why": "Why this platform fits their audience and product",
-        "best_format": "Carousel / Video / Story / Search Ad / etc."
-      }}
-    ],
-    "seasonal_angle": "Any time-sensitive or seasonal messaging opportunity right now",
-    "emotional_trigger": "The single strongest emotional trigger for this audience"
+    "recommended_funnel_stage": "Stage + why",
+    "emotional_trigger": "Strongest emotional trigger",
+    "best_platform": "Platform + why"
   }},
-
   "ad_angles": [
     {{
-      "angle_name": "Short name (e.g., 'Fear of Missing Out', 'Pain Point Lead', 'Social Proof Authority')",
-      "strategy": "Which marketing principle this uses (Social Proof / Scarcity / Pain-Agitate-Solution / Benefit-Led / Transformation / Authority)",
-      "why_this_works": "2 sentences on why this angle will convert for this specific business and audience",
-      "headline": "A compelling ad headline (max 10 words)",
-      "body_copy": "Full ad body copy — 4-6 sentences. Specific to this business, referencing actual products/features/benefits. NOT generic.",
-      "cta": "Call to action text",
-      "hook_line": "The opening line that stops the scroll (for video/social)",
+      "angle_name": "Short name",
+      "strategy": "Marketing principle",
+      "headline": "Ad headline (max 10 words)",
+      "body_copy": "4-6 sentence ad copy. SPECIFIC to this business with actual feature names.",
+      "cta": "CTA text",
+      "hook_line": "Opening scroll-stopper line",
       "predicted_effectiveness": 85,
-      "best_platform": "Which platform this angle works best on"
+      "best_platform": "Platform"
     }}
   ],
-
   "creative_brief": {{
     "recommended_angle_index": 0,
-    "recommended_angle_reason": "Why this specific angle was chosen as the best — reference the audience, the product strength, and the competitive gap",
-    "video_direction": "How a video ad should look and feel for this business — opening scene, visual style, pacing, music mood, closing",
-    "image_keywords": ["5-8 specific visual keywords for stock image search that represent this specific business"],
-    "color_palette": ["3-4 hex color codes that match the brand mood"],
-    "visual_style": "Professional / Bold / Minimal / Luxury / Energetic / Warm",
-    "music_mood": "What background music should feel like",
-    "voiceover_style": "Tone and pace for voiceover (e.g., 'Confident and measured, male voice, slight urgency in CTA')"
+    "video_direction": "Video style direction for this business",
+    "image_keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+    "color_palette": ["#hex1", "#hex2", "#hex3"],
+    "voiceover_style": "Voice direction"
   }},
-
   "funnel_intelligence": {{
-    "landing_page_assessment": "Quick assessment of the website as a landing page — what works and what doesn't for conversion",
-    "message_match_tips": ["3-4 tips to ensure ad-to-landing-page message consistency"],
-    "conversion_blockers": ["Potential reasons someone might not convert after clicking the ad"],
-    "retargeting_angle": "Suggested messaging for retargeting people who visited but didn't convert"
+    "landing_page_assessment": "2 sentence assessment",
+    "conversion_blockers": ["blocker1", "blocker2"],
+    "retargeting_angle": "Retargeting message"
   }}
 }}
 
-CRITICAL INSTRUCTIONS:
-- Generate exactly 4 ad angles, ranked by predicted effectiveness (best first)
-- Each ad angle body_copy must be 4-6 sentences, specific to THIS business with actual product names/features — NO generic template filler
-- The predicted_effectiveness score must vary across angles (not all the same)
-- Every field must have substantial content — no empty strings or placeholder text
-- The creative_brief.recommended_angle_index refers to the array index (0-based) of the best angle
-
-MANDATORY OUTPUT QUALITY RULES (FAILURE TO COMPLY = USELESS OUTPUT):
-
-1. MINIMUM REQUIREMENTS — your output MUST contain:
-   - main_products: AT LEAST 3 products/services (infer from industry if site content is thin)
-   - all_features: AT LEAST 10 features (combine what you see + what platforms in this industry always have)
-   - pain_points: AT LEAST 4 specific pain points
-   - ad_angles: EXACTLY 4 angles with 4-6 sentence body copy EACH
-   - trust_signals: AT LEAST 3 items
-   - likely_competitors: AT LEAST 3 named competitors
-
-2. JAVASCRIPT-RENDERED SITES:
-   Many modern websites use React/Next.js/Vue and return empty HTML shells to server-side fetches. The content above may be sparse. THIS IS NOT AN EXCUSE FOR THIN OUTPUT.
-
-   When content is limited, you MUST:
-   - Use sitemap URLs to understand the full site structure (each URL path reveals a feature or page)
-   - Use navigation menu items as your PRIMARY source of feature discovery
-   - Use the domain name, title tag, meta description, and OG data as positioning signals
-   - Use your training knowledge: if this is a "forex trading platform," you KNOW what features these platforms have (signals, chart analysis, copy trading, risk calculators, education, journals, etc.) — LIST THEM ALL as inferred features
-   - If you recognize the brand from your training data, USE that knowledge fully
-   - The business_profile.description must be 4-6 rich sentences, not 2 vague ones
-
-3. AD COPY QUALITY:
-   - Each ad angle body_copy must be 4-6 FULL sentences that reference SPECIFIC features by name
-   - No angle should contain generic phrases like "comprehensive platform" or "cutting-edge tools" without naming the actual tools
-   - Each angle must use a different marketing strategy (one Benefit-Led, one Pain-Agitate-Solution, one Social Proof, one Scarcity/Urgency)
-   - Headlines must be punchy, specific, and under 10 words
-
-4. If the products_and_features section has fewer than 3 main_products or fewer than 8 all_features, your output is REJECTED."""
+RULES:
+- EXACTLY 4 ad_angles, ranked by effectiveness. Each body_copy: 4-6 sentences referencing REAL features.
+- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors.
+- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in features, products, and competitors. A forex platform MUST list features like signals, chart analysis, risk calculator, copy trading, education, etc.
+- Each ad angle uses a DIFFERENT strategy: Benefit-Led, Pain-Agitate-Solution, Social Proof, Scarcity.
+- Return ONLY valid JSON, no markdown fences, no text outside the JSON."""
 
     async with httpx.AsyncClient(timeout=90.0) as client:
         response = await client.post(
