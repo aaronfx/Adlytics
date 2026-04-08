@@ -395,7 +395,10 @@ def calculate_creative_scores(
     visual_appeal = min(95, 70 + len(headline) + (len(body_copy) // 20))
     message_clarity = min(100, 60 + (20 if len(cta_text) > 0 else 0))
     cta_effectiveness = min(100, 50 + (len(cta_text) * 2))
-    platform_fit = calculate_percentile(platform, industry, "ctr") * 100
+
+    # calculate_percentile expects (score, platform, industry)
+    raw_score = (visual_appeal + message_clarity + cta_effectiveness) // 3
+    platform_fit = calculate_percentile(raw_score, platform, industry)
     brand_consistency = 75  # Default for AI-generated
 
     overall_score = int(
