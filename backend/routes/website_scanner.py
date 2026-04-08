@@ -53,23 +53,26 @@ async def _fetch_page(client: httpx.AsyncClient, url: str) -> Optional[str]:
 
 
 def _discover_subpages(html: str, base_url: str) -> List[str]:
-    """Find internal links for About, Services, Products, Pricing, Features, FAQ."""
+    """Find internal links from HTML + brute-force common paths for JS-heavy sites."""
     keywords = [
         "about", "service", "product", "feature", "pricing",
         "solution", "how-it-work", "why-", "benefit", "faq",
         "testimonial", "case-stud", "review", "client", "partner",
         "what-we-do", "our-story", "who-we-are", "offer",
+        "tool", "signal", "academ", "blog", "plan", "contact",
+        "demo", "portfolio", "team", "mission", "platform",
     ]
     found = set()
     parsed_base = urlparse(base_url)
+    base_clean = f"{parsed_base.scheme}://{parsed_base.netloc}"
 
+    # Method 1: Discover from HTML links
     for match in re.finditer(r'<a[^>]+href=["\']([^"\'#]+)["\']', html, re.I):
         href = match.group(1).strip()
         if href.startswith("javascript:") or href.startswith("mailto:") or href.startswith("tel:"):
             continue
         full = urljoin(base_url, href)
         parsed = urlparse(full)
-        # Same domain only
         if parsed.netloc != parsed_base.netloc:
             continue
         path_lower = parsed.path.lower()
@@ -78,7 +81,28 @@ def _discover_subpages(html: str, base_url: str) -> List[str]:
                 found.add(full.split("?")[0].split("#")[0])
                 break
 
-    return list(found)[:8]  # cap at 8 subpages
+    # Method 2: Also scan JavaScript/JSON for route definitions (SPA sites)
+    # Look for route paths in scripts like "/about", "/features", "/pricing"
+    for match in re.finditer(r'["\']/(about|features?|pricing|services?|products?|blog|tools?|academy|signals?|contact|demo|platform|faq|team)["\'/]', html, re.I):
+        path = match.group(1)
+        found.add(f"{base_clean}/{path}")
+
+    # Method 3: Brute-force common subpage paths (critical for JS-rendered sites)
+    # These are the most common paths that contain valuable marketing content
+    common_paths = [
+        "/about", "/about-us", "/features", "/pricing",
+        "/services", "/products", "/blog", "/contact",
+        "/how-it-works", "/why-us", "/faq", "/testimonials",
+        "/tools", "/platform", "/solutions", "/plans",
+    ]
+    for path in common_paths:
+        found.add(f"{base_clean}{path}")
+
+    # Remove the base URL itself
+    found.discard(base_url.rstrip("/"))
+    found.discard(base_url)
+
+    return list(found)[:12]  # cap at 12 subpages
 
 
 async def crawl_website(url: str) -> Dict[str, Any]:
@@ -213,7 +237,33 @@ def extract_page_content(html: str, is_homepage: bool = True) -> Dict[str, Any]:
             images.append({"alt": alt, "src": src})
     data["key_images"] = images[:10]
 
-    # 13. Body text (cleaned, generous limit)
+    # 13. Embedded app data (Next.js __NEXT_DATA__, Nuxt __NUXT__, generic window.__APP_STATE__)
+    embedded_data = []
+    for pattern in [
+        r'<script[^>]*id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>',
+        r'window\.__NEXT_DATA__\s*=\s*(\{.*?\});',
+        r'window\.__NUXT__\s*=\s*(\{.*?\});',
+        r'window\.__APP_STATE__\s*=\s*(\{.*?\});',
+        r'window\.__INITIAL_STATE__\s*=\s*(\{.*?\});',
+    ]:
+        m = re.search(pattern, html, re.I | re.S)
+        if m:
+            try:
+                raw = m.group(1).strip()[:5000]
+                embedded_data.append(raw)
+            except Exception:
+                pass
+
+    # Also extract ALL visible text from script-embedded content strings
+    # Many SPAs have readable text in their JS bundles
+    for m in re.finditer(r'"((?:[^"\\]|\\.){50,500})"', html):
+        text_chunk = m.group(1)
+        # Filter for actual readable content (has spaces, lowercase words)
+        if re.search(r'[a-z]{3,}\s+[a-z]{3,}\s+[a-z]{3,}', text_chunk) and '<' not in text_chunk[:20]:
+            embedded_data.append(text_chunk)
+    data["embedded_app_data"] = embedded_data[:5]
+
+    # 14. Body text (cleaned, generous limit)
     clean = html
     for tag in ["script", "style", "nav", "footer", "noscript", "svg", "iframe", "header"]:
         clean = re.sub(f"<{tag}[^>]*>.*?</{tag}>", "", clean, flags=re.I | re.S)
@@ -223,7 +273,7 @@ def extract_page_content(html: str, is_homepage: bool = True) -> Dict[str, Any]:
     text = re.sub(r"(cookie|privacy policy|terms of service|all rights reserved|©)[^.]*\.", "", text, flags=re.I)
     data["body_text"] = text[:8000]
 
-    # 14. Navigation menu items (reveals site structure)
+    # 15. Navigation menu items (reveals site structure)
     nav_items = []
     nav_html = re.search(r"<nav[^>]*>(.*?)</nav>", html, re.I | re.S)
     if nav_html:
@@ -233,7 +283,7 @@ def extract_page_content(html: str, is_homepage: bool = True) -> Dict[str, Any]:
                 nav_items.append(item)
     data["navigation"] = nav_items[:20]
 
-    # 15. Copyright / brand name from footer
+    # 16. Copyright / brand name from footer
     footer_match = re.search(r"<footer[^>]*>(.*?)</footer>", html, re.I | re.S)
     if footer_match:
         footer_text = re.sub(r"<[^>]+>", " ", footer_match.group(1)).strip()
@@ -337,6 +387,11 @@ def build_ai_content_package(crawl_data: Dict[str, Any]) -> str:
         img_alts = [img["alt"] for img in hp["key_images"] if img["alt"]]
         if img_alts:
             parts.append(f"Image Descriptions: {', '.join(img_alts)}")
+
+    if hp.get("embedded_app_data"):
+        parts.append("Embedded App/SPA Data (extracted from JavaScript):")
+        for chunk in hp["embedded_app_data"][:3]:
+            parts.append(f"  {chunk[:1000]}")
 
     parts.append(f"\nHomepage Body Text (first 4000 chars):\n{hp.get('body_text', '')[:4000]}")
 
@@ -488,7 +543,16 @@ CRITICAL INSTRUCTIONS:
 - The predicted_effectiveness score must vary across angles (not all the same)
 - Every field must have substantial content — no empty strings or placeholder text
 - The creative_brief.recommended_angle_index refers to the array index (0-based) of the best angle
-- If you can't find specific info, make strategic inferences based on the industry and positioning signals"""
+
+IMPORTANT — DEEP INFERENCE REQUIRED:
+Many modern websites use JavaScript frameworks (React, Next.js, Vue) that render content client-side. The content provided may be sparse or incomplete. When content is limited:
+1. Use EVERY available signal: title tags, meta descriptions, OG data, headings, nav menus, domain name clues, JSON-LD data, embedded script data, and any body text fragments
+2. Cross-reference the domain name, industry signals, and any keywords found to build a complete picture
+3. If the site appears to be a fintech/trading platform, SaaS tool, or any specialized product — research your knowledge of what such platforms typically offer and infer specific features based on the signals you can see
+4. NEVER return thin or vague output. If you can see it's a "trading platform" or "forex tool," populate all fields with rich, specific, relevant content about trading platforms and what would sell
+5. Look at the navigation menu items — they often reveal the FULL feature set even when page body text is limited
+6. The products_and_features.all_features array should have AT LEAST 8-10 items, inferred from all available signals
+7. The ad_angles body_copy should sound like it was written by someone who deeply understands this specific business"""
 
     async with httpx.AsyncClient(timeout=90.0) as client:
         response = await client.post(
