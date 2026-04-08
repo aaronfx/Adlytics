@@ -454,85 +454,91 @@ def render_story_reel_frame(
     badge_text: str, headline: str, body: str, cta: str,
     colors: list, product_img: Optional[Image.Image] = None
 ) -> Image.Image:
-    """Render a single frame for Story/Reel vertical template."""
-    c1 = colors[0] if colors else "#1e1b4b"
-    c2 = colors[1] if len(colors) > 1 else "#6366f1"
+    """Render a single frame for Story/Reel template. Works for any aspect ratio."""
+    c1 = colors[0] if colors else "#0f172a"
+    c2 = colors[1] if len(colors) > 1 else "#1e293b"
+    accent = colors[2] if len(colors) > 2 else "#3b82f6"
 
     bg = create_gradient_bg(width, height, c1, c2)
     draw = ImageDraw.Draw(bg)
     t = frame_num / total_frames
 
-    # Badge
+    # Subtle overlay line at top
+    draw.rectangle([0, 0, width, int(height * 0.003)], fill=hex_to_rgb(accent))
+
+    # Badge — small pill at top
     badge_start = 0.0
     if t >= badge_start:
         bt = min(1, (t - badge_start) / 0.1)
         scale = ease_out_back(bt)
         if scale > 0.3:
-            font_badge = get_font("bold", int(width * 0.035))
+            font_badge = get_font("bold", int(width * 0.028))
             bbox = draw.textbbox((0, 0), badge_text, font=font_badge)
-            bw = (bbox[2] - bbox[0]) + int(width * 0.06)
-            bh = int(height * 0.025)
+            bw = (bbox[2] - bbox[0]) + int(width * 0.05)
+            bh = int(height * 0.035)
             bx = (width - bw) // 2
-            by = int(height * 0.04)
-            draw_rounded_rect(draw, (bx, by, bx + bw, by + bh), 15, (245, 158, 11))
-            draw_text_centered(draw, badge_text, by + int(bh * 0.1), width, font_badge)
+            by = int(height * 0.025)
+            draw_rounded_rect(draw, (bx, by, bx + bw, by + bh), 15, hex_to_rgb(accent))
+            draw_text_centered(draw, badge_text, by + int(bh * 0.2), width, font_badge)
 
-    # Product image — large hero image
-    img_start = 0.05
+    # Product image — hero, fills upper portion
+    img_start = 0.04
     if t >= img_start and product_img:
         it = min(1, (t - img_start) / 0.15)
-        scale = ease_out_cubic(it)
-        img_w = int(width * 0.90 * scale)
-        img_h = int(height * 0.40 * scale)
-        if img_w > 10 and img_h > 10:
-            resized = product_img.resize((img_w, img_h), Image.LANCZOS)
-            x = (width - img_w) // 2
+        scale_v = ease_out_cubic(it)
+        img_w = int(width * 0.92)
+        img_h = int(height * 0.42)
+        cur_w = int(img_w * scale_v)
+        cur_h = int(img_h * scale_v)
+        if cur_w > 10 and cur_h > 10:
+            resized = product_img.resize((cur_w, cur_h), Image.LANCZOS)
+            x = (width - cur_w) // 2
             y = int(height * 0.08)
             bg.paste(resized, (x, y))
 
     # Headline
-    hl_start = 0.3
+    hl_start = 0.22
     if t >= hl_start:
-        ht = min(1, (t - hl_start) / 0.15)
-        font_hl = get_font("bold", int(width * 0.065))
-        lines = wrap_text(draw, headline, font_hl, int(width * 0.85))
-        y_off = int(height * 0.5)
+        ht = min(1, (t - hl_start) / 0.12)
+        ease_v = ease_out_cubic(ht)
+        y_slide = int(20 * (1 - ease_v))
+        font_hl = get_font("bold", int(width * 0.055))
+        lines = wrap_text(draw, headline, font_hl, int(width * 0.88))
+        y_off = int(height * 0.53) + y_slide
         for line in lines:
             draw_text_centered(draw, line, y_off, width, font_hl)
-            y_off += int(width * 0.075)
+            y_off += int(width * 0.065)
 
     # Body
-    body_start = 0.45
+    body_start = 0.35
     if t >= body_start:
-        bdt = min(1, (t - body_start) / 0.12)
-        font_body = get_font("regular", int(width * 0.033))
-        lines = wrap_text(draw, body, font_body, int(width * 0.8))
-        y_off = int(height * 0.66)
+        bdt = min(1, (t - body_start) / 0.10)
+        ease_v = ease_out_cubic(bdt)
+        font_body = get_font("regular", int(width * 0.030))
+        lines = wrap_text(draw, body, font_body, int(width * 0.82))
+        y_off = int(height * 0.70)
         for line in lines[:3]:
-            draw_text_centered(draw, line, y_off, width, font_body, fill=(220, 220, 230))
-            y_off += int(width * 0.04)
+            draw_text_centered(draw, line, y_off, width, font_body, fill=(200, 210, 220))
+            y_off += int(width * 0.038)
 
-    # CTA
-    cta_s = 0.6
+    # CTA Button
+    cta_s = 0.48
     if t >= cta_s:
-        ct = min(1, (t - cta_s) / 0.12)
-        scale = ease_out_back(ct)
-        font_cta = get_font("bold", int(width * 0.04))
+        ct = min(1, (t - cta_s) / 0.10)
+        scale_v = ease_out_back(ct)
+        font_cta = get_font("bold", int(width * 0.035))
         bbox = draw.textbbox((0, 0), cta, font=font_cta)
-        btn_w = (bbox[2] - bbox[0]) + int(width * 0.12)
-        btn_h = int(height * 0.04)
+        btn_w = (bbox[2] - bbox[0]) + int(width * 0.10)
+        btn_h = int(height * 0.05)
         btn_x = (width - btn_w) // 2
-        btn_y = int(height * 0.82)
-        if scale > 0.3:
-            draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), 14, (255, 255, 255))
-            draw_text_centered(draw, cta, btn_y + int(btn_h * 0.12), width, font_cta, fill=hex_to_rgb(c1))
+        btn_y = int(height * 0.85)
+        if scale_v > 0.3:
+            draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), 20, hex_to_rgb(accent))
+            draw_text_centered(draw, cta, btn_y + int(btn_h * 0.18), width, font_cta, fill=(255, 255, 255))
 
-    # Swipe up text
-    if t >= 0.75:
-        font_sw = get_font("regular", int(width * 0.022))
-        # Bounce effect
-        bounce = int(5 * abs(((t - 0.75) * 10) % 2 - 1))
-        draw_text_centered(draw, "SWIPE UP", int(height * 0.92) - bounce, width, font_sw, fill=(180, 180, 180))
+    # Bottom accent line
+    if t >= 0.6:
+        draw.rectangle([0, height - int(height * 0.003), width, height], fill=hex_to_rgb(accent))
 
     return bg
 
@@ -540,17 +546,45 @@ def render_story_reel_frame(
 # ========== VOICEOVER ==========
 
 async def generate_voiceover(text: str, voice: str, output_path: str, rate: str = "+0%") -> bool:
-    """Generate voiceover audio using Edge TTS."""
+    """Generate voiceover audio. Tries Edge TTS first, falls back to gTTS."""
+    # Try Edge TTS first (better quality, more voices)
     try:
         import edge_tts
-
+        print(f"[video_gen] Trying Edge TTS with voice {voice}...")
         communicate = edge_tts.Communicate(text, voice, rate=rate)
         await communicate.save(output_path)
-        print(f"[video_gen] Voiceover saved: {output_path}")
-        return True
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+            print(f"[video_gen] Edge TTS voiceover saved: {output_path} ({os.path.getsize(output_path)} bytes)")
+            return True
+        else:
+            print(f"[video_gen] Edge TTS produced empty/tiny file, trying gTTS...")
     except Exception as e:
-        print(f"[video_gen] Voiceover failed: {e}")
-        return False
+        print(f"[video_gen] Edge TTS failed: {type(e).__name__}: {e}")
+
+    # Fallback to gTTS (Google Text-to-Speech, uses HTTP, more reliable)
+    try:
+        from gtts import gTTS
+        print(f"[video_gen] Trying gTTS fallback...")
+        # Map voice preference to gTTS lang/tld
+        tld = "com"  # default US English
+        if "uk" in voice:
+            tld = "co.uk"
+        elif "au" in voice:
+            tld = "com.au"
+        elif "ng" in voice:
+            tld = "com.ng"
+
+        tts = gTTS(text=text, lang="en", tld=tld, slow=False)
+        tts.save(output_path)
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+            print(f"[video_gen] gTTS voiceover saved: {output_path} ({os.path.getsize(output_path)} bytes)")
+            return True
+        else:
+            print(f"[video_gen] gTTS produced empty file")
+    except Exception as e:
+        print(f"[video_gen] gTTS also failed: {type(e).__name__}: {e}")
+
+    return False
 
 
 async def get_audio_duration(audio_path: str) -> float:
@@ -569,54 +603,141 @@ async def get_audio_duration(audio_path: str) -> float:
 # ========== STOCK IMAGE FETCH ==========
 
 async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -> Optional[Image.Image]:
-    """Fetch a stock image and return as PIL Image. Tries multiple sources."""
+    """Fetch a relevant stock image. Uses Pexels API (free) then Pixabay, then fallback."""
     import random
     from io import BytesIO
 
-    search_query = ",".join(k.strip().lower() for k in keywords[:3] if k.strip())
+    search_query = " ".join(k.strip().lower() for k in keywords[:3] if k.strip())
     if not search_query:
-        search_query = "business,modern"
+        search_query = "business modern"
 
-    # Fetch at reasonable size (at least 800px wide for quality)
     fetch_w = max(width, 800)
     fetch_h = max(height, 600)
+    orientation = "landscape" if fetch_w >= fetch_h else "portrait"
+    if abs(fetch_w - fetch_h) < 100:
+        orientation = "square"
 
-    sources = [
-        # Source 1: Unsplash Source API (high quality, reliable)
-        f"https://source.unsplash.com/{fetch_w}x{fetch_h}/?{search_query.replace(',', ',')}",
-        # Source 2: loremflickr
-        f"https://loremflickr.com/{fetch_w}/{fetch_h}/{search_query}?lock={random.randint(1000, 9999)}",
-        # Source 3: Picsum (random but reliable)
-        f"https://picsum.photos/seed/{search_query[:5]}{random.randint(1,999)}/{fetch_w}/{fetch_h}",
-        # Source 4: Picsum random fallback
-        f"https://picsum.photos/{fetch_w}/{fetch_h}?random={random.randint(1, 9999)}",
-    ]
-
-    for i, url in enumerate(sources):
+    # Source 1: Pexels API (free, great quality, relevant results)
+    pexels_key = os.getenv("PEXELS_API_KEY")
+    if pexels_key:
         try:
-            print(f"[video_gen] Trying image source {i+1}: {url[:80]}...")
-            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
-                response = await client.get(url)
-                if response.status_code == 200 and len(response.content) > 5000:
-                    img = Image.open(BytesIO(response.content)).convert("RGB")
-                    print(f"[video_gen] Got image from source {i+1}: {img.size}")
-                    return img
-                else:
-                    print(f"[video_gen] Source {i+1} returned status {response.status_code}, size {len(response.content)}")
+            print(f"[video_gen] Trying Pexels API: '{search_query}'...")
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                response = await client.get(
+                    "https://api.pexels.com/v1/search",
+                    params={"query": search_query, "per_page": 5, "orientation": orientation},
+                    headers={"Authorization": pexels_key},
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    photos = data.get("photos", [])
+                    if photos:
+                        # Pick a random one from top 5 for variety
+                        photo = random.choice(photos)
+                        img_url = photo.get("src", {}).get("large2x") or photo.get("src", {}).get("large")
+                        if img_url:
+                            img_resp = await client.get(img_url, follow_redirects=True)
+                            if img_resp.status_code == 200 and len(img_resp.content) > 5000:
+                                img = Image.open(BytesIO(img_resp.content)).convert("RGB")
+                                print(f"[video_gen] Pexels image: {img.size} from '{photo.get('alt', '')}'")
+                                return img
         except Exception as e:
-            print(f"[video_gen] Source {i+1} failed: {e}")
-            continue
+            print(f"[video_gen] Pexels failed: {e}")
 
-    # Last resort: generate a colored placeholder
-    print("[video_gen] All image sources failed, generating placeholder")
-    placeholder = Image.new("RGB", (fetch_w, fetch_h), (40, 40, 60))
-    draw = ImageDraw.Draw(placeholder)
-    font = get_font("bold", 48)
-    text = search_query.split(",")[0].upper()
-    bbox = draw.textbbox((0, 0), text, font=font)
+    # Source 2: Pixabay API (free, good search)
+    pixabay_key = os.getenv("PIXABAY_API_KEY")
+    if pixabay_key:
+        try:
+            print(f"[video_gen] Trying Pixabay API: '{search_query}'...")
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                response = await client.get(
+                    "https://pixabay.com/api/",
+                    params={"key": pixabay_key, "q": search_query, "per_page": 5,
+                            "image_type": "photo", "min_width": 800},
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    hits = data.get("hits", [])
+                    if hits:
+                        hit = random.choice(hits)
+                        img_url = hit.get("largeImageURL") or hit.get("webformatURL")
+                        if img_url:
+                            img_resp = await client.get(img_url, follow_redirects=True)
+                            if img_resp.status_code == 200:
+                                img = Image.open(BytesIO(img_resp.content)).convert("RGB")
+                                print(f"[video_gen] Pixabay image: {img.size}")
+                                return img
+        except Exception as e:
+            print(f"[video_gen] Pixabay failed: {e}")
+
+    # Source 3: loremflickr (no key needed, but inconsistent)
+    try:
+        simple_q = keywords[0].strip().lower() if keywords else "business"
+        url = f"https://loremflickr.com/{fetch_w}/{fetch_h}/{simple_q}?lock={random.randint(1000, 9999)}"
+        print(f"[video_gen] Trying loremflickr: {url[:70]}...")
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            if response.status_code == 200 and len(response.content) > 5000:
+                img = Image.open(BytesIO(response.content)).convert("RGB")
+                print(f"[video_gen] loremflickr image: {img.size}")
+                return img
+    except Exception as e:
+        print(f"[video_gen] loremflickr failed: {e}")
+
+    # Source 4: Generate a professional gradient placeholder
+    print("[video_gen] All image sources failed, generating styled placeholder")
+    return _generate_styled_placeholder(fetch_w, fetch_h, search_query, keywords)
+
+
+def _generate_styled_placeholder(width: int, height: int, query: str, keywords: list) -> Image.Image:
+    """Generate a professional-looking placeholder image with abstract design."""
+    import random
+
+    # Professional color combos based on industry
+    color_themes = {
+        "finance": [(15, 23, 42), (30, 64, 175), (59, 130, 246)],
+        "trading": [(15, 23, 42), (22, 78, 99), (6, 182, 212)],
+        "real estate": [(30, 41, 59), (55, 65, 81), (148, 163, 184)],
+        "technology": [(17, 24, 39), (49, 46, 129), (99, 102, 241)],
+        "health": [(20, 30, 30), (4, 120, 87), (16, 185, 129)],
+        "default": [(15, 23, 42), (51, 65, 85), (100, 116, 139)],
+    }
+
+    # Pick theme based on keywords
+    theme = color_themes["default"]
+    for kw in keywords:
+        kw_l = kw.lower()
+        for theme_name, colors in color_themes.items():
+            if theme_name in kw_l or kw_l in theme_name:
+                theme = colors
+                break
+
+    bg = Image.new("RGB", (width, height), theme[0])
+    draw = ImageDraw.Draw(bg)
+
+    # Draw abstract geometric shapes
+    for _ in range(6):
+        x = random.randint(0, width)
+        y = random.randint(0, height)
+        r = random.randint(50, 200)
+        color = theme[random.randint(1, len(theme) - 1)]
+        # Semi-transparent circle effect via lighter color
+        lighter = tuple(min(255, c + 30) for c in color)
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=lighter)
+
+    # Add keyword text as subtle watermark
+    font = get_font("bold", min(72, width // 10))
+    label = keywords[0].upper() if keywords else query.split()[0].upper()
+    bbox = draw.textbbox((0, 0), label, font=font)
     tw = bbox[2] - bbox[0]
-    draw.text(((fetch_w - tw) // 2, fetch_h // 2 - 30), text, font=font, fill=(120, 120, 160))
-    return placeholder
+    th = bbox[3] - bbox[1]
+    x = (width - tw) // 2
+    y = (height - th) // 2
+    # Dark shadow + light text
+    draw.text((x + 2, y + 2), label, font=font, fill=(0, 0, 0))
+    draw.text((x, y), label, font=font, fill=(200, 210, 230))
+
+    return bg
 
 
 # ========== VIDEO ASSEMBLY ==========
@@ -718,8 +839,8 @@ Return a JSON object with these fields:
 6. "before_text" - pain point description (if template is before_after, max 15 words)
 7. "after_text" - solution description (if template is before_after, max 15 words)
 8. "badge_text" - short badge/label text like "NEW" or "LIMITED OFFER" (if template is story_reel)
-9. "color_palette" - array of 3 hex colors that match the brand/industry
-10. "image_keywords" - array of 2-3 simple nouns for stock photo search
+9. "color_palette" - array of 3 hex colors: [background_dark, background_medium, accent]. Use PROFESSIONAL, MUTED, DARK tones. NO bright neon colors. Examples: finance=["#0f172a","#1e3a5f","#3b82f6"], real estate=["#1a1a2e","#16213e","#e2e8f0"], health=["#0d1b2a","#1b4332","#10b981"]. The first two colors should be dark (for gradient background), the third is an accent.
+10. "image_keywords" - array of 2-3 SPECIFIC nouns that directly represent the product visually. For real estate use ["apartment","building","interior"]. For trading use ["stock chart","trading desk","finance"]. For food use ["restaurant","dish","chef"]. Be SPECIFIC to the actual product, not generic.
 
 Return ONLY valid JSON, no additional text or markdown."""
 
@@ -984,16 +1105,28 @@ async def get_video_status():
     """Check video generation capabilities."""
     has_ffmpeg = shutil.which("ffmpeg") is not None
 
+    has_edge_tts = False
     try:
         import edge_tts
-        has_tts = True
+        has_edge_tts = True
     except ImportError:
-        has_tts = False
+        pass
+
+    has_gtts = False
+    try:
+        from gtts import gTTS
+        has_gtts = True
+    except ImportError:
+        pass
 
     return {
         "ffmpeg_available": has_ffmpeg,
-        "edge_tts_available": has_tts,
+        "edge_tts_available": has_edge_tts,
+        "gtts_available": has_gtts,
+        "tts_available": has_edge_tts or has_gtts,
         "openrouter_available": bool(get_openrouter_key()),
+        "pexels_available": bool(os.getenv("PEXELS_API_KEY")),
+        "pixabay_available": bool(os.getenv("PIXABAY_API_KEY")),
         "templates_count": len(TEMPLATES),
         "max_duration": MAX_DURATION,
     }
