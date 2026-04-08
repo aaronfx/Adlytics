@@ -42,6 +42,7 @@ try:
     from backend.routes.video_funnel import router as video_funnel_router
     from backend.routes.meta_ads import router as meta_router
     from backend.routes.creative_gen import router as creative_router
+    from backend.routes.video_gen import router as video_gen_router
     logger.info("Successfully imported all routers")
 except ImportError as e:
     logger.warning(f"Failed to import routers: {e}")
@@ -50,6 +51,7 @@ except ImportError as e:
     video_funnel_router = None
     meta_router = None
     creative_router = None
+    video_gen_router = None
 
 # Mount routers
 if analyze_router:
@@ -62,6 +64,8 @@ if meta_router:
     app.include_router(meta_router, prefix="/api")
 if creative_router:
     app.include_router(creative_router, prefix="/api")
+if video_gen_router:
+    app.include_router(video_gen_router, prefix="/api")
 
 # Health endpoint
 @app.get("/health")

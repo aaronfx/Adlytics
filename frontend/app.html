@@ -1187,6 +1187,9 @@
                 <button class="tab-button" data-tab="create" onclick="switchTab('create')">
                     <span class="tab-icon">🖼️</span> <span class="tab-label">Create</span>
                 </button>
+                <button class="tab-button" data-tab="video" onclick="switchTab('video')">
+                    <span class="tab-icon">🎬</span> <span class="tab-label">Video</span>
+                </button>
                 <button class="tab-button" data-tab="campaigns" onclick="switchTab('campaigns')">
                     <span class="tab-icon">📡</span> <span class="tab-label">Campaigns</span>
                 </button>
@@ -1586,6 +1589,115 @@
                 <div id="creativeResults"></div>
             </div>
 
+            <!-- ===== VIDEO ADS TAB ===== -->
+            <div class="tab-panel" id="panel-video">
+                <div class="card mb-4">
+                    <div class="card-title">🎬 AI Video Ad Generator <span style="font-size:0.7rem;background:linear-gradient(135deg,#8B5CF6,#6366F1);padding:2px 8px;border-radius:99px;margin-left:8px;font-weight:500;">NEW</span></div>
+                    <form id="videoForm" class="form-section">
+                        <div class="form-group">
+                            <label class="form-label">Product / Service Description</label>
+                            <textarea class="form-textarea" name="product_description" placeholder="e.g., Premium 3-bedroom apartments in Kaduna with modern finishes. Starting from ₦15M." required style="min-height:80px;"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Video Template</label>
+                                <select class="form-select" name="template">
+                                    <option value="product_showcase">Product Showcase — zoom-in image + headline</option>
+                                    <option value="kinetic_text">Kinetic Typography — bold animated text</option>
+                                    <option value="before_after">Before / After — side-by-side comparison</option>
+                                    <option value="story_reel">Story / Reel — vertical with swipe-up CTA</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Aspect Ratio</label>
+                                <select class="form-select" name="aspect_ratio">
+                                    <option value="1:1">1:1 Square (Feed)</option>
+                                    <option value="16:9">16:9 Landscape (YouTube)</option>
+                                    <option value="9:16">9:16 Vertical (Stories/Reels)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Duration (seconds)</label>
+                                <div style="display:flex;align-items:center;gap:0.75rem;">
+                                    <input type="range" name="duration" min="3" max="30" value="6" style="flex:1;accent-color:#6366F1;" oninput="document.getElementById('durationLabel').textContent=this.value+'s'">
+                                    <span id="durationLabel" style="font-weight:600;color:var(--accent-indigo);min-width:2.5rem;">6s</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Industry</label>
+                                <select class="form-select" name="industry">
+                                    <option value="general">General</option>
+                                    <option value="real_estate">Real Estate</option>
+                                    <option value="ecommerce">E-Commerce</option>
+                                    <option value="finance">Finance</option>
+                                    <option value="saas">SaaS</option>
+                                    <option value="healthcare">Healthcare</option>
+                                    <option value="travel">Travel</option>
+                                    <option value="food">Food & Beverage</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Voiceover Options -->
+                        <div style="padding:1rem;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;margin-bottom:1rem;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                                <label style="font-weight:600;font-size:0.9rem;">🎙️ AI Voiceover</label>
+                                <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.82rem;">
+                                    <input type="checkbox" name="enable_voiceover" checked style="accent-color:#6366F1;width:16px;height:16px;">
+                                    Enabled
+                                </label>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" style="font-size:0.78rem;">Voice</label>
+                                    <select class="form-select" name="voice">
+                                        <option value="female_us">Female — US English</option>
+                                        <option value="male_us">Male — US English</option>
+                                        <option value="female_uk">Female — UK English</option>
+                                        <option value="male_uk">Male — UK English</option>
+                                        <option value="female_ng">Female — Nigerian English</option>
+                                        <option value="male_ng">Male — Nigerian English</option>
+                                        <option value="female_au">Female — Australian</option>
+                                        <option value="male_au">Male — Australian</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" style="font-size:0.78rem;">Speed</label>
+                                    <select class="form-select" name="voice_speed">
+                                        <option value="-20%">Slow</option>
+                                        <option value="+0%" selected>Normal</option>
+                                        <option value="+15%">Fast</option>
+                                        <option value="+30%">Very Fast</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Brand Name (optional)</label>
+                                <input type="text" class="form-input" name="brand_name" placeholder="e.g., Adlytics">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Upload Image (optional)</label>
+                                <input type="file" name="uploaded_image" accept="image/*" class="form-input" style="padding:0.45rem;">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;">
+                            <span id="videoButtonText">Generate Video Ad</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="videoError" class="hidden"></div>
+                <div id="videoResults"></div>
+            </div>
+
             <!-- ===== CAMPAIGNS TAB (META ADS) ===== -->
             <div class="tab-panel" id="panel-campaigns">
                 <div class="card mb-4">
@@ -1763,6 +1875,7 @@
             document.getElementById('rewriteForm')?.addEventListener('submit', handleRewriteSubmit);
             document.getElementById('brandVoiceForm')?.addEventListener('submit', handleBrandVoiceSubmit);
             document.getElementById('creativeForm')?.addEventListener('submit', handleCreativeSubmit);
+            document.getElementById('videoForm')?.addEventListener('submit', handleVideoSubmit);
 
             document.getElementById('adVideoInput')?.addEventListener('change', (e) => {
                 showFileInfo(e.target, 'adVideoInfo');
@@ -3233,6 +3346,114 @@
                         <span style="font-size:0.78rem;color:var(--text-muted);">Mode: <strong style="color:var(--accent-indigo);">${mode === 'dalle3' ? 'DALL-E 3' : mode === 'stock' ? 'Stock Photo' : 'AI Mockup'}</strong></span>
                     </div>
                     <div class="variants-grid">${variantsHtml}</div>
+                </div>
+            `;
+        }
+
+        // ===== VIDEO AD GENERATION =====
+        async function handleVideoSubmit(e) {
+            e.preventDefault();
+            clearError('videoError');
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const btnText = document.getElementById('videoButtonText');
+            const originalText = btnText.textContent;
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner-icon"></span> Generating video... (this may take 30-90s)';
+
+            try {
+                const formData = new FormData(form);
+
+                // Handle checkbox (unchecked = not sent)
+                if (!form.querySelector('[name="enable_voiceover"]').checked) {
+                    formData.set('enable_voiceover', 'false');
+                } else {
+                    formData.set('enable_voiceover', 'true');
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min timeout for video
+
+                const response = await fetch(`${API_BASE}/api/video/generate`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+                btn.disabled = false;
+                btnText.textContent = originalText;
+
+                if (!response.ok || !result.success) {
+                    showError('videoError', result.detail || result.error || 'Video generation failed.');
+                    return;
+                }
+
+                displayVideoResults(result.data);
+            } catch (error) {
+                btn.disabled = false;
+                btnText.textContent = originalText;
+                if (error.name === 'AbortError') {
+                    showError('videoError', 'Request timed out. Video rendering can take a while — try a shorter duration.');
+                } else {
+                    showError('videoError', 'Network error. Please try again.');
+                }
+                console.error(error);
+            }
+        }
+
+        function displayVideoResults(data) {
+            const container = document.getElementById('videoResults');
+            const script = data.script || {};
+
+            container.innerHTML = `
+                <div class="card mb-4" style="animation:fadeInSlideUp 0.4s ease both;">
+                    <div class="card-title">🎬 Your Video Ad</div>
+
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                        <span style="font-size:0.78rem;padding:0.25rem 0.75rem;background:rgba(99,102,241,0.12);border-radius:99px;color:#818cf8;">${data.template?.replace(/_/g,' ') || 'video'}</span>
+                        <span style="font-size:0.78rem;padding:0.25rem 0.75rem;background:rgba(16,185,129,0.12);border-radius:99px;color:#34d399;">${data.duration}s</span>
+                        <span style="font-size:0.78rem;padding:0.25rem 0.75rem;background:rgba(245,158,11,0.12);border-radius:99px;color:#fbbf24;">${data.resolution}</span>
+                        <span style="font-size:0.78rem;padding:0.25rem 0.75rem;background:rgba(139,92,246,0.12);border-radius:99px;color:#a78bfa;">${data.has_voiceover ? 'With Voiceover' : 'No Voiceover'}</span>
+                        <span style="font-size:0.78rem;padding:0.25rem 0.75rem;background:rgba(255,255,255,0.06);border-radius:99px;color:var(--text-muted);">${data.file_size_mb} MB</span>
+                    </div>
+
+                    <!-- Video Player -->
+                    <div style="border-radius:12px;overflow:hidden;background:#000;margin-bottom:1rem;">
+                        <video controls autoplay style="width:100%;max-height:500px;display:block;">
+                            <source src="${API_BASE}${data.video_url}" type="video/mp4">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+
+                    <!-- Script Preview -->
+                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+                        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;color:#818cf8;">AI-Generated Script</div>
+                        <div style="margin-bottom:0.5rem;">
+                            <span style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Headline</span>
+                            <div style="font-weight:700;font-size:1rem;">${script.headline || ''}</div>
+                        </div>
+                        <div style="margin-bottom:0.5rem;">
+                            <span style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Body</span>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">${script.body_copy || ''}</div>
+                        </div>
+                        ${script.voiceover_script ? `
+                        <div style="margin-bottom:0.5rem;">
+                            <span style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Voiceover</span>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);font-style:italic;">"${script.voiceover_script}"</div>
+                        </div>` : ''}
+                        <div>
+                            <span style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">CTA</span>
+                            <div style="display:inline-block;padding:0.3rem 0.8rem;background:var(--accent-indigo);color:white;border-radius:6px;font-size:0.82rem;font-weight:600;">${script.cta_text || ''}</div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display:flex;gap:0.75rem;">
+                        <a href="${API_BASE}${data.video_url}" download="adlytics_video.mp4" class="btn btn-primary" style="flex:1;text-align:center;text-decoration:none;">Download MP4</a>
+                        <button type="button" onclick="navigator.clipboard.writeText('${(script.voiceover_script||'').replace(/'/g,"\\'")}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',1500);" class="btn btn-secondary" style="flex:1;">Copy Script</button>
+                    </div>
                 </div>
             `;
         }
