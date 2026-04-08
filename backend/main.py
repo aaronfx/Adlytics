@@ -43,6 +43,7 @@ try:
     from backend.routes.meta_ads import router as meta_router
     from backend.routes.creative_gen import router as creative_router
     from backend.routes.video_gen import router as video_gen_router
+    from backend.routes.website_scanner import router as scanner_router
     logger.info("Successfully imported all routers")
 except ImportError as e:
     logger.warning(f"Failed to import routers: {e}")
@@ -52,6 +53,7 @@ except ImportError as e:
     meta_router = None
     creative_router = None
     video_gen_router = None
+    scanner_router = None
 
 # Mount routers
 if analyze_router:
@@ -66,6 +68,8 @@ if creative_router:
     app.include_router(creative_router, prefix="/api")
 if video_gen_router:
     app.include_router(video_gen_router, prefix="/api")
+if scanner_router:
+    app.include_router(scanner_router, prefix="/api")
 
 # Health endpoint
 @app.get("/health")
