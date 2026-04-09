@@ -549,37 +549,49 @@ Return ONLY valid JSON with this structure:
     "brand_gaps": ["gap1", "gap2"]
   }},
   "competitive_landscape": {{
-    "likely_competitors": ["competitor1", "competitor2", "competitor3"],
-    "competitive_advantages": ["advantage1", "advantage2"],
-    "competitive_disadvantages": ["weakness1", "weakness2"],
-    "market_gaps": ["gap1", "gap2"],
-    "differentiation_opportunity": "One sentence describing the biggest untapped positioning angle"
+    "likely_competitors": [
+      {{
+        "name": "Competitor name",
+        "positioning": "How they position themselves in 1 sentence",
+        "strength": "Their biggest advantage over this business",
+        "weakness": "Their biggest vulnerability this business can exploit"
+      }}
+    ],
+    "competitive_advantages": ["Specific advantage with evidence from the site — not generic like 'innovative technology'"],
+    "competitive_disadvantages": ["Honest weakness — e.g. 'No social proof visible, competitor X has 500+ reviews on G2'"],
+    "market_gaps": ["Specific unserved need — e.g. 'No competitor offers real-time AI mentorship for beginners'"],
+    "differentiation_opportunity": "One sentence positioning angle that NO competitor owns, referencing actual features from the site",
+    "positioning_matrix": "Where this business sits vs competitors: price (low/mid/premium) x approach (traditional/modern/AI-first)"
   }},
   "ad_strategy": {{
-    "recommended_funnel_stage": "Stage + why",
-    "emotional_trigger": "Strongest emotional trigger",
+    "recommended_funnel_stage": "Stage + why — e.g. 'TOFU awareness because brand has <1000 monthly visitors and no retargeting pixel'",
+    "emotional_trigger": "Strongest emotional trigger with WHY it works for this specific audience",
     "best_platforms": [
       {{
         "platform": "Platform name",
-        "reason": "Why this platform fits",
-        "recommended_budget_usd": "Monthly budget range in USD",
-        "expected_result": "Realistic expected outcome for that budget"
+        "reason": "Why this platform fits THIS business specifically, referencing audience demographics",
+        "recommended_budget_usd": "Specific monthly range e.g. '$500-$800/mo' — NOT vague like 'moderate budget'",
+        "expected_cpm": "Expected CPM range for this industry/platform e.g. '$8-$15'",
+        "expected_cpc": "Expected CPC range e.g. '$0.80-$2.50'",
+        "expected_ctr": "Expected CTR e.g. '1.2%-2.5%'",
+        "projected_roas": "Projected ROAS e.g. '2.5x-4x' with reasoning",
+        "expected_result": "Specific projected outcome e.g. '150-300 landing page visits, 15-30 signups at 10% CVR'"
       }}
     ],
-    "posting_frequency": "Recommended posting cadence with reasoning",
-    "ab_test_recommendation": "One specific A/B test to run first and why"
+    "posting_frequency": "Specific cadence e.g. '3x/week on Instagram Reels, 2x/week LinkedIn carousel' — not just 'regular posting'",
+    "ab_test_recommendation": "One specific A/B test with exact variants to test and expected learning — e.g. 'Test benefit headline vs pain-point headline on Meta, run for 7 days at $20/day, expect 95% confidence with 2000 impressions per variant'"
   }},
   "ad_angles": [
     {{
       "angle_name": "Short name",
-      "strategy": "Marketing principle",
-      "headline": "Ad headline (max 10 words)",
-      "body_copy": "4-6 sentence ad copy. SPECIFIC to this business with actual feature names.",
-      "cta": "CTA text",
-      "hook_line": "Opening scroll-stopper line",
+      "strategy": "Marketing principle (Benefit-Led, PAS, Social Proof, or Scarcity)",
+      "headline": "Ad headline (max 10 words) — MUST include the brand name or a specific product name",
+      "body_copy": "4-6 sentence ad copy. MUST reference at least 2 REAL product/feature names from the website. MUST include at least 1 specific number (price, stat, percentage, timeframe). NO generic phrases like 'innovative solutions' or 'cutting-edge technology'. Every sentence must be something ONLY this business could say.",
+      "cta": "CTA text — specific to the offer, not generic 'Learn More'",
+      "hook_line": "Opening scroll-stopper that references a SPECIFIC pain point or desire of the target audience — not generic curiosity bait",
       "predicted_effectiveness": 85,
       "best_platform": "Platform",
-      "why_this_works": "1-2 sentences explaining the psychological mechanism"
+      "why_this_works": "Name the specific psychological principle (loss aversion, social proof, anchoring, etc.) and explain how THIS headline/copy triggers it for THIS audience"
     }}
   ],
   "creative_brief": {{
@@ -591,27 +603,32 @@ Return ONLY valid JSON with this structure:
   }},
   "funnel_intelligence": {{
     "landing_page_score": 0,
-    "landing_page_assessment": "2 sentence assessment",
-    "strengths": ["strength1", "strength2"],
-    "conversion_blockers": ["blocker1", "blocker2"],
-    "conversion_leaks": ["leak1", "leak2"],
-    "retargeting_angle": "Retargeting message",
-    "recommended_cta": "The single best CTA for this business and why",
-    "pre_spend_checklist": ["item1", "item2", "item3", "item4"]
+    "landing_page_assessment": "2-3 sentence assessment analyzing: (1) above-the-fold clarity — can a visitor understand what you sell in 5 seconds? (2) CTA visibility — how many clicks to convert? (3) trust signals present or missing",
+    "above_fold_verdict": "What a visitor sees in the first 5 seconds — is the value prop clear? Is there a CTA visible? Rate: Clear/Confusing/Missing",
+    "strengths": ["Specific strength with evidence — e.g. 'Clear pricing page with comparison table reduces decision friction'"],
+    "conversion_blockers": ["Specific blocker — e.g. 'No visible testimonials or case studies anywhere on the site, killing trust at MOFU'"],
+    "conversion_leaks": ["Specific leak with funnel stage — e.g. 'Homepage → Pricing has no intermediate step, losing visitors who need education first (TOFU drop-off)'"],
+    "form_analysis": "How many form fields? Is there a free trial/demo? How many steps to signup? Friction assessment.",
+    "trust_signal_audit": "List what trust signals exist (reviews, logos, certifications, guarantees) and what critical ones are MISSING",
+    "retargeting_angle": "Specific retargeting message referencing the most common drop-off point — not generic 'come back'",
+    "recommended_cta": "The single best CTA with exact wording and WHY it works for this business's funnel stage — e.g. 'Start Free Trial (no card required)' reduces risk objection for SaaS with freemium model",
+    "pre_spend_checklist": ["Specific actionable item — e.g. 'Add 3 customer testimonials with real names and company logos to homepage'", "item2", "item3", "item4"]
   }}
 }}
 
 RULES:
-- EXACTLY 4 ad_angles, ranked by predicted_effectiveness (highest first). Each body_copy: 4-6 sentences referencing REAL features.
-- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors, 3 buying_triggers.
-- best_platforms: provide 2-3 platforms with realistic budgets. Budget should be appropriate for the business size/industry.
-- pre_spend_checklist: 4-6 items SPECIFIC to this business that must be done before spending on ads. Not generic advice.
-- brand_gaps: honest weaknesses in their current brand presentation.
-- competitive_disadvantages: honest areas where competitors are stronger. Businesses need truth, not flattery.
-- conversion_leaks: specific points where potential customers are dropping off based on the website analysis.
-- landing_page_score: 0-100 based on CTA clarity, trust signals, load speed signals, mobile readiness, copy quality.
-- buying_triggers: specific events or emotions that push this audience to purchase NOW.
-- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in features, products, and competitors.
+- EXACTLY 4 ad_angles, ranked by predicted_effectiveness (highest first).
+- SPECIFICITY IS EVERYTHING: Every field must pass the "only this business" test — if you could swap in a competitor's name and it still works, it's too generic. Rewrite it.
+- Ad angle body_copy: 4-6 sentences. MUST include at least 2 real product/feature names AND 1 number. NEVER use phrases like "innovative solutions", "cutting-edge technology", "revolutionize your", "take it to the next level". These are banned.
+- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors (with positioning detail), 3 buying_triggers.
+- best_platforms: provide 2-3 platforms with SPECIFIC dollar budgets, CPM/CPC/CTR estimates, and projected ROAS. Use real industry benchmarks.
+- competitive_landscape: For each competitor, analyze their positioning, biggest strength, and exploitable weakness. Include a positioning_matrix showing where this business sits.
+- funnel_intelligence: Analyze the ACTUAL page structure — above-fold content, form friction, trust signals present/missing, CTA clarity. Score 0-100 based on real assessment.
+- pre_spend_checklist: 4-6 items SPECIFIC to this business. Each item must reference something concrete found (or missing) on the actual website.
+- brand_gaps and competitive_disadvantages: honest weaknesses. Businesses need truth, not flattery.
+- conversion_leaks: identify specific funnel stages where drop-off occurs and WHY.
+- buying_triggers: specific events or emotions that push this audience to purchase NOW — not generic "desire for improvement".
+- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in details, but flag what is inferred vs observed.
 - Each ad angle uses a DIFFERENT strategy: Benefit-Led, Pain-Agitate-Solution, Social Proof, Scarcity/Urgency.
 - Return ONLY valid JSON, no markdown fences, no text outside the JSON."""
 

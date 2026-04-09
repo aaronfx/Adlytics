@@ -2411,9 +2411,17 @@
                 </div>`;
             }).join('');
 
-            const competitorsHtml = (competitive.likely_competitors || []).map(c =>
-                `<span style="display:inline-block;padding:0.25rem 0.6rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;font-size:0.75rem;color:#f87171;">${c}</span>`
-            ).join('');
+            const competitorsHtml = (competitive.likely_competitors || []).map(c => {
+                if (typeof c === 'object' && c !== null) {
+                    return `<div style="padding:0.5rem 0.7rem;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:8px;font-size:0.78rem;margin-bottom:0.3rem;">
+                        <div style="font-weight:600;color:#f87171;">${c.name || 'Unknown'}</div>
+                        ${c.positioning ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;">${c.positioning}</div>` : ''}
+                        ${c.strength ? `<div style="font-size:0.72rem;margin-top:0.1rem;"><span style="color:#10b981;">Strength:</span> ${c.strength}</div>` : ''}
+                        ${c.weakness ? `<div style="font-size:0.72rem;margin-top:0.1rem;"><span style="color:#f59e0b;">Weakness:</span> ${c.weakness}</div>` : ''}
+                    </div>`;
+                }
+                return `<span style="display:inline-block;padding:0.25rem 0.6rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;font-size:0.75rem;color:#f87171;">${c}</span>`;
+            }).join('');
 
             const advantagesHtml = (competitive.competitive_advantages || []).map(a =>
                 `<span style="display:inline-block;padding:0.25rem 0.6rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:6px;font-size:0.75rem;color:#34d399;">${a}</span>`
@@ -2484,7 +2492,8 @@
                     ${(competitive.likely_competitors || []).length > 0 ? `
                     <div style="margin-bottom:1rem;">
                         <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;font-weight:600;">Competitive Landscape</div>
-                        <div style="margin-bottom:0.4rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Competitors:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${competitorsHtml}</span></div>
+                        <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;gap:0.2rem;">${competitorsHtml}</div>
+                        ${competitive.positioning_matrix ? `<div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:rgba(99,102,241,0.06);border-radius:6px;"><span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;">Positioning:</span> <span style="font-size:0.78rem;color:#a78bfa;">${competitive.positioning_matrix}</span></div>` : ''}
                         ${advantagesHtml ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Advantages:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${advantagesHtml}</span></div>` : ''}
                         ${(competitive.competitive_disadvantages || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Weaknesses:</span> <span style="font-size:0.8rem;color:#f87171;">${competitive.competitive_disadvantages.join(' · ')}</span></div>` : ''}
                         ${(competitive.market_gaps || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' · ')}</span></div>` : ''}
@@ -2499,10 +2508,17 @@
                         ${adStrategy.emotional_trigger ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Emotional trigger: <strong style="color:#f472b6;">${adStrategy.emotional_trigger}</strong></div>` : ''}
                         ${adStrategy.best_platform ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Best platform: <strong style="color:#818cf8;">${adStrategy.best_platform}</strong></div>` : ''}
                         ${(adStrategy.best_platforms || []).length ? `
-                        <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;">
-                            ${adStrategy.best_platforms.map(p => `<div style="font-size:0.78rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid #818cf8;">
-                                <strong style="color:#818cf8;">${p.platform}</strong> — ${p.reason || ''}
-                                ${p.recommended_budget_usd ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;">Budget: <strong style="color:#34d399;">${p.recommended_budget_usd}</strong> · Expected: ${p.expected_result || '—'}</div>` : ''}
+                        <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">
+                            ${adStrategy.best_platforms.map(p => `<div style="font-size:0.78rem;padding:0.5rem 0.6rem;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #818cf8;">
+                                <div><strong style="color:#818cf8;">${p.platform}</strong> — ${p.reason || ''}</div>
+                                ${p.recommended_budget_usd ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">Budget: <strong style="color:#34d399;">${p.recommended_budget_usd}</strong></div>` : ''}
+                                ${(p.expected_cpm || p.expected_cpc || p.expected_ctr || p.projected_roas) ? `<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.2rem;font-size:0.7rem;">
+                                    ${p.expected_cpm ? `<span style="color:var(--text-muted);">CPM: <strong style="color:#60a5fa;">${p.expected_cpm}</strong></span>` : ''}
+                                    ${p.expected_cpc ? `<span style="color:var(--text-muted);">CPC: <strong style="color:#60a5fa;">${p.expected_cpc}</strong></span>` : ''}
+                                    ${p.expected_ctr ? `<span style="color:var(--text-muted);">CTR: <strong style="color:#fbbf24;">${p.expected_ctr}</strong></span>` : ''}
+                                    ${p.projected_roas ? `<span style="color:var(--text-muted);">ROAS: <strong style="color:#10b981;">${p.projected_roas}</strong></span>` : ''}
+                                </div>` : ''}
+                                ${p.expected_result ? `<div style="font-size:0.72rem;color:#34d399;margin-top:0.15rem;">${p.expected_result}</div>` : ''}
                             </div>`).join('')}
                         </div>` : ''}
                         ${adStrategy.posting_frequency ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Posting: ${adStrategy.posting_frequency}</div>` : ''}
@@ -2544,6 +2560,15 @@
                             })() : ''}
                         </div>
                         <div style="font-size:0.8rem;color:var(--text-secondary);">${funnel.landing_page_assessment}</div>
+                        ${funnel.above_fold_verdict ? `<div style="font-size:0.78rem;margin-top:0.4rem;padding:0.4rem 0.6rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:3px solid ${funnel.above_fold_verdict.toLowerCase().includes('clear') ? '#10b981' : funnel.above_fold_verdict.toLowerCase().includes('confus') ? '#f59e0b' : '#ef4444'};">
+                            <span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;">Above the Fold:</span> <span style="color:${funnel.above_fold_verdict.toLowerCase().includes('clear') ? '#10b981' : funnel.above_fold_verdict.toLowerCase().includes('confus') ? '#f59e0b' : '#ef4444'};">${funnel.above_fold_verdict}</span>
+                        </div>` : ''}
+                        ${funnel.form_analysis ? `<div style="font-size:0.78rem;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.06);border-radius:6px;">
+                            <span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;">Form Analysis:</span> <span style="color:var(--text-secondary);">${funnel.form_analysis}</span>
+                        </div>` : ''}
+                        ${funnel.trust_signal_audit ? `<div style="font-size:0.78rem;margin-top:0.3rem;padding:0.4rem 0.6rem;background:rgba(16,185,129,0.06);border-radius:6px;">
+                            <span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;">Trust Signals:</span> <span style="color:var(--text-secondary);">${funnel.trust_signal_audit}</span>
+                        </div>` : ''}
                         ${funnel.strengths?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#10b981;font-weight:600;">Strengths:</span> ${funnel.strengths.join(' · ')}</div>` : ''}
                         ${funnel.conversion_leaks?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#ef4444;font-weight:600;">Conversion Leaks:</span> ${funnel.conversion_leaks.join(' · ')}</div>` : ''}
                         ${funnel.conversion_blockers?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:#f87171;">Blockers: ${funnel.conversion_blockers.join(' · ')}</div>` : ''}
