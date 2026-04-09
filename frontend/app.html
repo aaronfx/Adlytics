@@ -2605,7 +2605,7 @@
 
             const gradeColor = (grade) => {
                 if (!grade) return '#6b7280';
-                const g = grade.toUpperCase();
+                const g = String(grade).toUpperCase();
                 if (g.startsWith('A')) return '#10b981';
                 if (g.startsWith('B')) return '#34d399';
                 if (g.startsWith('C')) return '#f59e0b';
