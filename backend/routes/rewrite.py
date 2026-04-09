@@ -422,7 +422,7 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
                     if prod_parts:
                         feat_section += "\n  Products:\n" + "\n".join(f"    • {p}" for p in prod_parts)
                     if features:
-                        feat_section += f"\n  All features: {', '.join(features[:15])}"
+                        feat_section += f"\n  All features: {', '.join(str(f) if isinstance(f, str) else (f.get('name', str(f)) if isinstance(f, dict) else str(f)) for f in features[:15])}"
                     if sb.get("pricing_model"):
                         feat_section += f"\n  Pricing: {sb['pricing_model']}"
                     sections.append(feat_section)
@@ -436,11 +436,11 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
                     if persona.get("demographics"):
                         aud_section += f"\n  Demographics: {persona['demographics']}"
                     if persona.get("pain_points"):
-                        aud_section += f"\n  Pain points: {', '.join(persona['pain_points'])}"
+                        aud_section += f"\n  Pain points: {', '.join(_to_str(p) for p in persona['pain_points'])}"
                     if persona.get("desires"):
-                        aud_section += f"\n  Desires: {', '.join(persona['desires'])}"
+                        aud_section += f"\n  Desires: {', '.join(_to_str(d) for d in persona['desires'])}"
                     if persona.get("objections"):
-                        aud_section += f"\n  Objections: {', '.join(persona['objections'])}"
+                        aud_section += f"\n  Objections: {', '.join(_to_str(o) for o in persona['objections'])}"
                     sections.append(aud_section)
 
                 # ── Brand analysis ──
@@ -454,19 +454,27 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
                     if ba.get("unique_positioning"):
                         brand_section += f"\n  Positioning: {ba['unique_positioning']}"
                     if ba.get("trust_signals"):
-                        brand_section += f"\n  Trust signals: {', '.join(ba['trust_signals'])}"
+                        brand_section += f"\n  Trust signals: {', '.join(_to_str(s) for s in ba['trust_signals'])}"
                     sections.append(brand_section)
 
                 # ── Competitive landscape (competitors, advantages, gaps) ──
+                def _to_str(item):
+                    """Safely convert any item (str, dict, etc.) to a display string."""
+                    if isinstance(item, str):
+                        return item
+                    if isinstance(item, dict):
+                        return item.get("name") or item.get("platform") or item.get("label") or str(item)
+                    return str(item)
+
                 comp = sb.get("competitive_landscape") or {}
                 if comp:
                     comp_section = "COMPETITIVE LANDSCAPE:"
                     if comp.get("likely_competitors"):
-                        comp_section += f"\n  Competitors: {', '.join(comp['likely_competitors'])}"
+                        comp_section += f"\n  Competitors: {', '.join(_to_str(c) for c in comp['likely_competitors'])}"
                     if comp.get("competitive_advantages"):
-                        comp_section += f"\n  Our advantages over them: {', '.join(comp['competitive_advantages'])}"
+                        comp_section += f"\n  Our advantages over them: {', '.join(_to_str(a) for a in comp['competitive_advantages'])}"
                     if comp.get("market_gaps"):
-                        comp_section += f"\n  Market gaps to exploit: {', '.join(comp['market_gaps'])}"
+                        comp_section += f"\n  Market gaps to exploit: {', '.join(_to_str(g) for g in comp['market_gaps'])}"
                     sections.append(comp_section)
 
                 # ── Ad strategy ──
@@ -504,7 +512,7 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
                     if funnel.get("landing_page_assessment"):
                         funnel_section += f"\n  Landing page: {funnel['landing_page_assessment']}"
                     if funnel.get("conversion_blockers"):
-                        funnel_section += f"\n  Conversion blockers: {', '.join(funnel['conversion_blockers'])}"
+                        funnel_section += f"\n  Conversion blockers: {', '.join(_to_str(b) for b in funnel['conversion_blockers'])}"
                     if funnel.get("retargeting_angle"):
                         funnel_section += f"\n  Retargeting angle: {funnel['retargeting_angle']}"
                     sections.append(funnel_section)
