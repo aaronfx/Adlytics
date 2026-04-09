@@ -2638,7 +2638,7 @@
             };
             const extractComment = (v) => {
                 if (typeof v !== 'object' || !v) return '';
-                return v.comment || v.feedback || v.description || v.reason || '';
+                return v.note || v.comment || v.feedback || v.description || v.reason || '';
             };
 
             const gradeColor = (grade) => {
@@ -2665,26 +2665,46 @@
                 </div>`;
             }).join('');
 
-            const genericFlags = (critique.generic_flags || []).map(f =>
-                `<div style="font-size:0.78rem;color:#f87171;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>⚠️</span> ${toText(f)}</div>`
-            ).join('');
+            const genericFlags = (critique.generic_flags || []).map(f => {
+                if (typeof f === 'string') return `<div style="font-size:0.78rem;color:#f87171;padding:0.3rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>⚠️</span> ${f}</div>`;
+                return `<div style="padding:0.4rem 0.5rem;background:rgba(239,68,68,0.04);border-radius:6px;margin-bottom:0.3rem;">
+                    ${f.section ? `<div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">${f.section}</div>` : ''}
+                    ${f.flagged_text ? `<div style="font-size:0.78rem;color:#f87171;font-style:italic;">"${f.flagged_text}"</div>` : ''}
+                    ${f.why_its_generic || f.why_generic ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.15rem;">${f.why_its_generic || f.why_generic}</div>` : ''}
+                    ${f.improved_version || f.fix ? `<div style="font-size:0.78rem;color:#34d399;margin-top:0.15rem;">✓ ${f.improved_version || f.fix}</div>` : ''}
+                </div>`;
+            }).join('');
 
-            const missingInsights = (critique.missing_insights || []).map(m =>
-                `<div style="font-size:0.78rem;color:#fbbf24;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>💡</span> ${toText(m)}</div>`
-            ).join('');
+            const missingInsights = (critique.missing_insights || []).map(m => {
+                if (typeof m === 'string') return `<div style="font-size:0.78rem;color:#fbbf24;padding:0.3rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>💡</span> ${m}</div>`;
+                return `<div style="padding:0.4rem 0.5rem;background:rgba(251,191,36,0.04);border-radius:6px;margin-bottom:0.3rem;">
+                    <div style="font-size:0.78rem;color:#fbbf24;font-weight:600;">💡 ${m.insight || m.title || toText(m)}</div>
+                    ${m.why_it_matters ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.1rem;">${m.why_it_matters}</div>` : ''}
+                    ${m.recommended_addition || m.recommendation ? `<div style="font-size:0.78rem;color:#34d399;margin-top:0.1rem;">→ ${m.recommended_addition || m.recommendation}</div>` : ''}
+                </div>`;
+            }).join('');
 
-            const topActions = (critique.top_3_actions || []).map((a, i) =>
-                `<div style="font-size:0.8rem;color:var(--text-primary);padding:0.35rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.3rem;"><strong style="color:#818cf8;">${i+1}.</strong> ${toText(a)}</div>`
-            ).join('');
+            const topActions = (critique.top_3_actions || []).map((a, i) => {
+                if (typeof a === 'string') return `<div style="font-size:0.8rem;color:var(--text-primary);padding:0.35rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.3rem;"><strong style="color:#818cf8;">${i+1}.</strong> ${a}</div>`;
+                return `<div style="padding:0.45rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.4rem;">
+                    <div style="font-size:0.82rem;color:var(--text-primary);font-weight:600;"><strong style="color:#818cf8;">${i+1}.</strong> ${a.action || a.title || toText(a)}</div>
+                    ${a.reason ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.15rem;">${a.reason}</div>` : ''}
+                    <div style="display:flex;gap:0.8rem;margin-top:0.15rem;font-size:0.72rem;color:var(--text-muted);">
+                        ${a.time_to_complete ? `<span>⏱ ${a.time_to_complete}</span>` : ''}
+                        ${a.expected_impact ? `<span>📈 ${a.expected_impact}</span>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
 
             const upgradedAngles = (critique.upgraded_ad_angles || []).map(a => {
                 if (typeof a === 'string') return `<div style="padding:0.5rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.4rem;font-size:0.8rem;color:var(--text-secondary);">${a}</div>`;
                 return `
-                <div style="padding:0.5rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.4rem;">
-                    <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.2rem;">${a.angle_name || a.name || 'Upgraded Angle'}</div>
-                    ${a.headline ? `<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;">"${a.headline}"</div>` : ''}
-                    ${a.body_copy || a.body ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">${a.body_copy || a.body}</div>` : ''}
-                    ${a.why_upgraded || a.reason ? `<div style="font-size:0.75rem;color:#a78bfa;margin-top:0.2rem;font-style:italic;">↑ ${a.why_upgraded || a.reason}</div>` : ''}
+                <div style="padding:0.6rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.5rem;">
+                    ${a.original_headline ? `<div style="font-size:0.75rem;color:#f87171;text-decoration:line-through;margin-bottom:0.3rem;">"${a.original_headline}"</div>` : ''}
+                    ${a.problem ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.3rem;">${a.problem}</div>` : ''}
+                    <div style="font-size:0.85rem;font-weight:700;color:#34d399;margin-bottom:0.2rem;">"${a.upgraded_headline || a.headline || ''}"</div>
+                    ${a.upgraded_body || a.body_copy ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">${a.upgraded_body || a.body_copy}</div>` : ''}
+                    ${a.upgraded_hook ? `<div style="font-size:0.75rem;color:#a78bfa;margin-top:0.25rem;font-style:italic;">Hook: "${a.upgraded_hook}"</div>` : ''}
                 </div>`;
             }).join('');
 
