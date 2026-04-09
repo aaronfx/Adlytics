@@ -238,13 +238,16 @@
             margin-left: 240px;
             flex: 1;
             min-width: 0;
+            overflow-y: auto;
         }
 
         /* Mobile hamburger */
         .mobile-header {
             display: none;
-            background: rgba(12, 14, 22, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(12, 14, 22, 0.97);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding: 0.75rem 1rem;
             align-items: center;
             justify-content: space-between;
@@ -1350,7 +1353,10 @@
             </div>
         </nav>
 
-        <!-- ===== MOBILE HEADER ===== -->
+        <!-- ===== MAIN CONTENT AREA ===== -->
+        <div class="sidebar-content-area">
+
+        <!-- ===== MOBILE HEADER (inside content area for proper sticky) ===== -->
         <div class="mobile-header" id="mobileHeader">
             <button class="hamburger-btn" onclick="toggleSidebar()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -1361,8 +1367,6 @@
             <div style="width:24px;"></div>
         </div>
 
-        <!-- ===== MAIN CONTENT AREA ===== -->
-        <div class="sidebar-content-area">
     <div class="min-h-screen flex flex-col">
 
         <!-- ===== PROGRESS BAR ===== -->
