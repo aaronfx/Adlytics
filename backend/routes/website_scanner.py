@@ -503,14 +503,16 @@ async def analyze_with_ai(content_package: str, url: str) -> Dict[str, Any]:
     if not get_openrouter_key():
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
 
-    prompt = f"""You are ADLYTICS — a senior performance marketing strategist with 15 years experience in digital advertising, brand positioning, and conversion optimization. You've been hired to analyze a business from their website and produce a comprehensive marketing intelligence report.
+    prompt = f"""You are ADLYTICS — a senior performance marketing strategist, conversion optimizer, and growth advisor with 15+ years experience scaling brands through paid ads across every major platform. You combine the analytical rigor of a top consultant with the creative instincts of an award-winning ad agency director.
+
+When analyzing a business, your intelligence is SPECIFIC (never generic filler), ACTIONABLE (clear next steps), MARKET-AWARE (realistic pricing, culturally relevant copy), and CONVERSION-OBSESSED (you think in funnels, not just awareness).
 
 WEBSITE CONTENT (crawled from multiple pages):
 {content_package}
 
-YOUR MISSION: Analyze this business deeply and produce a JSON report. DO NOT give shallow generic info — dig into what makes this business specific. If the website content is limited, make strategic inferences from the industry, positioning, and any signals you can find.
+YOUR MISSION: Analyze this business deeply. Produce intelligence so specific that the business owner reads it and thinks "this tool understands my business better than my own team." If the website content is limited, make strategic inferences from industry knowledge.
 
-Return ONLY valid JSON with this structure (keep values concise to fit within token limits):
+Return ONLY valid JSON with this structure:
 
 {{
   "business_profile": {{
@@ -522,7 +524,7 @@ Return ONLY valid JSON with this structure (keep values concise to fit within to
   }},
   "products_and_features": {{
     "main_products": [
-      {{"name": "Product name", "description": "1-2 sentences", "key_benefit": "Top benefit"}}
+      {{"name": "Product name", "description": "1-2 sentences", "key_benefit": "Top benefit", "price": "Price if found or estimated range"}}
     ],
     "all_features": ["feature1", "feature2", "...at least 10 items"],
     "pricing_model": "Pricing approach"
@@ -531,9 +533,11 @@ Return ONLY valid JSON with this structure (keep values concise to fit within to
     "primary_persona": {{
       "description": "2-3 sentences about ideal customer",
       "demographics": "Age, income, location",
+      "psychographics": "Values, lifestyle, attitudes, interests — what drives their identity",
       "pain_points": ["point1", "point2", "point3", "point4"],
       "desires": ["desire1", "desire2", "desire3"],
-      "objections": ["objection1", "objection2", "objection3"]
+      "objections": ["objection1", "objection2", "objection3"],
+      "buying_triggers": ["trigger1", "trigger2", "trigger3"]
     }}
   }},
   "brand_analysis": {{
@@ -541,17 +545,29 @@ Return ONLY valid JSON with this structure (keep values concise to fit within to
     "tone": "Emotional tone",
     "trust_signals": ["signal1", "signal2", "signal3"],
     "unique_positioning": "2 sentence differentiator",
-    "color_mood": "Visual brand feel"
+    "color_mood": "Visual brand feel",
+    "brand_gaps": ["gap1", "gap2"]
   }},
   "competitive_landscape": {{
     "likely_competitors": ["competitor1", "competitor2", "competitor3"],
     "competitive_advantages": ["advantage1", "advantage2"],
-    "market_gaps": ["gap1", "gap2"]
+    "competitive_disadvantages": ["weakness1", "weakness2"],
+    "market_gaps": ["gap1", "gap2"],
+    "differentiation_opportunity": "One sentence describing the biggest untapped positioning angle"
   }},
   "ad_strategy": {{
     "recommended_funnel_stage": "Stage + why",
     "emotional_trigger": "Strongest emotional trigger",
-    "best_platform": "Platform + why"
+    "best_platforms": [
+      {{
+        "platform": "Platform name",
+        "reason": "Why this platform fits",
+        "recommended_budget_usd": "Monthly budget range in USD",
+        "expected_result": "Realistic expected outcome for that budget"
+      }}
+    ],
+    "posting_frequency": "Recommended posting cadence with reasoning",
+    "ab_test_recommendation": "One specific A/B test to run first and why"
   }},
   "ad_angles": [
     {{
@@ -562,7 +578,8 @@ Return ONLY valid JSON with this structure (keep values concise to fit within to
       "cta": "CTA text",
       "hook_line": "Opening scroll-stopper line",
       "predicted_effectiveness": 85,
-      "best_platform": "Platform"
+      "best_platform": "Platform",
+      "why_this_works": "1-2 sentences explaining the psychological mechanism"
     }}
   ],
   "creative_brief": {{
@@ -573,20 +590,32 @@ Return ONLY valid JSON with this structure (keep values concise to fit within to
     "voiceover_style": "Voice direction"
   }},
   "funnel_intelligence": {{
+    "landing_page_score": 0,
     "landing_page_assessment": "2 sentence assessment",
+    "strengths": ["strength1", "strength2"],
     "conversion_blockers": ["blocker1", "blocker2"],
-    "retargeting_angle": "Retargeting message"
+    "conversion_leaks": ["leak1", "leak2"],
+    "retargeting_angle": "Retargeting message",
+    "recommended_cta": "The single best CTA for this business and why",
+    "pre_spend_checklist": ["item1", "item2", "item3", "item4"]
   }}
 }}
 
 RULES:
-- EXACTLY 4 ad_angles, ranked by effectiveness. Each body_copy: 4-6 sentences referencing REAL features.
-- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors.
-- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in features, products, and competitors. A forex platform MUST list features like signals, chart analysis, risk calculator, copy trading, education, etc.
-- Each ad angle uses a DIFFERENT strategy: Benefit-Led, Pain-Agitate-Solution, Social Proof, Scarcity.
+- EXACTLY 4 ad_angles, ranked by predicted_effectiveness (highest first). Each body_copy: 4-6 sentences referencing REAL features.
+- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors, 3 buying_triggers.
+- best_platforms: provide 2-3 platforms with realistic budgets. Budget should be appropriate for the business size/industry.
+- pre_spend_checklist: 4-6 items SPECIFIC to this business that must be done before spending on ads. Not generic advice.
+- brand_gaps: honest weaknesses in their current brand presentation.
+- competitive_disadvantages: honest areas where competitors are stronger. Businesses need truth, not flattery.
+- conversion_leaks: specific points where potential customers are dropping off based on the website analysis.
+- landing_page_score: 0-100 based on CTA clarity, trust signals, load speed signals, mobile readiness, copy quality.
+- buying_triggers: specific events or emotions that push this audience to purchase NOW.
+- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in features, products, and competitors.
+- Each ad angle uses a DIFFERENT strategy: Benefit-Led, Pain-Agitate-Solution, Social Proof, Scarcity/Urgency.
 - Return ONLY valid JSON, no markdown fences, no text outside the JSON."""
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
             OPENROUTER_API,
             headers={
@@ -598,7 +627,7 @@ RULES:
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.6,
-                "max_tokens": 6000,
+                "max_tokens": 7000,
             },
         )
 
@@ -696,3 +725,155 @@ async def scan_website(url: str = Form(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Deep scan failed: {type(e).__name__}: {str(e)}")
+
+
+# ─── Pass 2: CMO Critique ────────────────────────────────────────────
+
+async def run_cmo_critique(report_json: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Pass 2 — A senior CMO reviews the scanner report, grades each section,
+    flags generic filler, identifies missing insights, and produces upgraded
+    versions of the weakest ad angles and copy.
+    """
+    if not get_openrouter_key():
+        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+
+    # Serialize the report for the prompt (truncate if massive)
+    report_str = json.dumps(report_json, indent=1)
+    if len(report_str) > 10000:
+        report_str = report_str[:10000] + "\n... (truncated)"
+
+    prompt = f"""You are a CMO and fractional marketing advisor with 20 years of experience reviewing marketing intelligence reports. You have advised over 200 brands. You are known for being direct, honest, and practically useful. You speak to business owners like a trusted advisor — no fluff, no padding.
+
+A marketing intelligence tool generated the report below. Review it as a senior CMO would. Be brutally honest about what is generic, what is missing, and what is genuinely excellent. Then produce upgraded versions of the weakest sections.
+
+ORIGINAL REPORT:
+{report_str}
+
+Return ONLY valid JSON with this structure:
+
+{{
+  "overall_grade": "A or B or C or D",
+  "overall_verdict": "One honest sentence about the report quality",
+  "section_grades": {{
+    "target_audience": {{ "grade": "A-D", "note": "1 sentence" }},
+    "ad_angles": {{ "grade": "A-D", "note": "1 sentence" }},
+    "funnel_intelligence": {{ "grade": "A-D", "note": "1 sentence" }},
+    "competitive_landscape": {{ "grade": "A-D", "note": "1 sentence" }},
+    "ad_strategy": {{ "grade": "A-D", "note": "1 sentence" }},
+    "brand_analysis": {{ "grade": "A-D", "note": "1 sentence" }}
+  }},
+  "generic_flags": [
+    {{
+      "section": "Section name",
+      "flagged_text": "The exact text that is too generic",
+      "why_its_generic": "Why this fails the specificity test",
+      "improved_version": "A specific, actionable replacement"
+    }}
+  ],
+  "missing_insights": [
+    {{
+      "insight": "What is missing",
+      "why_it_matters": "Business impact of this gap",
+      "recommended_addition": "What should be added"
+    }}
+  ],
+  "top_3_actions": [
+    {{
+      "priority": 1,
+      "action": "Specific action to take",
+      "reason": "Why this matters most right now",
+      "time_to_complete": "Estimated time",
+      "expected_impact": "What this will achieve"
+    }}
+  ],
+  "upgraded_ad_angles": [
+    {{
+      "original_headline": "The original weak headline",
+      "problem": "What is wrong with it",
+      "upgraded_headline": "Better headline",
+      "upgraded_body": "Better 4-6 sentence body copy with REAL product names",
+      "upgraded_hook": "Better scroll-stopping hook"
+    }}
+  ],
+  "cmo_note": "One paragraph of frank, direct advice the business owner needs to hear. Be honest about what matters most and what they should stop worrying about."
+}}
+
+RULES:
+- Grade honestly. Most AI reports deserve a B or C, rarely an A.
+- Flag AT LEAST 2 generic items. If the copy says things like "innovative solutions" or "cutting-edge technology" without specifics, call it out.
+- Identify AT LEAST 2 missing insights that a real CMO would want to see.
+- Upgrade AT LEAST the 2 weakest ad angles with genuinely better copy.
+- The cmo_note should be the kind of advice that makes someone stop and rethink their approach.
+- top_3_actions must be things the business can do THIS WEEK, not long-term strategy.
+- Return ONLY valid JSON, no markdown fences."""
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(
+            OPENROUTER_API,
+            headers={
+                "Authorization": f"Bearer {get_openrouter_key()}",
+                "HTTP-Referer": "https://adlytics.ai",
+                "X-Title": "Adlytics CMO Critique",
+            },
+            json={
+                "model": GPT4O_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 5000,
+            },
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"CMO critique failed: {response.text[:300]}")
+
+        result = response.json()
+        content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        # Strip markdown code fences
+        md_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content)
+        if md_match:
+            content = md_match.group(1)
+
+        content = content.strip()
+        if not content.startswith("{"):
+            obj_match = re.search(r"\{[\s\S]*\}", content)
+            if obj_match:
+                content = obj_match.group(0)
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            try:
+                open_braces = content.count("{") - content.count("}")
+                open_brackets = content.count("[") - content.count("]")
+                repaired = content
+                if repaired.rstrip()[-1] not in ']},"':
+                    repaired += '"'
+                repaired += "]" * max(0, open_brackets)
+                repaired += "}" * max(0, open_braces)
+                return json.loads(repaired)
+            except Exception:
+                print(f"[cmo-critique] JSON parse failed. Content preview: {content[:500]}")
+                raise HTTPException(status_code=500, detail="Failed to parse CMO critique. Try again.")
+
+
+@router.post("/scanner/critique")
+async def critique_report(report: str = Form(...)):
+    """
+    Pass 2 — CMO critique of a scanner report.
+    Takes the full scanner report JSON and returns grades, flags, and upgrades.
+    """
+    try:
+        report_data = json.loads(report)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid report JSON")
+
+    print("[cmo-critique] Running CMO critique on scanner report...")
+    critique = await run_cmo_critique(report_data)
+    print(f"[cmo-critique] Complete. Grade: {critique.get('overall_grade', '?')}")
+
+    return {
+        "success": True,
+        "data": critique,
+    }

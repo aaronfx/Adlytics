@@ -2405,6 +2405,7 @@
                         ${a.best_platform ? `<span>Best on: <strong>${a.best_platform}</strong></span>` : ''}
                     </div>
                     ${a.hook_line ? `<div style="margin-top:0.3rem;font-size:0.75rem;color:#a78bfa;font-style:italic;">Hook: "${a.hook_line}"</div>` : ''}
+                    ${a.why_this_works ? `<div style="margin-top:0.3rem;font-size:0.75rem;color:#34d399;"><span style="font-weight:600;">Why it works:</span> ${a.why_this_works}</div>` : ''}
                 </div>`;
             }).join('');
 
@@ -2460,9 +2461,11 @@
                         <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Target Audience</div>
                         <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${targetAudience.description}</div>
                         ${targetAudience.demographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Demographics: ${targetAudience.demographics}</div>` : ''}
+                        ${targetAudience.psychographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Psychographics: ${targetAudience.psychographics}</div>` : ''}
                         ${targetAudience.pain_points?.length ? `<div style="font-size:0.8rem;margin-top:0.4rem;"><span style="color:#f87171;font-weight:600;">Pain Points:</span> ${targetAudience.pain_points.join(' · ')}</div>` : ''}
                         ${targetAudience.desires?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#34d399;font-weight:600;">Desires:</span> ${targetAudience.desires.join(' · ')}</div>` : ''}
                         ${targetAudience.objections?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#f59e0b;font-weight:600;">Objections:</span> ${targetAudience.objections.join(' · ')}</div>` : ''}
+                        ${targetAudience.buying_triggers?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#a78bfa;font-weight:600;">Buying Triggers:</span> ${targetAudience.buying_triggers.join(' · ')}</div>` : ''}
                     </div>` : ''}
 
                     <!-- Brand Analysis -->
@@ -2472,6 +2475,7 @@
                         <div style="font-size:0.85rem;color:var(--text-secondary);">Voice: <strong>${brandAnalysis.brand_voice}</strong> · Tone: <strong>${brandAnalysis.tone || ''}</strong></div>
                         ${brandAnalysis.unique_positioning ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">${brandAnalysis.unique_positioning}</div>` : ''}
                         ${brandAnalysis.trust_signals?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Trust signals: ${brandAnalysis.trust_signals.join(', ')}</div>` : ''}
+                        ${brandAnalysis.brand_gaps?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#f59e0b;">Brand gaps:</span> ${brandAnalysis.brand_gaps.join(' · ')}</div>` : ''}
                     </div>` : ''}
 
                     <!-- Competitive Landscape -->
@@ -2480,7 +2484,9 @@
                         <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;font-weight:600;">Competitive Landscape</div>
                         <div style="margin-bottom:0.4rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Competitors:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${competitorsHtml}</span></div>
                         ${advantagesHtml ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Advantages:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${advantagesHtml}</span></div>` : ''}
-                        ${(competitive.market_gaps || []).length ? `<div><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' · ')}</span></div>` : ''}
+                        ${(competitive.competitive_disadvantages || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Weaknesses:</span> <span style="font-size:0.8rem;color:#f87171;">${competitive.competitive_disadvantages.join(' · ')}</span></div>` : ''}
+                        ${(competitive.market_gaps || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' · ')}</span></div>` : ''}
+                        ${competitive.differentiation_opportunity ? `<div><span style="font-size:0.75rem;color:var(--text-muted);">Differentiation:</span> <span style="font-size:0.8rem;color:#34d399;">${competitive.differentiation_opportunity}</span></div>` : ''}
                     </div>` : ''}
 
                     <!-- Ad Strategy -->
@@ -2490,6 +2496,15 @@
                         <div style="font-size:0.8rem;color:var(--text-secondary);">${adStrategy.recommended_funnel_stage}</div>
                         ${adStrategy.emotional_trigger ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Emotional trigger: <strong style="color:#f472b6;">${adStrategy.emotional_trigger}</strong></div>` : ''}
                         ${adStrategy.best_platform ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Best platform: <strong style="color:#818cf8;">${adStrategy.best_platform}</strong></div>` : ''}
+                        ${(adStrategy.best_platforms || []).length ? `
+                        <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;">
+                            ${adStrategy.best_platforms.map(p => `<div style="font-size:0.78rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid #818cf8;">
+                                <strong style="color:#818cf8;">${p.platform}</strong> — ${p.reason || ''}
+                                ${p.recommended_budget_usd ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;">Budget: <strong style="color:#34d399;">${p.recommended_budget_usd}</strong> · Expected: ${p.expected_result || '—'}</div>` : ''}
+                            </div>`).join('')}
+                        </div>` : ''}
+                        ${adStrategy.posting_frequency ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Posting: ${adStrategy.posting_frequency}</div>` : ''}
+                        ${adStrategy.ab_test_recommendation ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:#a78bfa;">A/B Test: ${adStrategy.ab_test_recommendation}</div>` : ''}
                     </div>` : ''}
 
                     <!-- All Ad Angles -->
@@ -2510,12 +2525,35 @@
 
                     <!-- Funnel Intelligence -->
                     ${funnel.landing_page_assessment ? `
-                    <div style="padding:0.6rem;background:rgba(245,158,11,0.04);border-radius:8px;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Funnel Intelligence</div>
+                    <div style="padding:0.6rem;background:rgba(245,158,11,0.04);border-radius:8px;margin-bottom:1rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Funnel Intelligence</div>
+                            ${funnel.landing_page_score ? `<div style="display:flex;align-items:center;gap:0.4rem;">
+                                <span style="font-size:0.7rem;color:var(--text-muted);">Landing Page Score</span>
+                                <span style="font-size:1rem;font-weight:700;color:${parseInt(funnel.landing_page_score) >= 7 ? '#10b981' : parseInt(funnel.landing_page_score) >= 5 ? '#f59e0b' : '#ef4444'};background:${parseInt(funnel.landing_page_score) >= 7 ? 'rgba(16,185,129,0.12)' : parseInt(funnel.landing_page_score) >= 5 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)'};padding:0.15rem 0.5rem;border-radius:6px;">${funnel.landing_page_score}/10</span>
+                            </div>` : ''}
+                        </div>
                         <div style="font-size:0.8rem;color:var(--text-secondary);">${funnel.landing_page_assessment}</div>
-                        ${funnel.conversion_blockers?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:#f87171;">Blockers: ${funnel.conversion_blockers.join(' · ')}</div>` : ''}
+                        ${funnel.strengths?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#10b981;font-weight:600;">Strengths:</span> ${funnel.strengths.join(' · ')}</div>` : ''}
+                        ${funnel.conversion_leaks?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#ef4444;font-weight:600;">Conversion Leaks:</span> ${funnel.conversion_leaks.join(' · ')}</div>` : ''}
+                        ${funnel.conversion_blockers?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:#f87171;">Blockers: ${funnel.conversion_blockers.join(' · ')}</div>` : ''}
+                        ${funnel.recommended_cta ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#818cf8;font-weight:600;">Recommended CTA:</span> <strong>"${funnel.recommended_cta}"</strong></div>` : ''}
                         ${funnel.retargeting_angle ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:var(--text-muted);">Retargeting: ${funnel.retargeting_angle}</div>` : ''}
+                        ${funnel.pre_spend_checklist?.length ? `
+                        <div style="margin-top:0.5rem;padding:0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;">
+                            <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.3rem;">Pre-Spend Checklist</div>
+                            ${funnel.pre_spend_checklist.map(item => `<div style="font-size:0.78rem;color:var(--text-secondary);padding:0.15rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span style="color:#f59e0b;">☐</span> ${item}</div>`).join('')}
+                        </div>` : ''}
                     </div>` : ''}
+
+                    <!-- CMO Review Button -->
+                    <div style="text-align:center;margin-top:0.5rem;">
+                        <button type="button" onclick="requestCmoCritique()" id="cmoCritiqueBtn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;padding:0.65rem 1.5rem;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.5rem;">
+                            <span>🎯</span> Get CMO Review
+                        </button>
+                        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.4rem;">AI CMO grades your report and suggests upgrades</div>
+                    </div>
+                    <div id="cmoCritiqueResults" class="hidden"></div>
                 </div>
             `;
 
@@ -2523,6 +2561,149 @@
             panel.classList.remove('hidden');
             // Gentle scroll — panel is inline so just nudge it into view
             setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        }
+
+        async function requestCmoCritique() {
+            if (!window.lastScanData) {
+                showNotification('No scanner data available. Run a scan first.', 'error');
+                return;
+            }
+            const btn = document.getElementById('cmoCritiqueBtn');
+            const resultsDiv = document.getElementById('cmoCritiqueResults');
+            if (!btn || !resultsDiv) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> CMO is reviewing...';
+            btn.style.opacity = '0.7';
+            resultsDiv.classList.add('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('report', JSON.stringify(window.lastScanData));
+
+                const resp = await fetch('/api/scanner/critique', { method: 'POST', body: formData });
+                const result = await resp.json();
+
+                if (result.success && result.data) {
+                    displayCmoCritique(result.data);
+                    showNotification('CMO review complete!', 'success');
+                } else {
+                    showNotification(result.error || 'CMO critique failed', 'error');
+                }
+            } catch (err) {
+                console.error('CMO critique error:', err);
+                showNotification('Failed to get CMO review: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎯</span> Get CMO Review';
+                btn.style.opacity = '1';
+            }
+        }
+
+        function displayCmoCritique(critique) {
+            const resultsDiv = document.getElementById('cmoCritiqueResults');
+            if (!resultsDiv) return;
+
+            const gradeColor = (grade) => {
+                if (!grade) return '#6b7280';
+                const g = grade.toUpperCase();
+                if (g.startsWith('A')) return '#10b981';
+                if (g.startsWith('B')) return '#34d399';
+                if (g.startsWith('C')) return '#f59e0b';
+                if (g.startsWith('D')) return '#ef4444';
+                return '#ef4444';
+            };
+
+            const sectionGrades = critique.section_grades || {};
+            const sectionGradesHtml = Object.entries(sectionGrades).map(([section, grade]) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
+                    <span style="font-size:0.78rem;color:var(--text-secondary);text-transform:capitalize;">${section.replace(/_/g, ' ')}</span>
+                    <span style="font-size:0.85rem;font-weight:700;color:${gradeColor(grade)};">${grade}</span>
+                </div>
+            `).join('');
+
+            const genericFlags = (critique.generic_flags || []).map(f =>
+                `<div style="font-size:0.78rem;color:#f87171;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>⚠️</span> ${f}</div>`
+            ).join('');
+
+            const missingInsights = (critique.missing_insights || []).map(m =>
+                `<div style="font-size:0.78rem;color:#fbbf24;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>💡</span> ${m}</div>`
+            ).join('');
+
+            const topActions = (critique.top_3_actions || []).map((a, i) =>
+                `<div style="font-size:0.8rem;color:var(--text-primary);padding:0.35rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.3rem;"><strong style="color:#818cf8;">${i+1}.</strong> ${a}</div>`
+            ).join('');
+
+            const upgradedAngles = (critique.upgraded_ad_angles || []).map(a => `
+                <div style="padding:0.5rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.4rem;">
+                    <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.2rem;">${a.angle_name || 'Upgraded Angle'}</div>
+                    ${a.headline ? `<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;">"${a.headline}"</div>` : ''}
+                    ${a.body_copy ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">${a.body_copy}</div>` : ''}
+                    ${a.why_upgraded ? `<div style="font-size:0.75rem;color:#a78bfa;margin-top:0.2rem;font-style:italic;">↑ ${a.why_upgraded}</div>` : ''}
+                </div>
+            `).join('');
+
+            const html = `
+                <div class="card" style="margin-top:1rem;animation:fadeInSlideUp 0.3s ease both;border:1px solid rgba(99,102,241,0.2);background:linear-gradient(135deg,rgba(99,102,241,0.03),rgba(139,92,246,0.03));">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                        <div class="card-title" style="margin:0;">🎯 CMO Intelligence Review</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span style="font-size:2rem;font-weight:800;color:${gradeColor(critique.overall_grade)};">${critique.overall_grade || '—'}</span>
+                        </div>
+                    </div>
+
+                    ${critique.overall_verdict ? `
+                    <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;margin-bottom:1rem;padding:0.6rem;background:rgba(255,255,255,0.02);border-radius:8px;">
+                        ${critique.overall_verdict}
+                    </div>` : ''}
+
+                    <!-- Section Grades -->
+                    ${sectionGradesHtml ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.4rem;">Section Grades</div>
+                        <div style="display:flex;flex-direction:column;gap:0.25rem;">${sectionGradesHtml}</div>
+                    </div>` : ''}
+
+                    <!-- Generic Flags -->
+                    ${genericFlags ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.3rem;">Generic Content Flags</div>
+                        ${genericFlags}
+                    </div>` : ''}
+
+                    <!-- Missing Insights -->
+                    ${missingInsights ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.3rem;">Missing Insights</div>
+                        ${missingInsights}
+                    </div>` : ''}
+
+                    <!-- Top 3 Actions -->
+                    ${topActions ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.4rem;">Top 3 Priority Actions</div>
+                        ${topActions}
+                    </div>` : ''}
+
+                    <!-- Upgraded Ad Angles -->
+                    ${upgradedAngles ? `
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.4rem;">Upgraded Ad Angles</div>
+                        ${upgradedAngles}
+                    </div>` : ''}
+
+                    <!-- CMO Note -->
+                    ${critique.cmo_note ? `
+                    <div style="padding:0.7rem;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08));border-radius:10px;border:1px solid rgba(99,102,241,0.15);">
+                        <div style="font-size:0.72rem;color:#a78bfa;text-transform:uppercase;font-weight:600;margin-bottom:0.3rem;">CMO Note</div>
+                        <div style="font-size:0.85rem;color:var(--text-primary);line-height:1.5;font-style:italic;">"${critique.cmo_note}"</div>
+                    </div>` : ''}
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.remove('hidden');
+            setTimeout(() => resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
         }
 
         function setSelectByText(select, text) {
