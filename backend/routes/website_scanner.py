@@ -858,7 +858,7 @@ RULES:
                 raise HTTPException(status_code=500, detail="Failed to parse CMO critique. Try again.")
 
 
-@router.post("/scanner/critique")
+@router.post("/critique")
 async def critique_report(report: str = Form(...)):
     """
     Pass 2 — CMO critique of a scanner report.

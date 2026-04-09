@@ -2565,7 +2565,7 @@
 
         async function requestCmoCritique() {
             if (!window.lastScanData) {
-                showNotification('No scanner data available. Run a scan first.', 'error');
+                alert('No scanner data available. Run a scan first.');
                 return;
             }
             const btn = document.getElementById('cmoCritiqueBtn');
@@ -2573,7 +2573,7 @@
             if (!btn || !resultsDiv) return;
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> CMO is reviewing...';
+            btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;"></span> CMO is reviewing...';
             btn.style.opacity = '0.7';
             resultsDiv.classList.add('hidden');
 
@@ -2586,13 +2586,12 @@
 
                 if (result.success && result.data) {
                     displayCmoCritique(result.data);
-                    showNotification('CMO review complete!', 'success');
                 } else {
-                    showNotification(result.error || 'CMO critique failed', 'error');
+                    alert(result.error || result.detail || 'CMO critique failed. Please try again.');
                 }
             } catch (err) {
                 console.error('CMO critique error:', err);
-                showNotification('Failed to get CMO review: ' + err.message, 'error');
+                alert('Failed to get CMO review: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>🎯</span> Get CMO Review';
