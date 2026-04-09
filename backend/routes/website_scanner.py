@@ -510,7 +510,7 @@ When analyzing a business, your intelligence is SPECIFIC (never generic filler),
 WEBSITE CONTENT (crawled from multiple pages):
 {content_package}
 
-YOUR MISSION: Analyze this business deeply. Produce intelligence so specific that the business owner reads it and thinks "this tool understands my business better than my own team." If the website content is limited, make strategic inferences from industry knowledge.
+YOUR MISSION: Analyze this business deeply using ONLY the crawled website content above. Every claim, feature, product name, and description MUST come from what you can see in the crawled text. Do NOT invent features, products, or services that are not explicitly mentioned in the crawled content. If the website only shows 2 products, list 2 products — do NOT fabricate a third. If a feature is not mentioned on the site, do NOT include it. Accuracy is more important than completeness. The business owner will immediately lose trust if they see features or products they don't actually offer.
 
 Return ONLY valid JSON with this structure:
 
@@ -619,8 +619,8 @@ Return ONLY valid JSON with this structure:
 RULES:
 - EXACTLY 4 ad_angles, ranked by predicted_effectiveness (highest first).
 - SPECIFICITY IS EVERYTHING: Every field must pass the "only this business" test — if you could swap in a competitor's name and it still works, it's too generic. Rewrite it.
-- Ad angle body_copy: 4-6 sentences. MUST include at least 2 real product/feature names AND 1 number. NEVER use phrases like "innovative solutions", "cutting-edge technology", "revolutionize your", "take it to the next level". These are banned.
-- AT LEAST 3 main_products, 10 all_features, 4 pain_points, 3 competitors (with positioning detail), 3 buying_triggers.
+- Ad angle body_copy: 4-6 sentences. MUST reference ONLY products, features, and pricing that appear in the crawled website content. Include at least 1 specific detail from the site. NEVER invent features the business doesn't have. NEVER use phrases like "innovative solutions", "cutting-edge technology", "revolutionize your", "take it to the next level". These are banned.
+- List ONLY products and features actually found on the website. If the site shows 2 products, return 2. If it shows 5 features, return 5. Do NOT pad with invented items. For pain_points, buying_triggers, and competitors, you may infer from context but they must be realistic for THIS specific business.
 - best_platforms: provide 2-3 platforms with SPECIFIC dollar budgets, CPM/CPC/CTR estimates, and projected ROAS. Use real industry benchmarks.
 - competitive_landscape: For each competitor, analyze their positioning, biggest strength, and exploitable weakness. Include a positioning_matrix showing where this business sits.
 - funnel_intelligence: Analyze the ACTUAL page structure — above-fold content, form friction, trust signals present/missing, CTA clarity. Score 0-100 based on real assessment.
@@ -628,7 +628,7 @@ RULES:
 - brand_gaps and competitive_disadvantages: honest weaknesses. Businesses need truth, not flattery.
 - conversion_leaks: identify specific funnel stages where drop-off occurs and WHY.
 - buying_triggers: specific events or emotions that push this audience to purchase NOW — not generic "desire for improvement".
-- If website content is thin (JS-rendered site), use your training knowledge of the industry to fill in details, but flag what is inferred vs observed.
+- If website content is thin (JS-rendered site), only report what you can confirm from the crawled text. For missing fields, use "Not found on site" or empty arrays. NEVER fabricate products, features, or services not visible in the crawled content.
 - Each ad angle uses a DIFFERENT strategy: Benefit-Led, Pain-Agitate-Solution, Social Proof, Scarcity/Urgency.
 - Return ONLY valid JSON, no markdown fences, no text outside the JSON."""
 
@@ -643,7 +643,7 @@ RULES:
             json={
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.6,
+                "temperature": 0.3,
                 "max_tokens": 7000,
             },
         )
