@@ -386,38 +386,144 @@ IMPORTANT: The rewritten ad MUST match this brand voice. Use the preferred tone 
         benchmark_context = build_benchmark_context(platform, industry)
         benchmarks = get_benchmarks(platform, industry)
 
-        # Parse scanner intelligence if available
+        # Parse COMPLETE scanner intelligence for maximum rewrite quality
         scanner_context = ""
         if scanner_brief:
             try:
                 sb = json.loads(scanner_brief)
-                parts = []
+                sections = []
+
+                # ── Business identity ──
+                biz_parts = []
                 if sb.get("business_name"):
-                    parts.append(f"Business: {sb['business_name']}")
-                if sb.get("recommended_angle"):
-                    ra = sb["recommended_angle"]
-                    parts.append(f"Best Ad Angle: {ra.get('angle_name', '')} ({ra.get('strategy', '')})")
-                    parts.append(f"Hook: {ra.get('hook_line', '')}")
-                if sb.get("target_audience", {}).get("primary_persona"):
-                    pa = sb["target_audience"]["primary_persona"]
-                    parts.append(f"Audience: {pa.get('description', '')}")
-                    parts.append(f"Pain Points: {', '.join(pa.get('pain_points', []))}")
-                    parts.append(f"Desires: {', '.join(pa.get('desires', []))}")
-                if sb.get("brand_analysis"):
-                    ba = sb["brand_analysis"]
-                    parts.append(f"Brand Voice: {ba.get('brand_voice', '')} / {ba.get('tone', '')}")
-                if sb.get("products"):
-                    prods = [p.get("name", "") for p in sb["products"][:5]]
-                    parts.append(f"Products: {', '.join(prods)}")
-                if sb.get("competitive_advantages"):
-                    parts.append(f"USPs: {', '.join(sb['competitive_advantages'][:3])}")
-                if sb.get("ad_strategy"):
-                    parts.append(f"Emotional Trigger: {sb['ad_strategy'].get('emotional_trigger', '')}")
-                if parts:
-                    scanner_context = "\nSCANNER INTELLIGENCE (use real product names, features, and audience data below):\n" + "\n".join(f"- {p}" for p in parts)
-                    scanner_context += "\n\nIMPORTANT: Rewrite must reference ACTUAL products/features from the scanner data — not generic filler."
-            except (json.JSONDecodeError, KeyError):
-                pass
+                    biz_parts.append(f"Business: {sb['business_name']}")
+                if sb.get("tagline"):
+                    biz_parts.append(f"Tagline: \"{sb['tagline']}\"")
+                if sb.get("description"):
+                    biz_parts.append(f"About: {sb['description'][:200]}")
+                if biz_parts:
+                    sections.append("BUSINESS:\n" + "\n".join(f"  - {p}" for p in biz_parts))
+
+                # ── Products & features (full details, not just names) ──
+                prod_parts = []
+                for p in (sb.get("products") or [])[:5]:
+                    name = p.get("name", "")
+                    desc = p.get("description", "")
+                    benefit = p.get("key_benefit", "")
+                    line = f"{name}"
+                    if desc:
+                        line += f" — {desc}"
+                    if benefit:
+                        line += f" (Key benefit: {benefit})"
+                    prod_parts.append(line)
+                features = sb.get("all_features") or []
+                if prod_parts or features:
+                    feat_section = "PRODUCTS & FEATURES:"
+                    if prod_parts:
+                        feat_section += "\n  Products:\n" + "\n".join(f"    • {p}" for p in prod_parts)
+                    if features:
+                        feat_section += f"\n  All features: {', '.join(features[:15])}"
+                    if sb.get("pricing_model"):
+                        feat_section += f"\n  Pricing: {sb['pricing_model']}"
+                    sections.append(feat_section)
+
+                # ── Target audience (full persona) ──
+                persona = (sb.get("target_audience") or {}).get("primary_persona") or {}
+                if persona:
+                    aud_section = "TARGET AUDIENCE:"
+                    if persona.get("description"):
+                        aud_section += f"\n  Who: {persona['description']}"
+                    if persona.get("demographics"):
+                        aud_section += f"\n  Demographics: {persona['demographics']}"
+                    if persona.get("pain_points"):
+                        aud_section += f"\n  Pain points: {', '.join(persona['pain_points'])}"
+                    if persona.get("desires"):
+                        aud_section += f"\n  Desires: {', '.join(persona['desires'])}"
+                    if persona.get("objections"):
+                        aud_section += f"\n  Objections: {', '.join(persona['objections'])}"
+                    sections.append(aud_section)
+
+                # ── Brand analysis ──
+                ba = sb.get("brand_analysis") or {}
+                if ba:
+                    brand_section = "BRAND:"
+                    if ba.get("brand_voice"):
+                        brand_section += f"\n  Voice: {ba['brand_voice']}"
+                    if ba.get("tone"):
+                        brand_section += f" / Tone: {ba['tone']}"
+                    if ba.get("unique_positioning"):
+                        brand_section += f"\n  Positioning: {ba['unique_positioning']}"
+                    if ba.get("trust_signals"):
+                        brand_section += f"\n  Trust signals: {', '.join(ba['trust_signals'])}"
+                    sections.append(brand_section)
+
+                # ── Competitive landscape (competitors, advantages, gaps) ──
+                comp = sb.get("competitive_landscape") or {}
+                if comp:
+                    comp_section = "COMPETITIVE LANDSCAPE:"
+                    if comp.get("likely_competitors"):
+                        comp_section += f"\n  Competitors: {', '.join(comp['likely_competitors'])}"
+                    if comp.get("competitive_advantages"):
+                        comp_section += f"\n  Our advantages over them: {', '.join(comp['competitive_advantages'])}"
+                    if comp.get("market_gaps"):
+                        comp_section += f"\n  Market gaps to exploit: {', '.join(comp['market_gaps'])}"
+                    sections.append(comp_section)
+
+                # ── Ad strategy ──
+                strat = sb.get("ad_strategy") or {}
+                if strat:
+                    strat_section = "AD STRATEGY:"
+                    if strat.get("recommended_funnel_stage"):
+                        strat_section += f"\n  Funnel stage: {strat['recommended_funnel_stage']}"
+                    if strat.get("emotional_trigger"):
+                        strat_section += f"\n  Emotional trigger: {strat['emotional_trigger']}"
+                    if strat.get("best_platform"):
+                        strat_section += f"\n  Best platform: {strat['best_platform']}"
+                    sections.append(strat_section)
+
+                # ── All 4 ad angles (so rewrite can draw from any angle) ──
+                angles = sb.get("ad_angles") or []
+                if angles:
+                    rec = sb.get("recommended_angle") or angles[0]
+                    angles_section = f"AD ANGLES ({len(angles)} ranked — recommended: \"{rec.get('angle_name', '')}\"):"
+                    for i, a in enumerate(angles):
+                        eff = a.get("predicted_effectiveness", 0)
+                        angles_section += f"\n  {i+1}. {a.get('angle_name', '')} ({a.get('strategy', '')}) — {eff}% effectiveness"
+                        if a.get("hook_line"):
+                            angles_section += f"\n     Hook: \"{a['hook_line']}\""
+                        if a.get("headline"):
+                            angles_section += f"\n     Headline: \"{a['headline']}\""
+                        if a.get("cta"):
+                            angles_section += f"\n     CTA: \"{a['cta']}\""
+                    sections.append(angles_section)
+
+                # ── Funnel intelligence (conversion blockers, retargeting) ──
+                funnel = sb.get("funnel_intelligence") or {}
+                if funnel:
+                    funnel_section = "FUNNEL INTELLIGENCE:"
+                    if funnel.get("landing_page_assessment"):
+                        funnel_section += f"\n  Landing page: {funnel['landing_page_assessment']}"
+                    if funnel.get("conversion_blockers"):
+                        funnel_section += f"\n  Conversion blockers: {', '.join(funnel['conversion_blockers'])}"
+                    if funnel.get("retargeting_angle"):
+                        funnel_section += f"\n  Retargeting angle: {funnel['retargeting_angle']}"
+                    sections.append(funnel_section)
+
+                if sections:
+                    scanner_context = "\n\n═══ COMPLETE SCANNER INTELLIGENCE REPORT ═══\n" + "\n\n".join(sections)
+                    scanner_context += """
+
+═══ REWRITE DIRECTIVES ═══
+Use the scanner intelligence above to make the rewrite SPECIFIC and POWERFUL:
+- Reference ACTUAL product names and features — never use generic placeholders
+- Address the audience's real pain points and desires identified above
+- Leverage competitive advantages and market gaps to differentiate
+- Match the brand voice and tone
+- Use the strongest hooks and emotional triggers from the ad angles
+- Address conversion blockers identified in funnel intelligence
+- Position against named competitors where relevant"""
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"Failed to parse scanner_brief: {e}")
 
         # Build and call prompt
         prompt = _build_rewrite_prompt(

@@ -4030,17 +4030,34 @@
                     if (match) submitData.append('brand_voice', JSON.stringify(match));
                 }
 
-                // Add scanner intelligence so rewrite uses real product data, not generic filler
+                // Send the COMPLETE scanner report so rewrite has full intelligence:
+                // competitors to position against, market gaps to exploit, conversion
+                // blockers to address, all features to reference, all ad angles to draw from
                 if (window.lastScanData) {
                     const scannerBrief = {
                         business_name: window.lastScanData.profile?.business_name,
+                        tagline: window.lastScanData.profile?.tagline,
+                        description: window.lastScanData.profile?.description,
+                        industry: window.lastScanData.profile?.industry,
+                        // All products with full descriptions and key benefits
+                        products: window.lastScanData.products_and_features?.main_products,
+                        all_features: window.lastScanData.products_and_features?.all_features,
+                        pricing_model: window.lastScanData.products_and_features?.pricing_model,
+                        // All 4 ranked ad angles with body copy, hooks, CTAs
                         ad_angles: window.lastScanData.ad_angles,
                         recommended_angle: window.lastScanData.ad_angles?.[window.lastScanData.creative_brief?.recommended_angle_index || 0],
+                        // Full audience persona
                         target_audience: window.lastScanData.target_audience,
+                        // Brand voice, tone, positioning, trust signals
                         brand_analysis: window.lastScanData.brand_analysis,
+                        // Strategy: funnel stage, emotional trigger, best platform
                         ad_strategy: window.lastScanData.ad_strategy,
-                        products: window.lastScanData.products_and_features?.main_products,
-                        competitive_advantages: window.lastScanData.competitive_landscape?.competitive_advantages
+                        // Competitors, advantages, market gaps
+                        competitive_landscape: window.lastScanData.competitive_landscape,
+                        // Creative brief: video direction, color palette, voiceover
+                        creative_brief: window.lastScanData.creative_brief,
+                        // Funnel: landing page assessment, conversion blockers, retargeting
+                        funnel_intelligence: window.lastScanData.funnel_intelligence
                     };
                     submitData.append('scanner_brief', JSON.stringify(scannerBrief));
                 }
