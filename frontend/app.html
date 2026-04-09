@@ -2528,10 +2528,18 @@
                     <div style="padding:0.6rem;background:rgba(245,158,11,0.04);border-radius:8px;margin-bottom:1rem;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
                             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Funnel Intelligence</div>
-                            ${funnel.landing_page_score ? `<div style="display:flex;align-items:center;gap:0.4rem;">
-                                <span style="font-size:0.7rem;color:var(--text-muted);">Landing Page Score</span>
-                                <span style="font-size:1rem;font-weight:700;color:${parseInt(funnel.landing_page_score) >= 7 ? '#10b981' : parseInt(funnel.landing_page_score) >= 5 ? '#f59e0b' : '#ef4444'};background:${parseInt(funnel.landing_page_score) >= 7 ? 'rgba(16,185,129,0.12)' : parseInt(funnel.landing_page_score) >= 5 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)'};padding:0.15rem 0.5rem;border-radius:6px;">${funnel.landing_page_score}/10</span>
-                            </div>` : ''}
+                            ${funnel.landing_page_score ? (() => {
+                                let score = parseFloat(funnel.landing_page_score);
+                                let maxScore = 10;
+                                if (score > 10) { maxScore = 100; }
+                                const pct = maxScore === 100 ? score : score * 10;
+                                const color = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+                                const bg = pct >= 70 ? 'rgba(16,185,129,0.12)' : pct >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)';
+                                return `<div style="display:flex;align-items:center;gap:0.4rem;">
+                                    <span style="font-size:0.7rem;color:var(--text-muted);">Landing Page Score</span>
+                                    <span style="font-size:1rem;font-weight:700;color:${color};background:${bg};padding:0.15rem 0.5rem;border-radius:6px;">${score}/${maxScore}</span>
+                                </div>`;
+                            })() : ''}
                         </div>
                         <div style="font-size:0.8rem;color:var(--text-secondary);">${funnel.landing_page_assessment}</div>
                         ${funnel.strengths?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#10b981;font-weight:600;">Strengths:</span> ${funnel.strengths.join(' · ')}</div>` : ''}
@@ -2603,6 +2611,36 @@
             const resultsDiv = document.getElementById('cmoCritiqueResults');
             if (!resultsDiv) return;
 
+            // Helper: extract display text from any value (string, object, number)
+            const toText = (v) => {
+                if (v == null) return '';
+                if (typeof v === 'string') return v;
+                if (typeof v === 'number') return String(v);
+                if (typeof v === 'object') {
+                    // Try common keys: grade, text, comment, description, message, value, name
+                    for (const k of ['text','comment','description','message','value','name','grade','reason','action','flag','insight']) {
+                        if (v[k] && typeof v[k] === 'string') return v[k];
+                    }
+                    // Combine all string values
+                    const parts = Object.values(v).filter(x => typeof x === 'string');
+                    return parts.join(' — ') || JSON.stringify(v);
+                }
+                return String(v);
+            };
+
+            // Helper: extract grade from a section_grades value (could be string "B+" or object {grade:"B+", comment:"..."})
+            const extractGrade = (v) => {
+                if (typeof v === 'string') return v;
+                if (typeof v === 'object' && v) {
+                    return String(v.grade || v.score || v.value || Object.values(v).find(x => typeof x === 'string' && x.length <= 3) || '—');
+                }
+                return String(v || '—');
+            };
+            const extractComment = (v) => {
+                if (typeof v !== 'object' || !v) return '';
+                return v.comment || v.feedback || v.description || v.reason || '';
+            };
+
             const gradeColor = (grade) => {
                 if (!grade) return '#6b7280';
                 const g = String(grade).toUpperCase();
@@ -2614,33 +2652,41 @@
             };
 
             const sectionGrades = critique.section_grades || {};
-            const sectionGradesHtml = Object.entries(sectionGrades).map(([section, grade]) => `
+            const sectionGradesHtml = Object.entries(sectionGrades).map(([section, val]) => {
+                const grade = extractGrade(val);
+                const comment = extractComment(val);
+                return `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;">
-                    <span style="font-size:0.78rem;color:var(--text-secondary);text-transform:capitalize;">${section.replace(/_/g, ' ')}</span>
-                    <span style="font-size:0.85rem;font-weight:700;color:${gradeColor(grade)};">${grade}</span>
-                </div>
-            `).join('');
+                    <div style="flex:1;">
+                        <span style="font-size:0.78rem;color:var(--text-secondary);text-transform:capitalize;">${section.replace(/_/g, ' ')}</span>
+                        ${comment ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.1rem;">${comment}</div>` : ''}
+                    </div>
+                    <span style="font-size:0.85rem;font-weight:700;color:${gradeColor(grade)};min-width:30px;text-align:right;">${grade}</span>
+                </div>`;
+            }).join('');
 
             const genericFlags = (critique.generic_flags || []).map(f =>
-                `<div style="font-size:0.78rem;color:#f87171;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>⚠️</span> ${f}</div>`
+                `<div style="font-size:0.78rem;color:#f87171;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>⚠️</span> ${toText(f)}</div>`
             ).join('');
 
             const missingInsights = (critique.missing_insights || []).map(m =>
-                `<div style="font-size:0.78rem;color:#fbbf24;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>💡</span> ${m}</div>`
+                `<div style="font-size:0.78rem;color:#fbbf24;padding:0.2rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span>💡</span> ${toText(m)}</div>`
             ).join('');
 
             const topActions = (critique.top_3_actions || []).map((a, i) =>
-                `<div style="font-size:0.8rem;color:var(--text-primary);padding:0.35rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.3rem;"><strong style="color:#818cf8;">${i+1}.</strong> ${a}</div>`
+                `<div style="font-size:0.8rem;color:var(--text-primary);padding:0.35rem 0.5rem;background:rgba(99,102,241,0.06);border-radius:6px;border-left:2px solid #818cf8;margin-bottom:0.3rem;"><strong style="color:#818cf8;">${i+1}.</strong> ${toText(a)}</div>`
             ).join('');
 
-            const upgradedAngles = (critique.upgraded_ad_angles || []).map(a => `
+            const upgradedAngles = (critique.upgraded_ad_angles || []).map(a => {
+                if (typeof a === 'string') return `<div style="padding:0.5rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.4rem;font-size:0.8rem;color:var(--text-secondary);">${a}</div>`;
+                return `
                 <div style="padding:0.5rem;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin-bottom:0.4rem;">
-                    <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.2rem;">${a.angle_name || 'Upgraded Angle'}</div>
+                    <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.2rem;">${a.angle_name || a.name || 'Upgraded Angle'}</div>
                     ${a.headline ? `<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.2rem;">"${a.headline}"</div>` : ''}
-                    ${a.body_copy ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">${a.body_copy}</div>` : ''}
-                    ${a.why_upgraded ? `<div style="font-size:0.75rem;color:#a78bfa;margin-top:0.2rem;font-style:italic;">↑ ${a.why_upgraded}</div>` : ''}
-                </div>
-            `).join('');
+                    ${a.body_copy || a.body ? `<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">${a.body_copy || a.body}</div>` : ''}
+                    ${a.why_upgraded || a.reason ? `<div style="font-size:0.75rem;color:#a78bfa;margin-top:0.2rem;font-style:italic;">↑ ${a.why_upgraded || a.reason}</div>` : ''}
+                </div>`;
+            }).join('');
 
             const html = `
                 <div class="card" style="margin-top:1rem;animation:fadeInSlideUp 0.3s ease both;border:1px solid rgba(99,102,241,0.2);background:linear-gradient(135deg,rgba(99,102,241,0.03),rgba(139,92,246,0.03));">
