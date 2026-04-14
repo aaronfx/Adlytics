@@ -1866,98 +1866,120 @@
                 <div id="deepAuditError" class="hidden"></div>
                 <div id="deepAuditResults"></div>
 
-                <!-- Video Funnel Audit Section -->
-                <div class="card mb-4">
-                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg> Video Funnel Audit</div>
-                    <form id="funnelForm" class="form-section">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Platform</label>
-                                <select class="form-select" name="platform" required>
-                                    <option value="">Select platform...</option>
-                                    <option value="facebook">Facebook</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="youtube">YouTube</option>
-                                </select>
+                <!-- Visual Separator -->
+                <div style="display:flex;align-items:center;gap:1rem;margin:1.5rem 0;">
+                    <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,0.3),transparent);"></div>
+                    <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Or audit a video ad</span>
+                    <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,0.3),transparent);"></div>
+                </div>
+
+                <!-- Video Funnel Audit Section — Expandable -->
+                <div class="card mb-4" id="videoFunnelCard">
+                    <button type="button" onclick="const body=document.getElementById('videoFunnelBody');const chevron=document.getElementById('videoFunnelChevron');if(body.style.maxHeight==='0px'){body.style.maxHeight='2000px';body.style.opacity='1';body.style.padding='1rem 0 0';chevron.style.transform='rotate(180deg)';}else{body.style.maxHeight='0px';body.style.opacity='0';body.style.padding='0';chevron.style.transform='rotate(0deg)';}" style="width:100%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:0;color:var(--text-primary);">
+                        <div style="display:flex;align-items:center;gap:0.6rem;">
+                            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#8B5CF6,#6366F1);display:flex;align-items:center;justify-content:center;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Industry</label>
-                                <select class="form-select" name="industry" required>
-                                    <option value="">Select industry...</option>
-                                    <option value="finance">Finance</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="ecommerce">E-commerce</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="health">Health</option>
-                                    <option value="education">Education</option>
-                                    <option value="fashion">Fashion</option>
-                                    <option value="food">Food</option>
-                                    <option value="tech">Tech</option>
-                                    <option value="real_estate">Real Estate</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="other">Other</option>
-                                </select>
+                            <div style="text-align:left;">
+                                <div style="font-weight:600;font-size:0.9rem;">Video Funnel Audit</div>
+                                <div style="font-size:0.72rem;color:var(--text-muted);">Upload your ad video to get frame-by-frame funnel analysis</div>
                             </div>
                         </div>
+                        <span id="videoFunnelChevron" style="color:var(--text-muted);font-size:0.8rem;transition:transform 0.3s ease;">&#9660;</span>
+                    </button>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Audience Country</label>
-                                <input type="text" class="form-input" name="audience_country" placeholder="e.g., United States" required>
+                    <div id="videoFunnelBody" style="max-height:0px;opacity:0;overflow:hidden;transition:max-height 0.4s ease,opacity 0.3s ease,padding 0.3s ease;padding:0;">
+                        <form id="funnelForm" class="form-section">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Platform</label>
+                                    <select class="form-select" name="platform" required>
+                                        <option value="">Select platform...</option>
+                                        <option value="facebook">Facebook</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="tiktok">TikTok</option>
+                                        <option value="youtube">YouTube</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Industry</label>
+                                    <select class="form-select" name="industry" required>
+                                        <option value="">Select industry...</option>
+                                        <option value="finance">Finance</option>
+                                        <option value="crypto">Crypto</option>
+                                        <option value="ecommerce">E-commerce</option>
+                                        <option value="saas">SaaS</option>
+                                        <option value="health">Health</option>
+                                        <option value="education">Education</option>
+                                        <option value="fashion">Fashion</option>
+                                        <option value="food">Food</option>
+                                        <option value="tech">Tech</option>
+                                        <option value="real_estate">Real Estate</option>
+                                        <option value="forex">Forex</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Audience Age Range</label>
-                                <input type="text" class="form-input" name="audience_age" placeholder="e.g., 25-44" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Income Level</label>
-                                <select class="form-select" name="audience_income" required>
-                                    <option value="">Select income...</option>
-                                    <option value="low">Low</option>
-                                    <option value="middle">Middle</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Ad Video</label>
-                            <div class="file-input-wrapper">
-                                <label class="file-input-button">
-                                    <span>📹 Choose Video</span>
-                                    <input type="file" name="ad_video" accept="video/*" required id="adVideoInput">
-                                </label>
-                                <div id="adVideoInfo"></div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Audience Country</label>
+                                    <input type="text" class="form-input" name="audience_country" placeholder="e.g., United States" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Audience Age Range</label>
+                                    <input type="text" class="form-input" name="audience_age" placeholder="e.g., 25-44" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Income Level</label>
+                                    <select class="form-select" name="audience_income" required>
+                                        <option value="">Select income...</option>
+                                        <option value="low">Low</option>
+                                        <option value="middle">Middle</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Landing Video (Optional)</label>
-                            <div class="file-input-wrapper">
-                                <label class="file-input-button">
-                                    <span>🎥 Choose Video</span>
-                                    <input type="file" name="landing_video" accept="video/*" id="landingVideoInput">
-                                </label>
-                                <div id="landingVideoInfo"></div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Ad Video</label>
+                                    <div class="file-input-wrapper">
+                                        <label class="file-input-button">
+                                            <span>Choose Video</span>
+                                            <input type="file" name="ad_video" accept="video/*" required id="adVideoInput">
+                                        </label>
+                                        <div id="adVideoInfo"></div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Landing Video (Optional)</label>
+                                    <div class="file-input-wrapper">
+                                        <label class="file-input-button">
+                                            <span>Choose Video</span>
+                                            <input type="file" name="landing_video" accept="video/*" id="landingVideoInput">
+                                        </label>
+                                        <div id="landingVideoInfo"></div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">CTA Destination</label>
-                                <input type="text" class="form-input" name="cta_destination" placeholder="e.g., Product page, Sign-up" required>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">CTA Destination</label>
+                                    <input type="text" class="form-input" name="cta_destination" placeholder="e.g., Product page, Sign-up" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Brand Voice (Optional)</label>
+                                    <input type="text" class="form-input" name="brand_voice" placeholder="e.g., Professional, Witty">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Brand Voice (Optional)</label>
-                                <input type="text" class="form-input" name="brand_voice" placeholder="e.g., Professional, Witty">
-                            </div>
-                        </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            <span id="funnelButtonText">Analyze Funnel</span>
-                        </button>
-                    </form>
+                            <button type="submit" class="btn btn-primary">
+                                <span id="funnelButtonText">Analyze Video Funnel</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <div id="funnelError" class="hidden"></div>
