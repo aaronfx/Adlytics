@@ -1774,19 +1774,41 @@
 
             <!-- ===== VIDEO FUNNEL TAB ===== -->
             <div class="tab-panel" id="panel-funnel">
-                <!-- Deep Funnel Audit Section -->
-                <div class="card mb-4">
-                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Text-Based Funnel Audit</div>
-                    <form id="deepAuditForm" class="form-section">
-                        <div class="form-group">
-                            <label class="form-label">Website URL (Auto-fill form)</label>
-                            <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                                <input type="url" id="auditWebsiteUrl" class="form-input" placeholder="https://example.com" style="flex:1;">
-                                <button type="button" id="auditScanBtn" onclick="scanWebsite('audit')" class="btn btn-secondary">Scan Site</button>
-                            </div>
-                            <div id="auditScanStatus" style="font-size:0.85rem;margin-bottom:0.5rem;"></div>
-                        </div>
+                <!-- Step Progress -->
+                <div class="step-progress">
+                    <div class="step-item active"><span class="step-num">1</span><span class="step-label">Scan Website</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">2</span><span class="step-label">Review</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">3</span><span class="step-label">Audit Funnel</span></div>
+                </div>
 
+                <!-- Welcome Hero -->
+                <div class="card mb-4" id="funnelWelcomeCard">
+                    <div class="welcome-hero">
+                        <div class="hero-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        </div>
+                        <h2>Audit Your Ad Funnel</h2>
+                        <p>Scan your website to auto-fill the form, then run a deep AI audit on your ad-to-landing-page funnel.</p>
+                        <div class="hero-input-row">
+                            <input type="url" id="auditWebsiteUrl" placeholder="Enter website URL">
+                            <button type="button" id="auditScanBtn" onclick="scanWebsite('audit')">Scan Site</button>
+                        </div>
+                        <div id="auditScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+                    </div>
+                </div>
+
+                <div id="scannerResultsPanel" class="hidden"></div>
+
+                <!-- Form (hidden until scan) -->
+                <div class="card mb-4 form-section-hidden" id="funnelFormCard">
+                    <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        Configure Audit
+                        <span style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:99px;margin-left:auto;">Auto-filled</span>
+                    </div>
+                    <form id="deepAuditForm" class="form-section">
                         <div class="form-group">
                             <label class="form-label">Ad Copy</label>
                             <textarea class="form-input" name="ad_copy" placeholder="Paste your ad headline and body copy..." required style="min-height:100px;"></textarea>
@@ -1843,7 +1865,6 @@
 
                 <div id="deepAuditError" class="hidden"></div>
                 <div id="deepAuditResults"></div>
-                <div id="scannerResultsPanel" class="hidden"></div>
 
                 <!-- Video Funnel Audit Section -->
                 <div class="card mb-4">
@@ -2046,27 +2067,41 @@
 
             <!-- ===== CREATE TAB ===== -->
             <div class="tab-panel" id="panel-create">
-                <div class="card mb-4">
-                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> AI Ad Creator <span style="font-size:0.7rem;background:linear-gradient(135deg,#F97316,#EF4444);padding:2px 8px;border-radius:99px;margin-left:8px;font-weight:500;">NEW</span></div>
-                    <form id="creativeForm" class="form-section">
-                        <!-- Website Scanner -->
-                        <div class="form-group" style="border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:1rem;background:rgba(99,102,241,0.04);">
-                            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
-                                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                Auto-fill from Website <span style="font-size:0.65rem;background:rgba(99,102,241,0.2);color:#a5b4fc;padding:1px 6px;border-radius:99px;">AI SCAN</span>
-                            </label>
-                            <div style="display:flex;gap:0.5rem;">
-                                <input type="text" class="form-input" id="creativeWebsiteUrl" placeholder="e.g., gopeepwaste.com" style="flex:1;">
-                                <button type="button" class="btn btn-secondary" onclick="scanWebsite('creative')" id="creativeScanBtn" style="white-space:nowrap;padding:0.5rem 1rem;">
-                                    Scan Site
-                                </button>
-                            </div>
-                            <div id="creativeScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
+                <!-- Step Progress -->
+                <div class="step-progress">
+                    <div class="step-item active"><span class="step-num">1</span><span class="step-label">Scan Website</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">2</span><span class="step-label">Review</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">3</span><span class="step-label">Generate Creatives</span></div>
+                </div>
+
+                <!-- Welcome Hero -->
+                <div class="card mb-4" id="creativeWelcomeCard">
+                    <div class="welcome-hero">
+                        <div class="hero-icon" style="background:linear-gradient(135deg,#F97316,#EF4444);">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                         </div>
+                        <h2>Create AI Ad Creatives</h2>
+                        <p>Scan your website to auto-fill brand details, then generate stunning ad creatives with AI.</p>
+                        <div class="hero-input-row">
+                            <input type="text" id="creativeWebsiteUrl" placeholder="Enter website URL">
+                            <button type="button" onclick="scanWebsite('creative')" id="creativeScanBtn">Scan Site</button>
+                        </div>
+                        <div id="creativeScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+                    </div>
+                </div>
 
-                        <!-- Scanner Intelligence Report (inline) -->
-                        <div id="creativeScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
+                <div id="creativeScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
 
+                <!-- Form (hidden until scan) -->
+                <div class="card mb-4 form-section-hidden" id="creativeFormCard">
+                    <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        Configure Creative
+                        <span style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:99px;margin-left:auto;">Auto-filled</span>
+                    </div>
+                    <form id="creativeForm" class="form-section">
                         <div class="form-group">
                             <label class="form-label">Product / Service Description</label>
                             <textarea class="form-textarea" name="product_description" id="creativeProductDesc" placeholder="e.g., Premium Forex trading signals for Nigerian investors. 85% win rate, daily alerts via Telegram." required style="min-height:80px;"></textarea>
@@ -2161,27 +2196,41 @@
 
             <!-- ===== VIDEO ADS TAB ===== -->
             <div class="tab-panel" id="panel-video">
-                <div class="card mb-4">
-                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> AI Video Ad Studio <span style="font-size:0.7rem;background:linear-gradient(135deg,#8B5CF6,#6366F1);padding:2px 8px;border-radius:99px;margin-left:8px;font-weight:500;">NEW</span></div>
-                    <form id="videoForm" class="form-section">
-                        <!-- Website Scanner -->
-                        <div class="form-group" style="border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:1rem;background:rgba(99,102,241,0.04);">
-                            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
-                                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                Auto-fill from Website <span style="font-size:0.65rem;background:rgba(99,102,241,0.2);color:#a5b4fc;padding:1px 6px;border-radius:99px;">AI SCAN</span>
-                            </label>
-                            <div style="display:flex;gap:0.5rem;">
-                                <input type="text" class="form-input" id="videoWebsiteUrl" placeholder="e.g., gopeepwaste.com" style="flex:1;">
-                                <button type="button" class="btn btn-secondary" onclick="scanWebsite('video')" id="videoScanBtn" style="white-space:nowrap;padding:0.5rem 1rem;">
-                                    Scan Site
-                                </button>
-                            </div>
-                            <div id="videoScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
+                <!-- Step Progress -->
+                <div class="step-progress">
+                    <div class="step-item active"><span class="step-num">1</span><span class="step-label">Scan Website</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">2</span><span class="step-label">Review</span></div>
+                    <div class="step-connector"></div>
+                    <div class="step-item"><span class="step-num">3</span><span class="step-label">Generate Video</span></div>
+                </div>
+
+                <!-- Welcome Hero -->
+                <div class="card mb-4" id="videoWelcomeCard">
+                    <div class="welcome-hero">
+                        <div class="hero-icon" style="background:linear-gradient(135deg,#8B5CF6,#6366F1);">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                         </div>
+                        <h2>Create AI Video Ads</h2>
+                        <p>Scan your website, then generate professional video ads with AI voiceover and animations.</p>
+                        <div class="hero-input-row">
+                            <input type="text" id="videoWebsiteUrl" placeholder="Enter website URL">
+                            <button type="button" onclick="scanWebsite('video')" id="videoScanBtn">Scan Site</button>
+                        </div>
+                        <div id="videoScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+                    </div>
+                </div>
 
-                        <!-- Scanner Intelligence Report (inline) -->
-                        <div id="videoScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
+                <div id="videoScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
 
+                <!-- Form (hidden until scan) -->
+                <div class="card mb-4 form-section-hidden" id="videoFormCard">
+                    <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                        Configure Video Ad
+                        <span style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:99px;margin-left:auto;">Auto-filled</span>
+                    </div>
+                    <form id="videoForm" class="form-section">
                         <div class="form-group">
                             <label class="form-label">Product / Service Description</label>
                             <textarea class="form-textarea" name="product_description" id="videoProductDesc" placeholder="e.g., Premium 3-bedroom apartments in Kaduna with modern finishes. Starting from ₦15M." required style="min-height:80px;"></textarea>
@@ -2569,11 +2618,23 @@
                 // Show scanner results panel in the correct tab
                 displayScannerResults(window.lastScanData, target);
 
-                // Update step progress + reveal form for analysis panel
+                // Update step progress + reveal form for each panel
                 if (target === 'analysis') {
                     updateAnalysisStep('review');
-                    // Short delay then reveal form
                     setTimeout(() => revealAnalysisForm(), 800);
+                }
+                // Reveal forms for other panels after scan
+                const panelRevealMap = {
+                    'audit': { welcome: 'funnelWelcomeCard', form: 'funnelFormCard' },
+                    'creative': { welcome: 'creativeWelcomeCard', form: 'creativeFormCard' },
+                    'video': { welcome: 'videoWelcomeCard', form: 'videoFormCard' },
+                };
+                const reveal = panelRevealMap[target];
+                if (reveal) {
+                    const w = document.getElementById(reveal.welcome);
+                    const f = document.getElementById(reveal.form);
+                    if (w) w.classList.add('hidden');
+                    if (f) { f.classList.remove('form-section-hidden'); f.classList.add('form-section-visible'); }
                 }
 
                 // ═══════════════════════════════════════════════════════
