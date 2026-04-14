@@ -1776,55 +1776,66 @@
             <div class="tab-panel" id="panel-funnel">
                 <!-- Step Progress -->
                 <div class="step-progress">
-                    <div class="step-item active"><span class="step-num">1</span><span class="step-label">Scan Website</span></div>
+                    <div class="step-item active"><span class="step-num">1</span><span class="step-label">Paste Ad & Landing Page</span></div>
                     <div class="step-connector"></div>
-                    <div class="step-item"><span class="step-num">2</span><span class="step-label">Review</span></div>
+                    <div class="step-item"><span class="step-num">2</span><span class="step-label">AI Audits Funnel</span></div>
                     <div class="step-connector"></div>
-                    <div class="step-item"><span class="step-num">3</span><span class="step-label">Audit Funnel</span></div>
+                    <div class="step-item"><span class="step-num">3</span><span class="step-label">Get Fixes</span></div>
                 </div>
 
-                <!-- Welcome Hero -->
-                <div class="card mb-4" id="funnelWelcomeCard">
-                    <div class="welcome-hero">
-                        <div class="hero-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <!-- Funnel Audit Form — always visible, no scanner needed -->
+                <div class="card mb-4">
+                    <!-- Visual funnel flow header -->
+                    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:1.2rem;padding:0.75rem;background:rgba(99,102,241,0.04);border-radius:10px;border:1px solid rgba(99,102,241,0.1);">
+                        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:600;color:#818cf8;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            Your Ad
                         </div>
-                        <h2>Audit Your Ad Funnel</h2>
-                        <p>Scan your website to auto-fill the form, then run a deep AI audit on your ad-to-landing-page funnel.</p>
-                        <div class="hero-input-row">
-                            <input type="url" id="auditWebsiteUrl" placeholder="Enter website URL">
-                            <button type="button" id="auditScanBtn" onclick="scanWebsite('audit')">Scan Site</button>
+                        <svg width="20" height="12" viewBox="0 0 20 12" fill="none" style="flex-shrink:0;"><path d="M1 6h16M13 1l5 5-5 5" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:600;color:#f59e0b;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                            Funnel
                         </div>
-                        <div id="auditScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+                        <svg width="20" height="12" viewBox="0 0 20 12" fill="none" style="flex-shrink:0;"><path d="M1 6h16M13 1l5 5-5 5" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:600;color:#10b981;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Landing Page
+                        </div>
                     </div>
-                </div>
 
-                <div id="scannerResultsPanel" class="hidden"></div>
-
-                <!-- Form (hidden until scan) -->
-                <div class="card mb-4 form-section-hidden" id="funnelFormCard">
-                    <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
-                        <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-                        Configure Audit
-                        <span style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:99px;margin-left:auto;">Auto-filled</span>
+                    <div class="card-title" style="margin-bottom:0.3rem;">
+                        <svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                        Funnel Audit
                     </div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.5;">Paste your ad copy and landing page URL. The AI will trace the full journey from ad click to conversion and find exactly where visitors drop off.</div>
+
                     <form id="deepAuditForm" class="form-section">
-                        <div class="form-group">
-                            <label class="form-label">Ad Copy</label>
-                            <textarea class="form-input" name="ad_copy" placeholder="Paste your ad headline and body copy..." required style="min-height:100px;"></textarea>
+                        <!-- Ad Copy — the main input -->
+                        <div class="form-group" style="border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:1rem;background:rgba(99,102,241,0.04);">
+                            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                Ad Copy <span style="font-size:0.65rem;background:rgba(99,102,241,0.2);color:#a5b4fc;padding:1px 6px;border-radius:99px;">REQUIRED</span>
+                            </label>
+                            <textarea class="form-input" name="ad_copy" placeholder="Paste the full ad text from Facebook, TikTok, YouTube, etc. Include the headline, body copy, and CTA exactly as it appears in the ad." required style="min-height:120px;"></textarea>
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">Copy the exact text from your live ad — headline, body, CTA, everything.</div>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Landing Page URL</label>
-                            <input type="url" class="form-input" name="landing_url" placeholder="https://your-landing.com">
+                        <!-- Landing Page URL — fetched & analyzed -->
+                        <div class="form-group" style="border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:1rem;background:rgba(245,158,11,0.04);">
+                            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                                Landing Page URL <span style="font-size:0.65rem;background:rgba(245,158,11,0.2);color:#fbbf24;padding:1px 6px;border-radius:99px;">AI WILL SCAN</span>
+                            </label>
+                            <input type="url" class="form-input" name="landing_url" placeholder="https://your-landing-page.com" style="border-color:rgba(245,158,11,0.2);">
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">The page your ad links to. We'll crawl it to check message match, CTA clarity, trust signals, and conversion flow.</div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Platform</label>
                                 <select class="form-select" name="platform" required>
-                                    <option value="">Select platform...</option>
-                                    <option value="facebook">Facebook</option>
+                                    <option value="">Where is this ad running?</option>
+                                    <option value="facebook">Facebook / Meta</option>
                                     <option value="instagram">Instagram</option>
                                     <option value="tiktok">TikTok</option>
                                     <option value="youtube">YouTube</option>
@@ -1845,26 +1856,26 @@
                                     <option value="food">Food</option>
                                     <option value="tech">Tech</option>
                                     <option value="real_estate">Real Estate</option>
+                                    <option value="forex">Forex</option>
                                     <option value="other">Other</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Target Audience</label>
-                                <input type="text" class="form-input" name="audience_description" placeholder="e.g., Busy professionals, age 25-45" required>
-                            </div>
+                        <div class="form-group">
+                            <label class="form-label">Target Audience <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">(who is this ad targeting?)</span></label>
+                            <input type="text" class="form-input" name="audience_description" placeholder="e.g., Small business owners, age 30-50, interested in marketing tools" required>
                         </div>
 
                         <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;">
-                            <span id="deepAuditButtonText">Deep Audit</span>
+                            <span id="deepAuditButtonText">Audit Full Funnel</span>
                         </button>
                     </form>
                 </div>
 
                 <div id="deepAuditError" class="hidden"></div>
                 <div id="deepAuditResults"></div>
+                <div id="scannerResultsPanel" class="hidden"></div>
 
                 <!-- Visual Separator -->
                 <div style="display:flex;align-items:center;gap:1rem;margin:1.5rem 0;">
@@ -2647,7 +2658,6 @@
                 }
                 // Reveal forms for other panels after scan
                 const panelRevealMap = {
-                    'audit': { welcome: 'funnelWelcomeCard', form: 'funnelFormCard' },
                     'creative': { welcome: 'creativeWelcomeCard', form: 'creativeFormCard' },
                     'video': { welcome: 'videoWelcomeCard', form: 'videoFormCard' },
                 };
