@@ -90,6 +90,258 @@
             100% { background-position: 1000px 0; }
         }
 
+        /* ===== STEP PROGRESS INDICATOR ===== */
+        .step-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(99,102,241,0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(99,102,241,0.08);
+        }
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .step-item .step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            border: 1.5px solid rgba(255,255,255,0.12);
+            background: transparent;
+            transition: all 0.4s ease;
+            flex-shrink: 0;
+        }
+        .step-item.active {
+            color: #a5b4fc;
+        }
+        .step-item.active .step-num {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 0 12px rgba(99,102,241,0.4);
+        }
+        .step-item.completed {
+            color: #34d399;
+        }
+        .step-item.completed .step-num {
+            background: #10b981;
+            border-color: transparent;
+            color: white;
+        }
+        .step-connector {
+            width: 32px;
+            height: 1.5px;
+            background: rgba(255,255,255,0.08);
+            margin: 0 0.2rem;
+            transition: background 0.4s ease;
+        }
+        .step-connector.active {
+            background: linear-gradient(90deg, #10b981, #6366f1);
+        }
+
+        /* ===== WELCOME / HERO STATE ===== */
+        .welcome-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1.5rem;
+            text-align: center;
+            animation: fadeInSlideUp 0.5s ease both;
+        }
+        .welcome-hero .hero-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 8px 32px rgba(99,102,241,0.3);
+        }
+        .welcome-hero h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+        .welcome-hero p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            max-width: 400px;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+        .welcome-hero .hero-input-row {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 480px;
+        }
+        .welcome-hero .hero-input-row input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1.5px solid rgba(99,102,241,0.25);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .welcome-hero .hero-input-row input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+        .welcome-hero .hero-input-row button {
+            padding: 0.75rem 1.3rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+        .welcome-hero .hero-input-row button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+        }
+
+        /* ===== SCANNER ACCORDION ===== */
+        .scanner-accordion-item {
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+        .scanner-accordion-item:hover {
+            border-color: rgba(99,102,241,0.2);
+        }
+        .scanner-accordion-trigger {
+            width: 100%;
+            background: rgba(255,255,255,0.02);
+            border: none;
+            padding: 0.65rem 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: left;
+            transition: background 0.2s;
+        }
+        .scanner-accordion-trigger:hover {
+            background: rgba(99,102,241,0.06);
+        }
+        .scanner-accordion-trigger .trigger-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .scanner-accordion-trigger .trigger-badge {
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 99px;
+            font-weight: 500;
+        }
+        .scanner-accordion-trigger .chevron-icon {
+            transition: transform 0.3s ease;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+        .scanner-accordion-item.open .chevron-icon {
+            transform: rotate(180deg);
+        }
+        .scanner-accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            padding: 0 0.8rem;
+        }
+        .scanner-accordion-item.open .scanner-accordion-body {
+            max-height: 2000px;
+            padding: 0.5rem 0.8rem 0.8rem;
+        }
+
+        /* ===== FORM REVEAL ANIMATION ===== */
+        .form-section-hidden {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease, max-height 0.5s ease;
+        }
+        .form-section-visible {
+            opacity: 1;
+            max-height: 3000px;
+            overflow: visible;
+            transition: opacity 0.4s ease 0.1s, max-height 0.5s ease;
+        }
+
+        /* ===== SHIMMER LOADING SKELETON ===== */
+        .shimmer-block {
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite linear;
+            border-radius: 8px;
+        }
+
+        /* ===== SECTION FADE-IN ===== */
+        .section-reveal {
+            animation: fadeInSlideUp 0.4s ease both;
+        }
+
+        @media (max-width: 768px) {
+            .step-progress {
+                gap: 0;
+                padding: 0.5rem;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            .step-item {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.4rem;
+            }
+            .step-item .step-label {
+                display: none;
+            }
+            .step-connector {
+                width: 16px;
+            }
+            .welcome-hero {
+                padding: 2rem 1rem;
+            }
+            .welcome-hero h2 {
+                font-size: 1.1rem;
+            }
+            .welcome-hero .hero-input-row {
+                flex-direction: column;
+            }
+        }
+
         /* ===== HEADER (legacy compat) ===== */
         header {
             display: none;
@@ -1391,27 +1643,56 @@
         <main class="main-content">
             <!-- ===== AD ANALYSIS TAB ===== -->
             <div class="tab-panel active" id="panel-analysis">
-                <div class="card mb-4">
-                    <div class="card-title"><svg style="width:20px;height:20px;display:inline" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M21 21H4a1 1 0 01-1-1V3"/><path d="M7 14l4-4 4 4 5-5"/></svg> Ad Score Analysis</div>
-                    <form id="analysisForm" class="form-section">
-                        <!-- Website Scanner -->
-                        <div class="form-group" style="border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:1rem;background:rgba(99,102,241,0.04);">
-                            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
-                                <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                Auto-fill from Website <span style="font-size:0.65rem;background:rgba(99,102,241,0.2);color:#a5b4fc;padding:1px 6px;border-radius:99px;">AI SCAN</span>
-                            </label>
-                            <div style="display:flex;gap:0.5rem;">
-                                <input type="text" class="form-input" id="analysisWebsiteUrl" placeholder="e.g., gopeepwaste.com" style="flex:1;">
-                                <button type="button" class="btn btn-secondary" onclick="scanWebsite('analysis')" id="analysisScanBtn" style="white-space:nowrap;padding:0.5rem 1rem;">
-                                    Scan Site
-                                </button>
-                            </div>
-                            <div id="analysisScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;"></div>
+                <!-- Step Progress Indicator -->
+                <div class="step-progress" id="analysisStepProgress">
+                    <div class="step-item active" id="step-scan">
+                        <span class="step-num">1</span>
+                        <span class="step-label">Scan Website</span>
+                    </div>
+                    <div class="step-connector" id="conn-1-2"></div>
+                    <div class="step-item" id="step-review">
+                        <span class="step-num">2</span>
+                        <span class="step-label">Review Intelligence</span>
+                    </div>
+                    <div class="step-connector" id="conn-2-3"></div>
+                    <div class="step-item" id="step-generate">
+                        <span class="step-num">3</span>
+                        <span class="step-label">Analyze Ad</span>
+                    </div>
+                    <div class="step-connector" id="conn-3-4"></div>
+                    <div class="step-item" id="step-grade">
+                        <span class="step-num">4</span>
+                        <span class="step-label">CMO Review</span>
+                    </div>
+                </div>
+
+                <!-- Welcome Hero (shown before first scan) -->
+                <div class="card mb-4" id="analysisWelcomeCard">
+                    <div class="welcome-hero">
+                        <div class="hero-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         </div>
+                        <h2>Analyze Any Ad in Seconds</h2>
+                        <p>Paste a website URL to auto-scan the business, then get AI-powered ad scoring with actionable insights.</p>
+                        <div class="hero-input-row">
+                            <input type="text" id="analysisWebsiteUrl" placeholder="Enter website URL (e.g., gopipways.com)">
+                            <button type="button" onclick="scanWebsite('analysis')" id="analysisScanBtn">Scan Site</button>
+                        </div>
+                        <div id="analysisScanStatus" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;"></div>
+                    </div>
+                </div>
 
-                        <!-- Scanner Intelligence Report (inline) -->
-                        <div id="analysisScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
+                <!-- Scanner Intelligence Report (inline) -->
+                <div id="analysisScannerResultsPanel" class="hidden" style="border-radius:12px;"></div>
 
+                <!-- Form (hidden until scan completes) -->
+                <div class="card mb-4 form-section-hidden" id="analysisFormCard">
+                    <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M21 21H4a1 1 0 01-1-1V3"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                        Fine-tune & Analyze
+                        <span style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#34d399;padding:2px 8px;border-radius:99px;margin-left:auto;">Auto-filled from scan</span>
+                    </div>
+                    <form id="analysisForm" class="form-section">
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Platform</label>
@@ -1478,6 +1759,13 @@
                             <span id="analyzeButtonText">Analyze Ad</span>
                         </button>
                     </form>
+                </div>
+
+                <!-- Rescan button (shown after scan, below form) -->
+                <div class="hidden" id="analysisRescanRow" style="text-align:center;margin-bottom:1rem;">
+                    <button type="button" onclick="document.getElementById('analysisWelcomeCard').classList.remove('hidden');document.getElementById('analysisFormCard').classList.remove('form-section-visible');document.getElementById('analysisFormCard').classList.add('form-section-hidden');document.getElementById('analysisRescanRow').classList.add('hidden');updateAnalysisStep('scan');" style="background:none;border:1px solid rgba(99,102,241,0.2);color:#a5b4fc;padding:0.4rem 1rem;border-radius:8px;font-size:0.75rem;cursor:pointer;transition:all 0.3s;">
+                        Scan a different website
+                    </button>
                 </div>
 
                 <div id="analysisError" class="hidden"></div>
@@ -2153,6 +2441,49 @@
         let lastScanProfile = null;  // Store last website scan result
         window.lastScanData = null;  // Store full scanner response data
 
+        // ===== STEP PROGRESS MANAGEMENT =====
+        function updateAnalysisStep(currentStep) {
+            const steps = ['scan', 'review', 'generate', 'grade'];
+            const currentIdx = steps.indexOf(currentStep);
+            steps.forEach((step, idx) => {
+                const el = document.getElementById(`step-${step}`);
+                const conn = document.getElementById(`conn-${idx}-${idx+1}`);
+                if (!el) return;
+                el.classList.remove('active', 'completed');
+                if (idx < currentIdx) {
+                    el.classList.add('completed');
+                    el.querySelector('.step-num').textContent = '\u2713';
+                } else if (idx === currentIdx) {
+                    el.classList.add('active');
+                    el.querySelector('.step-num').textContent = String(idx + 1);
+                } else {
+                    el.querySelector('.step-num').textContent = String(idx + 1);
+                }
+                if (conn) {
+                    conn.classList.toggle('active', idx < currentIdx);
+                }
+            });
+        }
+
+        function revealAnalysisForm() {
+            const welcomeCard = document.getElementById('analysisWelcomeCard');
+            const formCard = document.getElementById('analysisFormCard');
+            const rescanRow = document.getElementById('analysisRescanRow');
+            if (welcomeCard) welcomeCard.classList.add('hidden');
+            if (formCard) {
+                formCard.classList.remove('form-section-hidden');
+                formCard.classList.add('form-section-visible');
+            }
+            if (rescanRow) rescanRow.classList.remove('hidden');
+            updateAnalysisStep('generate');
+        }
+
+        // ===== SCANNER ACCORDION TOGGLE =====
+        function toggleScannerAccordion(el) {
+            const item = el.closest('.scanner-accordion-item');
+            if (item) item.classList.toggle('open');
+        }
+
         // ===== WEBSITE SCANNER =====
         async function scanWebsite(target) {
             const urlInput = document.getElementById(`${target}WebsiteUrl`);
@@ -2167,7 +2498,12 @@
 
             btn.disabled = true;
             btn.textContent = 'Scanning...';
-            status.innerHTML = '<span style="color:#a5b4fc;">Crawling pages...</span>';
+            status.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;"><span style="width:14px;height:14px;border:2px solid #6366f1;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite;"></span><span style="color:#a5b4fc;">Crawling & analyzing website...</span></div>
+            <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;">
+                <div class="shimmer-block" style="height:12px;width:80%;"></div>
+                <div class="shimmer-block" style="height:12px;width:60%;"></div>
+                <div class="shimmer-block" style="height:12px;width:70%;"></div>
+            </div>`;
 
             try {
                 const formData = new FormData();
@@ -2232,6 +2568,13 @@
 
                 // Show scanner results panel in the correct tab
                 displayScannerResults(window.lastScanData, target);
+
+                // Update step progress + reveal form for analysis panel
+                if (target === 'analysis') {
+                    updateAnalysisStep('review');
+                    // Short delay then reveal form
+                    setTimeout(() => revealAnalysisForm(), 800);
+                }
 
                 // ═══════════════════════════════════════════════════════
                 // AUTO-FILL: Push ALL scanner intelligence into forms
@@ -2430,80 +2773,101 @@
             const html = `
                 <div class="card mb-4" style="animation:fadeInSlideUp 0.3s ease both;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-                        <div class="card-title" style="margin:0;">📊 Scanner Intelligence Report</div>
-                        <button type="button" onclick="this.closest('.card').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">×</button>
+                        <div class="card-title" style="margin:0;">Scanner Intelligence Report</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span style="font-size:0.65rem;color:var(--text-muted);">${scanData.pages_crawled || 0} pages crawled</span>
+                            <button type="button" onclick="this.closest('.card').remove();" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">&times;</button>
+                        </div>
                     </div>
 
-                    <!-- Business Profile -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                    <!-- Business Profile (always visible) -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
                         <div>
-                            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.2rem;">Business</div>
-                            <div style="font-weight:600;font-size:0.95rem;">${profile.business_name || '—'}</div>
-                            ${profile.tagline ? `<div style="font-size:0.8rem;color:#a5b4fc;font-style:italic;">"${profile.tagline}"</div>` : ''}
+                            <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Business</div>
+                            <div style="font-weight:700;font-size:1rem;">${profile.business_name || '—'}</div>
+                            ${profile.tagline ? `<div style="font-size:0.78rem;color:#a5b4fc;font-style:italic;">"${profile.tagline}"</div>` : ''}
                         </div>
                         <div>
-                            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.2rem;">Industry</div>
+                            <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Industry</div>
                             <div style="font-weight:600;">${profile.industry || '—'}</div>
-                            <div style="font-size:0.8rem;color:var(--text-muted);">${profile.business_model || ''}</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">${profile.business_model || ''}</div>
                         </div>
                     </div>
-                    ${profile.description ? `<div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;margin-bottom:1rem;padding:0.6rem;background:rgba(255,255,255,0.02);border-radius:8px;">${profile.description}</div>` : ''}
-                    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1rem;">Pages crawled: <strong>${scanData.pages_crawled || 0}</strong></div>
+                    ${profile.description ? `<div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.55;margin-bottom:0.75rem;padding:0.6rem;background:rgba(255,255,255,0.02);border-radius:8px;border-left:2px solid rgba(99,102,241,0.3);">${profile.description}</div>` : ''}
 
-                    <!-- Products -->
-                    ${mainProducts.length > 0 ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Products / Services (${mainProducts.length})</div>
-                        ${mainProducts.map(p => `<div style="margin-bottom:0.4rem;padding:0.5rem 0.7rem;background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid #818cf8;"><strong style="color:#818cf8;font-size:0.85rem;">${p.name || ''}</strong><div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.15rem;">${p.description || ''}</div>${p.key_benefit ? `<div style="font-size:0.75rem;color:#34d399;margin-top:0.15rem;">Key benefit: ${p.key_benefit}</div>` : ''}</div>`).join('')}
-                        ${pf.pricing_model ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;">Pricing: <strong>${pf.pricing_model}</strong></div>` : ''}
+                    <!-- Accordion: Products & Features -->
+                    ${mainProducts.length > 0 || allFeatures.length > 0 ? `
+                    <div class="scanner-accordion-item open">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Products & Features <span class="trigger-badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;">${mainProducts.length} products &middot; ${allFeatures.length} features</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
+                            ${mainProducts.map(p => `<div style="margin-bottom:0.4rem;padding:0.5rem 0.7rem;background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid #818cf8;"><strong style="color:#818cf8;font-size:0.85rem;">${p.name || ''}</strong><div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.15rem;">${p.description || ''}</div>${p.key_benefit ? `<div style="font-size:0.75rem;color:#34d399;margin-top:0.15rem;">Key benefit: ${p.key_benefit}</div>` : ''}</div>`).join('')}
+                            ${pf.pricing_model ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;">Pricing: <strong>${pf.pricing_model}</strong></div>` : ''}
+                            ${allFeatures.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;">${featuresHtml}</div>` : ''}
+                        </div>
                     </div>` : ''}
 
-                    <!-- All Features -->
-                    ${allFeatures.length > 0 ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Features Detected (${allFeatures.length})</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">${featuresHtml}</div>
-                    </div>` : ''}
-
-                    <!-- Target Audience -->
+                    <!-- Accordion: Target Audience -->
                     ${targetAudience.description ? `
-                    <div style="margin-bottom:1rem;padding:0.7rem;background:rgba(139,92,246,0.06);border-radius:10px;border:1px solid rgba(139,92,246,0.12);">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Target Audience</div>
-                        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${targetAudience.description}</div>
-                        ${targetAudience.demographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Demographics: ${targetAudience.demographics}</div>` : ''}
-                        ${targetAudience.psychographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Psychographics: ${targetAudience.psychographics}</div>` : ''}
-                        ${targetAudience.pain_points?.length ? `<div style="font-size:0.8rem;margin-top:0.4rem;"><span style="color:#f87171;font-weight:600;">Pain Points:</span> ${targetAudience.pain_points.join(' · ')}</div>` : ''}
-                        ${targetAudience.desires?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#34d399;font-weight:600;">Desires:</span> ${targetAudience.desires.join(' · ')}</div>` : ''}
-                        ${targetAudience.objections?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#f59e0b;font-weight:600;">Objections:</span> ${targetAudience.objections.join(' · ')}</div>` : ''}
-                        ${targetAudience.buying_triggers?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#a78bfa;font-weight:600;">Buying Triggers:</span> ${targetAudience.buying_triggers.join(' · ')}</div>` : ''}
+                    <div class="scanner-accordion-item">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Target Audience <span class="trigger-badge" style="background:rgba(139,92,246,0.15);color:#c4b5fd;">${targetAudience.pain_points?.length || 0} pain points</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
+                            <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${targetAudience.description}</div>
+                            ${targetAudience.demographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">Demographics: ${targetAudience.demographics}</div>` : ''}
+                            ${targetAudience.psychographics ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Psychographics: ${targetAudience.psychographics}</div>` : ''}
+                            ${targetAudience.pain_points?.length ? `<div style="font-size:0.8rem;margin-top:0.4rem;"><span style="color:#f87171;font-weight:600;">Pain Points:</span> ${targetAudience.pain_points.join(' &middot; ')}</div>` : ''}
+                            ${targetAudience.desires?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#34d399;font-weight:600;">Desires:</span> ${targetAudience.desires.join(' &middot; ')}</div>` : ''}
+                            ${targetAudience.objections?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#f59e0b;font-weight:600;">Objections:</span> ${targetAudience.objections.join(' &middot; ')}</div>` : ''}
+                            ${targetAudience.buying_triggers?.length ? `<div style="font-size:0.8rem;margin-top:0.2rem;"><span style="color:#a78bfa;font-weight:600;">Buying Triggers:</span> ${targetAudience.buying_triggers.join(' &middot; ')}</div>` : ''}
+                        </div>
                     </div>` : ''}
 
-                    <!-- Brand Analysis -->
+                    <!-- Accordion: Brand Analysis -->
                     ${brandAnalysis.brand_voice ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Brand Analysis</div>
-                        <div style="font-size:0.85rem;color:var(--text-secondary);">Voice: <strong>${brandAnalysis.brand_voice}</strong> · Tone: <strong>${brandAnalysis.tone || ''}</strong></div>
-                        ${brandAnalysis.unique_positioning ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">${brandAnalysis.unique_positioning}</div>` : ''}
+                    <div class="scanner-accordion-item">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Brand Analysis <span class="trigger-badge" style="background:rgba(16,185,129,0.15);color:#6ee7b7;">${brandAnalysis.brand_voice}</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">Voice: <strong>${brandAnalysis.brand_voice}</strong> &middot; Tone: <strong>${brandAnalysis.tone || ''}</strong></div>
+                            ${brandAnalysis.unique_positioning ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">${brandAnalysis.unique_positioning}</div>` : ''}
                         ${brandAnalysis.trust_signals?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Trust signals: ${brandAnalysis.trust_signals.join(', ')}</div>` : ''}
-                        ${brandAnalysis.brand_gaps?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#f59e0b;">Brand gaps:</span> ${brandAnalysis.brand_gaps.join(' · ')}</div>` : ''}
+                        ${brandAnalysis.brand_gaps?.length ? `<div style="font-size:0.8rem;margin-top:0.3rem;"><span style="color:#f59e0b;">Brand gaps:</span> ${brandAnalysis.brand_gaps.join(' &middot; ')}</div>` : ''}
+                        </div>
                     </div>` : ''}
 
-                    <!-- Competitive Landscape -->
+                    <!-- Accordion: Competitive Landscape -->
                     ${(competitive.likely_competitors || []).length > 0 ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;font-weight:600;">Competitive Landscape</div>
-                        <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;gap:0.2rem;">${competitorsHtml}</div>
-                        ${competitive.positioning_matrix ? `<div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:rgba(99,102,241,0.06);border-radius:6px;"><span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;">Positioning:</span> <span style="font-size:0.78rem;color:#a78bfa;">${competitive.positioning_matrix}</span></div>` : ''}
-                        ${advantagesHtml ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Advantages:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${advantagesHtml}</span></div>` : ''}
-                        ${(competitive.competitive_disadvantages || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Weaknesses:</span> <span style="font-size:0.8rem;color:#f87171;">${competitive.competitive_disadvantages.join(' · ')}</span></div>` : ''}
-                        ${(competitive.market_gaps || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' · ')}</span></div>` : ''}
-                        ${competitive.differentiation_opportunity ? `<div><span style="font-size:0.75rem;color:var(--text-muted);">Differentiation:</span> <span style="font-size:0.8rem;color:#34d399;">${competitive.differentiation_opportunity}</span></div>` : ''}
+                    <div class="scanner-accordion-item">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Competitive Landscape <span class="trigger-badge" style="background:rgba(239,68,68,0.15);color:#fca5a5;">${(competitive.likely_competitors || []).length} competitors</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
+                            <div style="margin-bottom:0.5rem;display:flex;flex-direction:column;gap:0.2rem;">${competitorsHtml}</div>
+                            ${competitive.positioning_matrix ? `<div style="margin-bottom:0.4rem;padding:0.4rem 0.6rem;background:rgba(99,102,241,0.06);border-radius:6px;"><span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;">Positioning:</span> <span style="font-size:0.78rem;color:#a78bfa;">${competitive.positioning_matrix}</span></div>` : ''}
+                            ${advantagesHtml ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Advantages:</span> <span style="display:inline-flex;flex-wrap:wrap;gap:0.3rem;">${advantagesHtml}</span></div>` : ''}
+                            ${(competitive.competitive_disadvantages || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Weaknesses:</span> <span style="font-size:0.8rem;color:#f87171;">${competitive.competitive_disadvantages.join(' &middot; ')}</span></div>` : ''}
+                            ${(competitive.market_gaps || []).length ? `<div style="margin-bottom:0.3rem;"><span style="font-size:0.75rem;color:var(--text-muted);">Market gaps:</span> <span style="font-size:0.8rem;color:#fbbf24;">${competitive.market_gaps.join(' &middot; ')}</span></div>` : ''}
+                            ${competitive.differentiation_opportunity ? `<div><span style="font-size:0.75rem;color:var(--text-muted);">Differentiation:</span> <span style="font-size:0.8rem;color:#34d399;">${competitive.differentiation_opportunity}</span></div>` : ''}
+                        </div>
                     </div>` : ''}
 
                     <!-- Ad Strategy -->
+                    <!-- Accordion: Ad Strategy -->
                     ${adStrategy.recommended_funnel_stage ? `
-                    <div style="margin-bottom:1rem;padding:0.6rem;background:rgba(99,102,241,0.04);border-radius:8px;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Ad Strategy</div>
+                    <div class="scanner-accordion-item open">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Ad Strategy <span class="trigger-badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;">${(adStrategy.best_platforms || []).length} platforms</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
                         <div style="font-size:0.8rem;color:var(--text-secondary);">${adStrategy.recommended_funnel_stage}</div>
                         ${adStrategy.emotional_trigger ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Emotional trigger: <strong style="color:#f472b6;">${adStrategy.emotional_trigger}</strong></div>` : ''}
                         ${adStrategy.best_platform ? `<div style="font-size:0.8rem;margin-top:0.2rem;">Best platform: <strong style="color:#818cf8;">${adStrategy.best_platform}</strong></div>` : ''}
@@ -2523,29 +2887,44 @@
                         </div>` : ''}
                         ${adStrategy.posting_frequency ? `<div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted);">Posting: ${adStrategy.posting_frequency}</div>` : ''}
                         ${adStrategy.ab_test_recommendation ? `<div style="font-size:0.8rem;margin-top:0.2rem;color:#a78bfa;">A/B Test: ${adStrategy.ab_test_recommendation}</div>` : ''}
+                        </div>
                     </div>` : ''}
 
-                    <!-- All Ad Angles -->
+                    <!-- Accordion: Ad Angles -->
                     ${adAngles.length > 0 ? `
-                    <div style="margin-bottom:1rem;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;">Ad Angles (${adAngles.length} ranked)</div>
-                        <div style="display:flex;flex-direction:column;gap:0.6rem;">${anglesHtml}</div>
+                    <div class="scanner-accordion-item open">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Ad Angles <span class="trigger-badge" style="background:rgba(245,158,11,0.15);color:#fbbf24;">${adAngles.length} ranked</span></span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
+                            <div style="display:flex;flex-direction:column;gap:0.6rem;">${anglesHtml}</div>
+                        </div>
                     </div>` : ''}
 
-                    <!-- Creative Brief -->
+                    <!-- Accordion: Creative Brief -->
                     ${creativeBrief.video_direction ? `
-                    <div style="margin-bottom:0.5rem;padding:0.6rem;background:rgba(139,92,246,0.04);border-radius:8px;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.3rem;font-weight:600;">Creative Brief</div>
+                    <div class="scanner-accordion-item">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Creative Brief</span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
                         <div style="font-size:0.8rem;color:var(--text-secondary);">Video direction: ${creativeBrief.video_direction}</div>
                         ${creativeBrief.voiceover_style ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Voiceover: ${creativeBrief.voiceover_style}</div>` : ''}
                         ${creativeBrief.color_palette?.length ? `<div style="display:flex;gap:0.3rem;margin-top:0.3rem;">${creativeBrief.color_palette.map(c => `<span style="width:24px;height:24px;border-radius:4px;background:${c};display:inline-block;border:1px solid rgba(255,255,255,0.1);" title="${c}"></span>`).join('')}</div>` : ''}
+                        </div>
                     </div>` : ''}
 
-                    <!-- Funnel Intelligence -->
+                    <!-- Accordion: Funnel Intelligence -->
                     ${funnel.landing_page_assessment ? `
-                    <div style="padding:0.6rem;background:rgba(245,158,11,0.04);border-radius:8px;margin-bottom:1rem;">
+                    <div class="scanner-accordion-item open">
+                        <button class="scanner-accordion-trigger" onclick="toggleScannerAccordion(this)">
+                            <span class="trigger-left">Funnel Intelligence ${funnel.landing_page_score ? `<span class="trigger-badge" style="background:rgba(245,158,11,0.15);color:#fbbf24;">Score: ${funnel.landing_page_score}</span>` : ''}</span>
+                            <span class="chevron-icon">&#9660;</span>
+                        </button>
+                        <div class="scanner-accordion-body">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
-                            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Funnel Intelligence</div>
                             ${funnel.landing_page_score ? (() => {
                                 let score = parseFloat(funnel.landing_page_score);
                                 let maxScore = 10;
@@ -2579,10 +2958,11 @@
                             <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:0.3rem;">Pre-Spend Checklist</div>
                             ${funnel.pre_spend_checklist.map(item => `<div style="font-size:0.78rem;color:var(--text-secondary);padding:0.15rem 0;display:flex;align-items:flex-start;gap:0.3rem;"><span style="color:#f59e0b;">☐</span> ${item}</div>`).join('')}
                         </div>` : ''}
+                        </div>
                     </div>` : ''}
 
                     <!-- CMO Review Button -->
-                    <div style="text-align:center;margin-top:0.5rem;">
+                    <div style="text-align:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
                         <button type="button" onclick="requestCmoCritique()" id="cmoCritiqueBtn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;padding:0.65rem 1.5rem;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.5rem;">
                             <span>🎯</span> Get CMO Review
                         </button>
@@ -3035,6 +3415,7 @@
                 currentAnalysis = result.analysis;
                 currentFormData = data;
                 displayAnalysisResults(result.analysis, data);
+                updateAnalysisStep('grade');
                 saveToHistory('analysis', data, result.analysis);
 
                 setTimeout(() => {
