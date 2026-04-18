@@ -566,21 +566,28 @@ async def generate_creatives(
             )
             key_message = concept.get("key_message", variant_headline)
 
+            print(f"[creative_gen] Concept {variant_idx}: headline='{variant_headline}', dall_e_prompt length={len(dall_e_prompt)}")
+
             # Generate image with DALL-E 3
-            # Clean the prompt — DALL-E rejects prompts asking for text in images
-            safe_prompt = dall_e_prompt
-            if safe_prompt:
-                # Remove any instructions to render text/logos in the image
-                for phrase in ["with text", "showing text", "include text", "overlay text",
-                               "with the words", "showing the words", "that says", "that reads",
-                               "with logo", "include logo", "brand logo"]:
-                    safe_prompt = safe_prompt.replace(phrase, "")
-                # Append safety suffix
-                safe_prompt = safe_prompt.strip() + " No text, no words, no logos, no watermarks in the image."
+            # Build a safe prompt — no text/logos (DALL-E rejects those)
+            safe_prompt = dall_e_prompt.strip() if dall_e_prompt else ""
+
+            # If GPT-4o didn't produce a DALL-E prompt, build one from the visual concept
+            if not safe_prompt:
+                fallback_desc = visual_concept or variant_headline or product_description
+                safe_prompt = f"Professional commercial photograph related to {fallback_desc}. Clean, modern aesthetic, studio lighting."
+                print(f"[creative_gen] No dall_e_prompt from GPT-4o, using fallback: {safe_prompt[:100]}")
+
+            # Remove instructions to render text/logos in the image
+            for phrase in ["with text", "showing text", "include text", "overlay text",
+                           "with the words", "showing the words", "that says", "that reads",
+                           "with logo", "include logo", "brand logo"]:
+                safe_prompt = safe_prompt.replace(phrase, "")
+            safe_prompt = safe_prompt.strip() + " No text, no words, no logos, no watermarks in the image."
 
             image_url = None
-            if has_openai and safe_prompt:
-                print(f"[creative_gen] DALL-E safe prompt: {safe_prompt[:150]}...")
+            if has_openai:
+                print(f"[creative_gen] Calling DALL-E with prompt ({len(safe_prompt)} chars): {safe_prompt[:150]}...")
                 image_url = await generate_dalle_image(safe_prompt)
                 if image_url:
                     generation_mode = "dalle3"
