@@ -174,7 +174,6 @@ For EACH variant, provide a JSON object with:
 5. "dall_e_prompt" - DALL-E 3 image prompt (50-80 words). Describe ONLY the visual scene — NO text overlays, NO logos, NO brand names, NO words in the image. Focus on photography style, lighting, composition, colors, and subjects. Example: "Professional photograph of a modern trading desk with multiple monitors showing colorful charts, warm ambient lighting, shallow depth of field, clean minimalist workspace"
 6. "color_palette" - array of 3 hex colors (e.g., ["#FF6B6B", "#4ECDC4", "#45B7D1"])
 7. "key_message" - single most important message
-8. "image_keywords" - array of 2-3 simple, concrete NOUNS for stock photo search that visually represent this specific ad variant. Each keyword should be a single common word that a stock photo site would match well. Use DIFFERENT keywords for each variant so they get different images. Examples: for real estate use ["house", "interior", "luxury"], for food use ["restaurant", "dinner", "plate"], for tech use ["laptop", "office", "technology"].
 
 Return ONLY a valid JSON array with {num_variants} objects, no additional text.
 """
@@ -260,7 +259,9 @@ _last_dalle_error = None
 
 async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
-    Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
+    Generate image using DALL-E 3 API.
+    Uses response_format=b64_json to get base64 directly — no separate download needed.
+    Returns data:image/png;base64,... string or None on failure.
     """
     global _last_dalle_error
     api_key = get_openai_key()
@@ -269,11 +270,11 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
         print(f"[creative_gen] ERROR: {_last_dalle_error}")
         return None
 
-    print(f"[creative_gen] Attempting DALL-E 3 generation with key: {api_key[:8]}...")
-    print(f"[creative_gen] DALL-E prompt (first 200 chars): {prompt[:200]}")
+    print(f"[creative_gen] DALL-E request starting (key: {api_key[:8]}...)")
+    print(f"[creative_gen] Prompt ({len(prompt)} chars): {prompt[:200]}")
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        try:
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 OPENAI_IMAGES_API,
                 headers={
@@ -286,10 +287,11 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
                     "n": 1,
                     "size": DALL_E_IMAGE_SIZE,
                     "quality": "standard",
+                    "response_format": "b64_json",
                 },
             )
 
-            print(f"[creative_gen] DALL-E response status: {response.status_code}")
+            print(f"[creative_gen] DALL-E response: HTTP {response.status_code}")
 
             if response.status_code != 200:
                 error_detail = response.text[:500]
@@ -303,28 +305,25 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
                 return None
 
             result = response.json()
-            image_url = result.get("data", [{}])[0].get("url")
+            b64_data = result.get("data", [{}])[0].get("b64_json")
 
-            if image_url:
-                print(f"[creative_gen] DALL-E image URL received, downloading...")
-                img_response = await client.get(image_url, timeout=30.0)
-                if img_response.status_code == 200:
-                    image_b64 = base64.b64encode(img_response.content).decode()
-                    print(f"[creative_gen] DALL-E image downloaded: {len(image_b64) // 1024}KB base64")
-                    _last_dalle_error = None
-                    return f"data:image/png;base64,{image_b64}"
-                else:
-                    _last_dalle_error = f"Image download failed: HTTP {img_response.status_code}"
-                    print(f"[creative_gen] {_last_dalle_error}")
+            if b64_data:
+                print(f"[creative_gen] DALL-E SUCCESS: got {len(b64_data) // 1024}KB base64 image")
+                _last_dalle_error = None
+                return f"data:image/png;base64,{b64_data}"
             else:
-                _last_dalle_error = f"No image URL in response: {json.dumps(result)[:300]}"
-                print(f"[creative_gen] {_last_dalle_error}")
+                _last_dalle_error = f"No b64_json in response. Keys: {list(result.get('data', [{}])[0].keys()) if result.get('data') else 'no data'}"
+                print(f"[creative_gen] DALL-E ERROR: {_last_dalle_error}")
+                return None
 
-            return None
-        except Exception as e:
-            _last_dalle_error = f"{type(e).__name__}: {str(e)}"
-            print(f"[creative_gen] DALL-E generation exception: {_last_dalle_error}")
-            return None
+    except httpx.TimeoutException as e:
+        _last_dalle_error = f"Timeout after 120s: {str(e)}"
+        print(f"[creative_gen] DALL-E TIMEOUT: {_last_dalle_error}")
+        return None
+    except Exception as e:
+        _last_dalle_error = f"{type(e).__name__}: {str(e)}"
+        print(f"[creative_gen] DALL-E EXCEPTION: {_last_dalle_error}")
+        return None
 
 
 def generate_svg_mockup(
@@ -527,7 +526,8 @@ async def generate_creatives(
         )
 
     try:
-        # Step 1: Generate creative concepts
+        # Step 1: Generate creative concepts via GPT-4o
+        print(f"[creative_gen] Step 1: Generating concepts for '{product_description[:50]}...'")
         concepts_result = await generate_creative_concepts(
             product_description=product_description,
             platform=platform,
@@ -543,8 +543,9 @@ async def generate_creatives(
         )
 
         concepts = concepts_result.get("concepts", [])
+        print(f"[creative_gen] Step 1 done: got {len(concepts)} concepts")
 
-        # Step 2: Generate images with DALL-E 3 and score each variant
+        # Step 2: Generate DALL-E images and score each variant
         variants = []
         has_openai = bool(get_openai_key())
         generation_mode = "dalle3" if has_openai else "mockup"
@@ -555,44 +556,43 @@ async def generate_creatives(
         for variant_idx, concept in enumerate(concepts):
             # Extract concept data
             variant_headline = concept.get("headline", "Amazing Offer")
-            variant_body = concept.get(
-                "body_copy", "Discover the difference today."
-            )
+            variant_body = concept.get("body_copy", "Discover the difference today.")
             variant_cta = concept.get("cta_text", "Learn More")
             visual_concept = concept.get("visual_concept", "")
             dall_e_prompt = concept.get("dall_e_prompt", "")
-            color_palette = concept.get(
-                "color_palette", ["#FF6B6B", "#4ECDC4", "#45B7D1"]
-            )
+            color_palette = concept.get("color_palette", ["#FF6B6B", "#4ECDC4", "#45B7D1"])
             key_message = concept.get("key_message", variant_headline)
 
-            print(f"[creative_gen] Concept {variant_idx}: headline='{variant_headline}', dall_e_prompt length={len(dall_e_prompt)}")
+            print(f"[creative_gen] Variant {variant_idx}: headline='{variant_headline}', dall_e_prompt={len(dall_e_prompt)} chars")
 
-            # Generate image with DALL-E 3
-            # Build a safe prompt — no text/logos (DALL-E rejects those)
+            # Build safe DALL-E prompt
             safe_prompt = dall_e_prompt.strip() if dall_e_prompt else ""
 
-            # If GPT-4o didn't produce a DALL-E prompt, build one from the visual concept
+            # Fallback prompt if GPT-4o didn't produce one
             if not safe_prompt:
                 fallback_desc = visual_concept or variant_headline or product_description
-                safe_prompt = f"Professional commercial photograph related to {fallback_desc}. Clean, modern aesthetic, studio lighting."
-                print(f"[creative_gen] No dall_e_prompt from GPT-4o, using fallback: {safe_prompt[:100]}")
+                safe_prompt = f"Professional commercial photograph related to {fallback_desc}. Clean modern aesthetic, studio lighting, high quality."
+                print(f"[creative_gen] Using fallback prompt: {safe_prompt[:80]}")
 
-            # Remove instructions to render text/logos in the image
+            # Strip text/logo instructions that DALL-E rejects
             for phrase in ["with text", "showing text", "include text", "overlay text",
                            "with the words", "showing the words", "that says", "that reads",
                            "with logo", "include logo", "brand logo"]:
                 safe_prompt = safe_prompt.replace(phrase, "")
             safe_prompt = safe_prompt.strip() + " No text, no words, no logos, no watermarks in the image."
 
+            # Call DALL-E 3
             image_url = None
             if has_openai:
-                print(f"[creative_gen] Calling DALL-E with prompt ({len(safe_prompt)} chars): {safe_prompt[:150]}...")
+                print(f"[creative_gen] Step 2.{variant_idx}: Calling DALL-E 3...")
                 image_url = await generate_dalle_image(safe_prompt)
                 if image_url:
                     generation_mode = "dalle3"
+                    print(f"[creative_gen] Step 2.{variant_idx}: DALL-E SUCCESS")
+                else:
+                    print(f"[creative_gen] Step 2.{variant_idx}: DALL-E FAILED, using SVG fallback")
 
-            # Fallback: SVG mockup (only if DALL-E fails or key missing)
+            # Fallback: SVG mockup
             if not image_url:
                 generation_mode = "mockup"
                 platform_specs = get_platform_specs(platform, ad_format)
@@ -624,7 +624,7 @@ async def generate_creatives(
                 "cta_text": variant_cta,
                 "visual_concept": visual_concept,
                 "image_url": image_url,
-                "dall_e_prompt": dall_e_prompt,
+                "dall_e_prompt": safe_prompt,
                 "color_palette": color_palette,
                 "scores": scores_dict,
                 "predicted_ctr": predicted_ctr,
@@ -633,8 +633,7 @@ async def generate_creatives(
 
             variants.append(variant)
 
-        # Step 3: Build response (include DALL-E error for debugging)
-        dalle_debug = _last_dalle_error
+        # Step 3: Build response
         response_data = {
             "variants": variants,
             "platform": platform,
@@ -642,9 +641,10 @@ async def generate_creatives(
             "generation_mode": generation_mode,
             "style": style,
             "ad_format": ad_format,
-            "dalle_error": dalle_debug,
+            "dalle_error": _last_dalle_error,
         }
 
+        print(f"[creative_gen] Done: {len(variants)} variants, mode={generation_mode}, dalle_error={_last_dalle_error}")
         return CreativeGenerationResponse(success=True, data=response_data)
 
     except HTTPException:
@@ -705,7 +705,7 @@ async def get_status():
 
     if key:
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(
                     OPENAI_IMAGES_API,
                     headers={
@@ -718,10 +718,12 @@ async def get_status():
                         "n": 1,
                         "size": "1024x1024",
                         "quality": "standard",
+                        "response_format": "b64_json",
                     },
                 )
                 if resp.status_code == 200:
-                    dalle_test = "ok"
+                    b64 = resp.json().get("data", [{}])[0].get("b64_json", "")
+                    dalle_test = f"ok (got {len(b64) // 1024}KB image)"
                 else:
                     error = resp.text[:300]
                     try:
