@@ -260,16 +260,20 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
     api_key = get_openai_key()
     if not api_key:
-        print("[creative_gen] No OPENAI_API_KEY set, skipping DALL-E")
+        print("[creative_gen] ERROR: No OPENAI_API_KEY set — cannot generate DALL-E images")
         return None
 
     print(f"[creative_gen] Attempting DALL-E 3 generation with key: {api_key[:8]}...")
+    print(f"[creative_gen] DALL-E prompt (first 200 chars): {prompt[:200]}")
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=90.0) as client:
         try:
             response = await client.post(
                 OPENAI_IMAGES_API,
-                headers={"Authorization": f"Bearer {api_key}"},
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
                 json={
                     "model": DALL_E_MODEL,
                     "prompt": prompt,
@@ -279,30 +283,36 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
                 },
             )
 
+            print(f"[creative_gen] DALL-E response status: {response.status_code}")
+
             if response.status_code != 200:
-                error_detail = response.text
+                error_detail = response.text[:500]
                 try:
                     error_data = response.json()
                     error_detail = error_data.get("error", {}).get("message", error_detail)
                 except Exception:
                     pass
-                raise Exception(f"DALL-E API error: {error_detail}")
+                print(f"[creative_gen] DALL-E FAILED: {error_detail}")
+                return None
 
             result = response.json()
             image_url = result.get("data", [{}])[0].get("url")
 
             if image_url:
-                # Convert URL to base64 if it's a direct URL
-                # For now, return the URL - in production you might download and convert
+                print(f"[creative_gen] DALL-E image URL received, downloading...")
                 img_response = await client.get(image_url, timeout=30.0)
                 if img_response.status_code == 200:
                     image_b64 = base64.b64encode(img_response.content).decode()
+                    print(f"[creative_gen] DALL-E image downloaded: {len(image_b64) // 1024}KB base64")
                     return f"data:image/png;base64,{image_b64}"
+                else:
+                    print(f"[creative_gen] Failed to download DALL-E image: HTTP {img_response.status_code}")
+            else:
+                print(f"[creative_gen] DALL-E response had no image URL: {json.dumps(result)[:300]}")
 
             return None
         except Exception as e:
-            # Log error but don't fail - fall back to mockup
-            print(f"DALL-E generation failed: {str(e)}")
+            print(f"[creative_gen] DALL-E generation exception: {type(e).__name__}: {str(e)}")
             return None
 
 
@@ -657,9 +667,41 @@ async def get_available_styles():
 
 @router.get("/status")
 async def get_status():
-    """Check which generation backends are available."""
+    """Check which generation backends are available and test DALL-E connectivity."""
+    key = os.getenv("OPENAI_API_KEY")
+    dalle_test = None
+
+    if key:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    OPENAI_IMAGES_API,
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "dall-e-3",
+                        "prompt": "A simple blue circle on white background",
+                        "n": 1,
+                        "size": "1024x1024",
+                        "quality": "standard",
+                    },
+                )
+                if resp.status_code == 200:
+                    dalle_test = "ok"
+                else:
+                    error = resp.text[:300]
+                    try:
+                        error = resp.json().get("error", {}).get("message", error)
+                    except Exception:
+                        pass
+                    dalle_test = f"error ({resp.status_code}): {error}"
+        except Exception as e:
+            dalle_test = f"exception: {type(e).__name__}: {str(e)}"
+
     return {
-        "dalle3_available": bool(os.getenv("OPENAI_API_KEY")),
-        "openai_available": bool(os.getenv("OPENAI_API_KEY")),
-        "openai_key_prefix": os.getenv("OPENAI_API_KEY", "")[:8] + "..." if os.getenv("OPENAI_API_KEY") else None,
+        "openai_key_set": bool(key),
+        "openai_key_prefix": key[:8] + "..." if key else None,
+        "dalle3_test": dalle_test,
     }
