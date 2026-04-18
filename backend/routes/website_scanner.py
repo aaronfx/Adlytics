@@ -644,7 +644,7 @@ RULES:
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
-                "max_tokens": 7000,
+                "max_tokens": 3000,
             },
         )
 
@@ -837,7 +837,7 @@ RULES:
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7,
-                "max_tokens": 5000,
+                "max_tokens": 3000,
             },
         )
 

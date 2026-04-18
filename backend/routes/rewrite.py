@@ -200,7 +200,7 @@ async def _call_gpt4o(prompt: str) -> str:
         "model": MODEL_ID,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.8,
-        "max_tokens": 4000,
+        "max_tokens": 2500,
         "top_p": 0.9
     }
 

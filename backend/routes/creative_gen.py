@@ -35,7 +35,7 @@ OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
 DALL_E_MODEL = "dall-e-3"
 GPT4O_MODEL = "openai/gpt-4o"
 DEFAULT_TEMPERATURE = 0.9
-DEFAULT_MAX_TOKENS = 3000
+DEFAULT_MAX_TOKENS = 2500
 DALL_E_IMAGE_SIZE = "1024x1024"
 MAX_VARIANTS = 4
 

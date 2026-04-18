@@ -273,7 +273,7 @@ Return valid JSON:
                         "model": VISION_MODEL,
                         "messages": [{"role": "user", "content": message_content}],
                         "temperature": 0.7,
-                        "max_tokens": 12000
+                        "max_tokens": 3000
                     }
                 )
 
@@ -849,7 +849,7 @@ CRITICAL: Every observation and fix must reference SPECIFIC words, phrases, or e
                     "model": TEXT_MODEL,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.6,
-                    "max_tokens": 4000,
+                    "max_tokens": 2500,
                 },
             )
 
