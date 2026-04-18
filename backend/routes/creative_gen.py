@@ -147,11 +147,68 @@ async def generate_creative_concepts(
     )
 
     scanner_context = ""
+    brand_visual_guide = ""
     if scanner_brief:
+        # Parse scanner brief to extract brand-specific visual direction
+        try:
+            brief_data = json.loads(scanner_brief) if isinstance(scanner_brief, str) else scanner_brief
+        except (json.JSONDecodeError, TypeError):
+            brief_data = {}
+
+        # Extract brand colors from creative_brief
+        creative = brief_data.get("creative_brief", {})
+        brand_colors = creative.get("color_palette", [])
+        image_keywords = creative.get("image_keywords", [])
+        video_direction = creative.get("video_direction", "")
+
+        # Extract brand analysis
+        brand = brief_data.get("brand_analysis", {})
+        brand_tone = brand.get("brand_tone", "") or brand.get("tone", "")
+        brand_personality = brand.get("brand_personality", "") or brand.get("personality", "")
+        brand_style = brand.get("visual_identity", "") or brand.get("style", "")
+
+        # Extract products for visual reference
+        products = brief_data.get("products", [])
+        product_names = []
+        if isinstance(products, list):
+            for p in products[:3]:
+                if isinstance(p, dict):
+                    product_names.append(p.get("name", ""))
+                elif isinstance(p, str):
+                    product_names.append(p)
+
+        # Build visual guide for DALL-E prompts
+        visual_parts = []
+        if brand_colors:
+            visual_parts.append(f"Brand colors: {', '.join(brand_colors[:4])}")
+        if brand_tone:
+            visual_parts.append(f"Brand tone: {brand_tone}")
+        if brand_personality:
+            visual_parts.append(f"Brand personality: {brand_personality}")
+        if brand_style:
+            visual_parts.append(f"Visual style: {brand_style}")
+        if image_keywords:
+            visual_parts.append(f"Visual keywords: {', '.join(image_keywords[:5])}")
+        if product_names:
+            visual_parts.append(f"Products to reference visually: {', '.join(product_names)}")
+        if video_direction:
+            visual_parts.append(f"Creative direction: {video_direction}")
+
+        brand_visual_guide = ". ".join(visual_parts) if visual_parts else ""
+        color_hint = f" Use these brand colors in color_palette: {brand_colors}" if brand_colors else ""
+
         scanner_context = f"""
 SCANNER INTELLIGENCE (use as primary creative direction):
 {scanner_brief}
-Use the recommended angle, specific features, brand voice, and audience pain points above to create ads that are specific to this business — NOT generic templates."""
+
+BRAND VISUAL IDENTITY:
+{brand_visual_guide}
+
+CRITICAL RULES:
+- Every headline, body copy, and CTA MUST reference this specific brand's products, features, and value props
+- The color_palette MUST use or be inspired by the brand's actual colors{color_hint}
+- The dall_e_prompt MUST create visuals that feel on-brand (matching the brand's tone, industry, and audience)
+- Do NOT create generic stock-photo-style images — make them specific to THIS business"""
 
     prompt = f"""You are an expert ad creative director working for ADLYTICS. Generate {num_variants} ad creative variants.
 
@@ -167,13 +224,13 @@ Industry: {industry_description}
 {scanner_context}
 
 For EACH variant, provide a JSON object with:
-1. "headline" - compelling, platform-optimized headline (max 10 words)
-2. "body_copy" - persuasive ad copy (2-3 sentences, max 150 words)
+1. "headline" - compelling, platform-optimized headline referencing the brand's specific products/features (max 10 words)
+2. "body_copy" - persuasive ad copy mentioning specific brand features and benefits (2-3 sentences, max 150 words)
 3. "cta_text" - call-to-action button text (if not provided)
-4. "visual_concept" - detailed description of the visual composition (2-3 sentences)
-5. "dall_e_prompt" - DALL-E 3 image prompt (50-80 words). Describe ONLY the visual scene — NO text overlays, NO logos, NO brand names, NO words in the image. Focus on photography style, lighting, composition, colors, and subjects. Example: "Professional photograph of a modern trading desk with multiple monitors showing colorful charts, warm ambient lighting, shallow depth of field, clean minimalist workspace"
-6. "color_palette" - array of 3 hex colors (e.g., ["#FF6B6B", "#4ECDC4", "#45B7D1"])
-7. "key_message" - single most important message
+4. "visual_concept" - detailed description of the visual composition that matches the brand's identity (2-3 sentences)
+5. "dall_e_prompt" - DALL-E 3 image prompt (50-80 words). Create a BRANDED visual that matches this company's identity. Use the brand's color tones as dominant colors in the scene. Include visual elements specific to their industry and products. Describe lighting, mood, composition, and atmosphere that match the brand tone. NO text, NO logos, NO words in the image — only visual scenes. {'Use color tones inspired by ' + ", ".join(brand_colors[:3]) + '.' if brand_visual_guide and brand_colors else 'Use professional, industry-appropriate color tones.'}
+6. "color_palette" - array of 3 hex colors {'(MUST include or be inspired by brand colors: ' + ", ".join(brand_colors[:3]) + ')' if brand_visual_guide and brand_colors else '(e.g., ["#FF6B6B", "#4ECDC4", "#45B7D1"])'}
+7. "key_message" - single most important message specific to this brand
 
 Return ONLY a valid JSON array with {num_variants} objects, no additional text.
 """
