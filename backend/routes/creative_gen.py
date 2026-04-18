@@ -1,9 +1,8 @@
 """
 FastAPI router for AI ad creative generation.
 
-Supports two backends:
-1. OpenAI DALL-E 3 for actual image generation (requires OPENAI_API_KEY)
-2. Fallback: SVG mockup generation using GPT-4o concept generation (requires OPENROUTER_API_KEY)
+Uses OpenAI DALL-E 3 for image generation (requires OPENAI_API_KEY).
+Falls back to SVG mockup if DALL-E fails on a specific prompt.
 """
 
 import os
@@ -259,53 +258,6 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             )
 
 
-async def fetch_stock_image(keywords: list, width: int = 1080, height: int = 1080, variant_index: int = 0) -> Optional[str]:
-    """
-    Fetch a relevant stock image using loremflickr with simple keywords.
-    Uses lock parameter to get different images per variant.
-    Returns a direct image URL.
-    """
-    import random
-
-    try:
-        # Use the provided keywords directly (already cleaned by GPT-4o)
-        if isinstance(keywords, list) and keywords:
-            search_query = ",".join(k.strip().lower() for k in keywords[:3] if k.strip())
-        elif isinstance(keywords, str):
-            # Fallback if passed a string
-            terms = [t for t in keywords.lower().split() if len(t) > 2][:3]
-            search_query = ",".join(terms)
-        else:
-            search_query = "business,modern"
-
-        # Use lock parameter to get a unique but deterministic image per variant
-        lock_seed = random.randint(1000, 9999) + variant_index * 100
-        image_url = f"https://loremflickr.com/{width}/{height}/{search_query}?lock={lock_seed}"
-
-        print(f"[creative_gen] Fetching stock image: {image_url}")
-
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            response = await client.head(image_url)
-            if response.status_code == 200:
-                final_url = str(response.url)
-                print(f"[creative_gen] Stock image found: {final_url}")
-                return final_url
-
-        # Fallback: picsum.photos with unique seed per variant
-        fallback_url = f"https://picsum.photos/seed/adlytics{variant_index}{random.randint(1,999)}/{width}/{height}"
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            response = await client.head(fallback_url)
-            if response.status_code == 200:
-                final_url = str(response.url)
-                print(f"[creative_gen] Picsum fallback image: {final_url}")
-                return final_url
-
-        return None
-    except Exception as e:
-        print(f"[creative_gen] Stock image fetch failed: {e}")
-        return None
-
-
 async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
     Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
@@ -522,11 +474,8 @@ async def generate_creatives(
     scanner_brief: Optional[str] = Form(None),
 ):
     """
-    Generate ad creative variants with AI-generated concepts and images.
-
-    Supports two backends:
-    - DALL-E 3: Generates actual images (requires OPENAI_API_KEY)
-    - Fallback: Generates SVG mockups with GPT-4o concepts (requires OPENROUTER_API_KEY)
+    Generate ad creative variants with AI-generated concepts and DALL-E 3 images.
+    Falls back to SVG mockup if DALL-E fails on a specific prompt.
     """
 
     # Validate inputs
@@ -578,11 +527,13 @@ async def generate_creatives(
 
         concepts = concepts_result.get("concepts", [])
 
-        # Step 2: Generate images and score each variant
-        # Priority: DALL-E 3 → Stock Photo → SVG Mockup
+        # Step 2: Generate images with DALL-E 3 and score each variant
         variants = []
         has_openai = bool(get_openai_key())
-        generation_mode = "dalle3" if has_openai else "stock"
+        generation_mode = "dalle3" if has_openai else "mockup"
+
+        if not has_openai:
+            print("[creative_gen] WARNING: OPENAI_API_KEY not set — falling back to SVG mockups")
 
         for variant_idx, concept in enumerate(concepts):
             # Extract concept data
@@ -598,28 +549,14 @@ async def generate_creatives(
             )
             key_message = concept.get("key_message", variant_headline)
 
-            # Try DALL-E 3 first
+            # Generate image with DALL-E 3
             image_url = None
             if has_openai:
                 image_url = await generate_dalle_image(dall_e_prompt)
                 if image_url:
                     generation_mode = "dalle3"
 
-            # Fallback: Stock photo with AI-generated keywords
-            if not image_url:
-                platform_specs = get_platform_specs(platform, ad_format)
-                size_str = platform_specs["recommended_size"]
-                img_width, img_height = map(int, size_str.split("x"))
-                # Use GPT-4o generated keywords if available, otherwise build from context
-                image_keywords = concept.get("image_keywords", [])
-                if not image_keywords or not isinstance(image_keywords, list):
-                    # Fallback: extract simple nouns from industry + visual concept
-                    image_keywords = [industry.replace("_", " "), visual_concept.split()[0] if visual_concept else "business"]
-                image_url = await fetch_stock_image(image_keywords, img_width, img_height, variant_index=variant_idx)
-                if image_url:
-                    generation_mode = "stock"
-
-            # Final fallback: SVG mockup
+            # Fallback: SVG mockup (only if DALL-E fails or key missing)
             if not image_url:
                 generation_mode = "mockup"
                 platform_specs = get_platform_specs(platform, ad_format)

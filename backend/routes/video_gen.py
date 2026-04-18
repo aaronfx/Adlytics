@@ -600,11 +600,13 @@ async def get_audio_duration(audio_path: str) -> float:
         return 0.0
 
 
-# ========== STOCK IMAGE FETCH ==========
+# ========== AI IMAGE GENERATION (DALL-E 3) ==========
 
-async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -> Optional[Image.Image]:
-    """Fetch a relevant stock image using free APIs (no keys needed)."""
-    import random
+OPENAI_IMAGES_API = "https://api.openai.com/v1/images/generations"
+
+
+async def fetch_image_for_video(keywords: list, width: int, height: int) -> Optional[Image.Image]:
+    """Generate an image using OpenAI DALL-E 3. Falls back to styled placeholder if key missing or API fails."""
     from io import BytesIO
 
     search_terms = [k.strip().lower() for k in keywords[:3] if k.strip()]
@@ -614,60 +616,54 @@ async def fetch_stock_image_for_video(keywords: list, width: int, height: int) -
     fetch_w = max(width, 800)
     fetch_h = max(height, 600)
 
-    async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("[video_gen] No OPENAI_API_KEY set — using styled placeholder")
+        return _generate_styled_placeholder(fetch_w, fetch_h, " ".join(search_terms), search_terms)
 
-        # Source 1: Lexica.art API (free, no key, AI-generated high quality)
-        try:
-            query = " ".join(search_terms)
-            print(f"[video_gen] Trying Lexica API: '{query}'...")
-            response = await client.get(
-                f"https://lexica.art/api/v1/search",
-                params={"q": query},
+    # Build a descriptive prompt from keywords
+    keyword_str = ", ".join(search_terms)
+    dalle_prompt = (
+        f"Professional, high-quality commercial photography of {keyword_str}. "
+        f"Clean, modern aesthetic suitable for a video advertisement. "
+        f"No text, no watermarks, no logos. Photorealistic style."
+    )
+
+    try:
+        print(f"[video_gen] Generating DALL-E 3 image for: '{keyword_str}'...")
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                OPENAI_IMAGES_API,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": "dall-e-3",
+                    "prompt": dalle_prompt,
+                    "n": 1,
+                    "size": "1024x1024",
+                    "quality": "standard",
+                },
             )
-            if response.status_code == 200:
-                data = response.json()
-                images = data.get("images", [])
-                if images:
-                    pick = random.choice(images[:8])
-                    img_url = pick.get("src") or pick.get("srcSmall")
-                    if img_url:
-                        img_resp = await client.get(img_url)
-                        if img_resp.status_code == 200 and len(img_resp.content) > 5000:
-                            img = Image.open(BytesIO(img_resp.content)).convert("RGB")
-                            print(f"[video_gen] Lexica image: {img.size}")
-                            return img
-        except Exception as e:
-            print(f"[video_gen] Lexica failed: {e}")
 
-        # Source 2: loremflickr with specific single keyword (works better)
-        for keyword in search_terms[:2]:
-            try:
-                lock = random.randint(1000, 9999)
-                url = f"https://loremflickr.com/{fetch_w}/{fetch_h}/{keyword}?lock={lock}"
-                print(f"[video_gen] Trying loremflickr: '{keyword}' (lock={lock})...")
-                response = await client.get(url)
-                if response.status_code == 200 and len(response.content) > 5000:
-                    img = Image.open(BytesIO(response.content)).convert("RGB")
-                    print(f"[video_gen] loremflickr image: {img.size}")
+            if response.status_code != 200:
+                error_detail = response.text[:200]
+                print(f"[video_gen] DALL-E API error ({response.status_code}): {error_detail}")
+                return _generate_styled_placeholder(fetch_w, fetch_h, " ".join(search_terms), search_terms)
+
+            result = response.json()
+            image_url = result.get("data", [{}])[0].get("url")
+
+            if image_url:
+                img_resp = await client.get(image_url, timeout=30.0)
+                if img_resp.status_code == 200 and len(img_resp.content) > 5000:
+                    img = Image.open(BytesIO(img_resp.content)).convert("RGB")
+                    print(f"[video_gen] DALL-E 3 image generated: {img.size}")
                     return img
-            except Exception as e:
-                print(f"[video_gen] loremflickr '{keyword}' failed: {e}")
 
-        # Source 3: Picsum (random but reliable — always works)
-        try:
-            seed = "".join(search_terms)[:10]
-            url = f"https://picsum.photos/seed/{seed}{random.randint(1,99)}/{fetch_w}/{fetch_h}"
-            print(f"[video_gen] Trying Picsum: {url[:60]}...")
-            response = await client.get(url)
-            if response.status_code == 200 and len(response.content) > 5000:
-                img = Image.open(BytesIO(response.content)).convert("RGB")
-                print(f"[video_gen] Picsum image: {img.size}")
-                return img
-        except Exception as e:
-            print(f"[video_gen] Picsum failed: {e}")
+    except Exception as e:
+        print(f"[video_gen] DALL-E generation failed: {e}")
 
-    # Source 4: Generate a professional styled placeholder (offline fallback)
-    print("[video_gen] All image sources failed, generating styled placeholder")
+    # Fallback: styled placeholder
+    print("[video_gen] DALL-E failed, using styled placeholder")
     return _generate_styled_placeholder(fetch_w, fetch_h, " ".join(search_terms), search_terms)
 
 
@@ -951,7 +947,7 @@ async def generate_video(
         colors = script.get("color_palette", ["#6366F1", "#1a1c2e", "#8B5CF6"])
         image_keywords = script.get("image_keywords", ["business", "modern"])
 
-        # Step 2: Handle user image or fetch stock (at full resolution)
+        # Step 2: Handle user image or generate with DALL-E (at full resolution)
         product_img = None
         if uploaded_image and uploaded_image.filename:
             print(f"[video_gen] Using uploaded image: {uploaded_image.filename}")
@@ -959,8 +955,8 @@ async def generate_video(
             from io import BytesIO
             product_img = Image.open(BytesIO(img_data)).convert("RGB")
         else:
-            print(f"[video_gen] Fetching stock image with keywords: {image_keywords}")
-            product_img = await fetch_stock_image_for_video(image_keywords, full_width, int(full_height * 0.5))
+            print(f"[video_gen] Generating DALL-E image with keywords: {image_keywords}")
+            product_img = await fetch_image_for_video(image_keywords, full_width, int(full_height * 0.5))
 
         # Step 3: Generate voiceover
         audio_path = None
@@ -1122,7 +1118,7 @@ async def get_video_status():
         "gtts_available": has_gtts,
         "tts_available": has_edge_tts or has_gtts,
         "openrouter_available": bool(get_openrouter_key()),
-        "image_sources": "lexica, loremflickr, picsum, placeholder",
+        "image_sources": "dall-e-3, styled-placeholder",
         "templates_count": len(TEMPLATES),
         "max_duration": MAX_DURATION,
     }
@@ -1154,7 +1150,7 @@ async def test_video_pipeline():
 
     # Test 3: Image fetch
     try:
-        img = await fetch_stock_image_for_video(["office", "business"], 800, 600)
+        img = await fetch_image_for_video(["office", "business"], 800, 600)
         results["image_fetch"] = f"ok ({img.size})" if img else "failed"
     except Exception as e:
         results["image_fetch"] = f"error: {type(e).__name__}: {e}"
