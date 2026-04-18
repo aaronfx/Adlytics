@@ -171,7 +171,7 @@ For EACH variant, provide a JSON object with:
 2. "body_copy" - persuasive ad copy (2-3 sentences, max 150 words)
 3. "cta_text" - call-to-action button text (if not provided)
 4. "visual_concept" - detailed description of the visual composition (2-3 sentences)
-5. "dall_e_prompt" - detailed DALL-E 3 prompt for image generation (100+ words, very specific)
+5. "dall_e_prompt" - DALL-E 3 image prompt (50-80 words). Describe ONLY the visual scene — NO text overlays, NO logos, NO brand names, NO words in the image. Focus on photography style, lighting, composition, colors, and subjects. Example: "Professional photograph of a modern trading desk with multiple monitors showing colorful charts, warm ambient lighting, shallow depth of field, clean minimalist workspace"
 6. "color_palette" - array of 3 hex colors (e.g., ["#FF6B6B", "#4ECDC4", "#45B7D1"])
 7. "key_message" - single most important message
 8. "image_keywords" - array of 2-3 simple, concrete NOUNS for stock photo search that visually represent this specific ad variant. Each keyword should be a single common word that a stock photo site would match well. Use DIFFERENT keywords for each variant so they get different images. Examples: for real estate use ["house", "interior", "luxury"], for food use ["restaurant", "dinner", "plate"], for tech use ["laptop", "office", "technology"].
@@ -556,9 +556,21 @@ async def generate_creatives(
             key_message = concept.get("key_message", variant_headline)
 
             # Generate image with DALL-E 3
+            # Clean the prompt — DALL-E rejects prompts asking for text in images
+            safe_prompt = dall_e_prompt
+            if safe_prompt:
+                # Remove any instructions to render text/logos in the image
+                for phrase in ["with text", "showing text", "include text", "overlay text",
+                               "with the words", "showing the words", "that says", "that reads",
+                               "with logo", "include logo", "brand logo"]:
+                    safe_prompt = safe_prompt.replace(phrase, "")
+                # Append safety suffix
+                safe_prompt = safe_prompt.strip() + " No text, no words, no logos, no watermarks in the image."
+
             image_url = None
-            if has_openai:
-                image_url = await generate_dalle_image(dall_e_prompt)
+            if has_openai and safe_prompt:
+                print(f"[creative_gen] DALL-E safe prompt: {safe_prompt[:150]}...")
+                image_url = await generate_dalle_image(safe_prompt)
                 if image_url:
                     generation_mode = "dalle3"
 
