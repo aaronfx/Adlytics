@@ -254,13 +254,19 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             )
 
 
+# Store last DALL-E error for debugging
+_last_dalle_error = None
+
+
 async def generate_dalle_image(prompt: str) -> Optional[str]:
     """
     Generate image using DALL-E 3 API. Returns base64-encoded image or None if API key not available.
     """
+    global _last_dalle_error
     api_key = get_openai_key()
     if not api_key:
-        print("[creative_gen] ERROR: No OPENAI_API_KEY set — cannot generate DALL-E images")
+        _last_dalle_error = "OPENAI_API_KEY not set in environment"
+        print(f"[creative_gen] ERROR: {_last_dalle_error}")
         return None
 
     print(f"[creative_gen] Attempting DALL-E 3 generation with key: {api_key[:8]}...")
@@ -292,7 +298,8 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
                     error_detail = error_data.get("error", {}).get("message", error_detail)
                 except Exception:
                     pass
-                print(f"[creative_gen] DALL-E FAILED: {error_detail}")
+                _last_dalle_error = f"HTTP {response.status_code}: {error_detail}"
+                print(f"[creative_gen] DALL-E FAILED: {_last_dalle_error}")
                 return None
 
             result = response.json()
@@ -304,15 +311,19 @@ async def generate_dalle_image(prompt: str) -> Optional[str]:
                 if img_response.status_code == 200:
                     image_b64 = base64.b64encode(img_response.content).decode()
                     print(f"[creative_gen] DALL-E image downloaded: {len(image_b64) // 1024}KB base64")
+                    _last_dalle_error = None
                     return f"data:image/png;base64,{image_b64}"
                 else:
-                    print(f"[creative_gen] Failed to download DALL-E image: HTTP {img_response.status_code}")
+                    _last_dalle_error = f"Image download failed: HTTP {img_response.status_code}"
+                    print(f"[creative_gen] {_last_dalle_error}")
             else:
-                print(f"[creative_gen] DALL-E response had no image URL: {json.dumps(result)[:300]}")
+                _last_dalle_error = f"No image URL in response: {json.dumps(result)[:300]}"
+                print(f"[creative_gen] {_last_dalle_error}")
 
             return None
         except Exception as e:
-            print(f"[creative_gen] DALL-E generation exception: {type(e).__name__}: {str(e)}")
+            _last_dalle_error = f"{type(e).__name__}: {str(e)}"
+            print(f"[creative_gen] DALL-E generation exception: {_last_dalle_error}")
             return None
 
 
@@ -615,7 +626,8 @@ async def generate_creatives(
 
             variants.append(variant)
 
-        # Step 3: Build response
+        # Step 3: Build response (include DALL-E error for debugging)
+        dalle_debug = _last_dalle_error
         response_data = {
             "variants": variants,
             "platform": platform,
@@ -623,6 +635,7 @@ async def generate_creatives(
             "generation_mode": generation_mode,
             "style": style,
             "ad_format": ad_format,
+            "dalle_error": dalle_debug,
         }
 
         return CreativeGenerationResponse(success=True, data=response_data)
@@ -716,4 +729,5 @@ async def get_status():
         "openai_key_set": bool(key),
         "openai_key_prefix": key[:8] + "..." if key else None,
         "dalle3_test": dalle_test,
+        "last_dalle_error": _last_dalle_error,
     }
