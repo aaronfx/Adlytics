@@ -28,8 +28,8 @@ from fastapi.responses import FileResponse
 router = APIRouter(prefix="/video", tags=["video-generation"])
 
 # Constants
-OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
-GPT4O_MODEL = "openai/gpt-4o"
+OPENAI_CHAT_API = "https://api.openai.com/v1/chat/completions"
+GPT4O_MODEL = "gpt-4o"
 FPS = 18  # Good balance of smooth + fast rendering
 RENDER_SCALE = 0.67  # Render at 720p, FFmpeg upscales to 1080p
 MAX_DURATION = 60  # seconds
@@ -94,8 +94,8 @@ ASPECT_SIZES = {
 }
 
 
-def get_openrouter_key():
-    return os.getenv("OPENROUTER_API_KEY")
+def get_openai_key():
+    return os.getenv("OPENAI_API_KEY")
 
 
 def get_font(style: str = "bold", size: int = 48):
@@ -796,8 +796,8 @@ async def generate_video_script(
     scanner_brief: Optional[str] = None,
 ) -> dict:
     """Use GPT-4o to generate video ad script content, optionally powered by scanner intelligence."""
-    if not get_openrouter_key():
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+    if not get_openai_key():
+        raise HTTPException(status_code=500, detail="OPENAI_CHAT_API_KEY not configured")
 
     template_info = TEMPLATES.get(template, TEMPLATES["product_showcase"])
 
@@ -835,11 +835,10 @@ Return ONLY valid JSON, no additional text or markdown."""
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
-            OPENROUTER_API,
+            OPENAI_CHAT_API,
             headers={
-                "Authorization": f"Bearer {get_openrouter_key()}",
-                "HTTP-Referer": "https://adlytics.ai",
-                "X-Title": "Adlytics Video Generation",
+                "Authorization": f"Bearer {get_openai_key()}",
+                "Content-Type": "application/json",
             },
             json={
                 "model": GPT4O_MODEL,
@@ -1117,7 +1116,7 @@ async def get_video_status():
         "edge_tts_available": has_edge_tts,
         "gtts_available": has_gtts,
         "tts_available": has_edge_tts or has_gtts,
-        "openrouter_available": bool(get_openrouter_key()),
+        "openai_available": bool(get_openai_key()),
         "image_sources": "dall-e-3, styled-placeholder",
         "templates_count": len(TEMPLATES),
         "max_duration": MAX_DURATION,
@@ -1157,19 +1156,19 @@ async def test_video_pipeline():
 
     # Test 4: OpenRouter API
     try:
-        key = get_openrouter_key()
+        key = get_openai_key()
         if key:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(
-                    OPENROUTER_API,
+                    OPENAI_CHAT_API,
                     headers={"Authorization": f"Bearer {key}"},
                     json={"model": GPT4O_MODEL, "messages": [{"role": "user", "content": "Say hello in 3 words"}], "max_tokens": 20},
                 )
-                results["openrouter"] = f"ok (status {resp.status_code})"
+                results["openai"] = f"ok (status {resp.status_code})"
         else:
-            results["openrouter"] = "no API key"
+            results["openai"] = "no API key"
     except Exception as e:
-        results["openrouter"] = f"error: {type(e).__name__}: {e}"
+        results["openai"] = f"error: {type(e).__name__}: {e}"
 
     # Test 5: Frame rendering
     try:

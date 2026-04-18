@@ -254,8 +254,8 @@ class AIEngine:
     """v7.0 — Chain-of-thought + audience injection + two-pass critic + brand voice support"""
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.base_url = "https://openrouter.ai/api/v1"
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.base_url = "https://api.openai.com/v1"
 
     def _clean_json(self, raw: str) -> str:
         return re.sub(r"```json|```", "", raw).strip()
@@ -267,10 +267,9 @@ class AIEngine:
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "https://adlytics.ai",
                 },
                 json={
-                    "model": "openai/gpt-4o",
+                    "model": "gpt-4o",
                     "messages": [{"role": "user", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "max_tokens": max_tokens,

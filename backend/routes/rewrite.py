@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/rewrite", tags=["rewrite"])
 
-# OpenRouter API configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-MODEL_ID = "openai/gpt-4o"
+# OpenAI API configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+MODEL_ID = "gpt-4o"
 
 # ─── REWRITE MODES ────────────────────────────────────────────────────────
 # Full-ad rewrite modes
@@ -185,35 +185,33 @@ IMPORTANT REQUIREMENTS:
 
 
 async def _call_gpt4o(prompt: str) -> str:
-    """Call OpenRouter GPT-4o API with the provided prompt."""
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
+    """Call OpenAI GPT-4o API with the provided prompt."""
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
 
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://adlytics.app",
-        "X-Title": "Adlytics Ad Copy Rewriter"
     }
 
     payload = {
         "model": MODEL_ID,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.8,
-        "max_tokens": 2500,
+        "max_tokens": 4000,
         "top_p": 0.9
     }
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
+                f"{OPENAI_BASE_URL}/chat/completions",
                 json=payload,
                 headers=headers
             )
 
             if response.status_code != 200:
-                logger.error(f"OpenRouter API error: {response.status_code} - {response.text}")
+                logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to call GPT-4o: {response.status_code}"

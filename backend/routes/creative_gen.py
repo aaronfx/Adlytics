@@ -24,18 +24,15 @@ router = APIRouter(prefix="/creative", tags=["creative-generation"])
 def get_openai_key():
     return os.getenv("OPENAI_API_KEY")
 
-def get_openrouter_key():
-    return os.getenv("OPENROUTER_API_KEY")
-
 # API endpoints
 OPENAI_IMAGES_API = "https://api.openai.com/v1/images/generations"
-OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
+OPENAI_CHAT_API = "https://api.openai.com/v1/chat/completions"
 
 # Constants
 DALL_E_MODEL = "dall-e-3"
-GPT4O_MODEL = "openai/gpt-4o"
+GPT4O_MODEL = "gpt-4o"
 DEFAULT_TEMPERATURE = 0.9
-DEFAULT_MAX_TOKENS = 2500
+DEFAULT_MAX_TOKENS = 3000
 DALL_E_IMAGE_SIZE = "1024x1024"
 MAX_VARIANTS = 4
 
@@ -135,12 +132,12 @@ async def generate_creative_concepts(
     scanner_brief: Optional[str] = None,
 ) -> dict:
     """
-    Use GPT-4o via OpenRouter to generate creative concepts, headlines, copy, and DALL-E prompts.
+    Use GPT-4o via OpenAI to generate creative concepts, headlines, copy, and DALL-E prompts.
     """
-    if not get_openrouter_key():
+    if not get_openai_key():
         raise HTTPException(
             status_code=500,
-            detail="OPENROUTER_API_KEY not configured. Creative generation requires OpenRouter API access.",
+            detail="OPENAI_API_KEY not configured. Creative generation requires OpenAI API access.",
         )
 
     style_description = STYLE_PRESETS.get(style, style)
@@ -184,11 +181,10 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
-            OPENROUTER_API,
+            OPENAI_CHAT_API,
             headers={
-                "Authorization": f"Bearer {get_openrouter_key()}",
-                "HTTP-Referer": "https://adlytics.ai",
-                "X-Title": "Adlytics Creative Generation",
+                "Authorization": f"Bearer {get_openai_key()}",
+                "Content-Type": "application/json",
             },
             json={
                 "model": GPT4O_MODEL,
@@ -207,7 +203,7 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
                 pass
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"OpenRouter API error: {error_detail}",
+                detail=f"OpenAI API error: {error_detail}",
             )
 
         result = response.json()
@@ -217,16 +213,16 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             error_msg = result["error"].get("message", str(result["error"]))
             raise HTTPException(
                 status_code=500,
-                detail=f"OpenRouter API error: {error_msg}",
+                detail=f"OpenAI API error: {error_msg}",
             )
 
         content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
 
         if not content or not content.strip():
-            print(f"[creative_gen] Empty response from OpenRouter. Full result: {json.dumps(result)[:500]}")
+            print(f"[creative_gen] Empty response from OpenAI. Full result: {json.dumps(result)[:500]}")
             raise HTTPException(
                 status_code=500,
-                detail="OpenRouter returned an empty response. Please try again.",
+                detail="OpenAI returned an empty response. Please try again.",
             )
 
         print(f"[creative_gen] Response preview: {content[:300]}")
@@ -254,7 +250,7 @@ Return ONLY a valid JSON array with {num_variants} objects, no additional text.
             print(f"[creative_gen] JSON parse error. Content: {content[:500]}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to parse creative concepts from OpenRouter: {str(e)}",
+                detail=f"Failed to parse creative concepts from OpenAI: {str(e)}",
             )
 
 
@@ -664,6 +660,6 @@ async def get_status():
     """Check which generation backends are available."""
     return {
         "dalle3_available": bool(os.getenv("OPENAI_API_KEY")),
-        "openrouter_available": bool(os.getenv("OPENROUTER_API_KEY")),
-        "dalle3_key_prefix": os.getenv("OPENAI_API_KEY", "")[:8] + "..." if os.getenv("OPENAI_API_KEY") else None,
+        "openai_available": bool(os.getenv("OPENAI_API_KEY")),
+        "openai_key_prefix": os.getenv("OPENAI_API_KEY", "")[:8] + "..." if os.getenv("OPENAI_API_KEY") else None,
     }

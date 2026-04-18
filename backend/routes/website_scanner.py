@@ -21,13 +21,13 @@ from fastapi import APIRouter, HTTPException, Form
 
 router = APIRouter(prefix="/scanner", tags=["website-scanner"])
 
-OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
-GPT4O_MODEL = "openai/gpt-4o"
+OPENAI_CHAT_API = "https://api.openai.com/v1/chat/completions"
+GPT4O_MODEL = "gpt-4o"
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
-def get_openrouter_key():
-    return os.getenv("OPENROUTER_API_KEY")
+def get_openai_key():
+    return os.getenv("OPENAI_API_KEY")
 
 
 def _headers():
@@ -500,8 +500,8 @@ async def analyze_with_ai(content_package: str, url: str) -> Dict[str, Any]:
     GPT-4o acts as a senior marketing strategist analyzing the business.
     Returns a comprehensive business intelligence + creative strategy report.
     """
-    if not get_openrouter_key():
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+    if not get_openai_key():
+        raise HTTPException(status_code=500, detail="OPENAI_CHAT_API_KEY not configured")
 
     prompt = f"""You are ADLYTICS — a senior performance marketing strategist, conversion optimizer, and growth advisor with 15+ years experience scaling brands through paid ads across every major platform. You combine the analytical rigor of a top consultant with the creative instincts of an award-winning ad agency director.
 
@@ -634,17 +634,16 @@ RULES:
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
-            OPENROUTER_API,
+            OPENAI_CHAT_API,
             headers={
-                "Authorization": f"Bearer {get_openrouter_key()}",
-                "HTTP-Referer": "https://adlytics.ai",
-                "X-Title": "Adlytics Deep Scanner",
+                "Authorization": f"Bearer {get_openai_key()}",
+                "Content-Type": "application/json",
             },
             json={
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
-                "max_tokens": 3000,
+                "max_tokens": 7000,
             },
         )
 
@@ -752,8 +751,8 @@ async def run_cmo_critique(report_json: Dict[str, Any]) -> Dict[str, Any]:
     flags generic filler, identifies missing insights, and produces upgraded
     versions of the weakest ad angles and copy.
     """
-    if not get_openrouter_key():
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+    if not get_openai_key():
+        raise HTTPException(status_code=500, detail="OPENAI_CHAT_API_KEY not configured")
 
     # Serialize the report for the prompt (truncate if massive)
     report_str = json.dumps(report_json, indent=1)
@@ -827,17 +826,16 @@ RULES:
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
-            OPENROUTER_API,
+            OPENAI_CHAT_API,
             headers={
-                "Authorization": f"Bearer {get_openrouter_key()}",
-                "HTTP-Referer": "https://adlytics.ai",
-                "X-Title": "Adlytics CMO Critique",
+                "Authorization": f"Bearer {get_openai_key()}",
+                "Content-Type": "application/json",
             },
             json={
                 "model": GPT4O_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7,
-                "max_tokens": 3000,
+                "max_tokens": 5000,
             },
         )
 

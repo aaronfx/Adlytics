@@ -41,9 +41,9 @@ router = APIRouter(prefix="/meta", tags=["meta-ads"])
 TIMEOUT_CONFIG = httpx.Timeout(30.0, connect=10.0)
 AI_TIMEOUT = httpx.Timeout(90.0, connect=10.0)
 
-# OpenRouter for AI analysis
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions"
+# OpenAI for AI analysis
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_CHAT_API = "https://api.openai.com/v1/chat/completions"
 
 
 def validate_env_vars() -> None:
@@ -697,8 +697,8 @@ Ad {i+1}: {ad.get('name', 'Unnamed')}
 """
 
             # Call GPT-4o for analysis
-            if not OPENROUTER_API_KEY:
-                raise HTTPException(status_code=500, detail="AI analysis requires OPENROUTER_API_KEY")
+            if not OPENAI_API_KEY:
+                raise HTTPException(status_code=500, detail="AI analysis requires OPENAI_API_KEY")
 
             prompt = f"""You are an expert digital advertising analyst. Analyze this Meta Ads campaign and provide actionable insights.
 
@@ -728,14 +728,13 @@ Return ONLY valid JSON, no additional text.
 
             async with httpx.AsyncClient(timeout=AI_TIMEOUT) as ai_client:
                 ai_response = await ai_client.post(
-                    OPENROUTER_API,
+                    OPENAI_CHAT_API,
                     headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                        "HTTP-Referer": "https://adlytics.ai",
-                        "X-Title": "Adlytics Campaign Analysis",
+                        "Authorization": f"Bearer {OPENAI_API_KEY}",
+                        "Content-Type": "application/json",
                     },
                     json={
-                        "model": "openai/gpt-4o",
+                        "model": "gpt-4o",
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.7,
                         "max_tokens": 2000,

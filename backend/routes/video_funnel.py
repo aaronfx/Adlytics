@@ -29,10 +29,10 @@ router = APIRouter(
     responses={400: {"description": "Bad request"}, 500: {"description": "Internal server error"}}
 )
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-VISION_MODEL = "openai/gpt-4o"
-TEXT_MODEL = "openai/gpt-4o"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+VISION_MODEL = "gpt-4o"
+TEXT_MODEL = "gpt-4o"
 REQUEST_TIMEOUT = 180.0
 
 AUDIENCE_PERSONAS = {
@@ -75,7 +75,7 @@ AUDIENCE_PERSONAS = {
 
 
 class VideoFunnelAnalyzer:
-    """Handles video funnel analysis using GPT-4o Vision via OpenRouter API"""
+    """Handles video funnel analysis using GPT-4o Vision via OpenAI API"""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -230,9 +230,9 @@ Return valid JSON:
         return prompt
 
     async def analyze_with_vision(self, ad_frames=None, ad_transcript=None, landing_frames=None, landing_transcript=None, platform="facebook", industry="finance", audience_country="nigeria", audience_age="25-34", audience_income="middle", cta_destination="telegram", brand_voice=None):
-        """Analyze video funnel using GPT-4o Vision via OpenRouter API."""
-        if not OPENROUTER_API_KEY:
-            raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+        """Analyze video funnel using GPT-4o Vision via OpenAI API."""
+        if not OPENAI_API_KEY:
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
 
         prompt = self._build_vision_prompt(
             ad_frames=ad_frames, ad_transcript=ad_transcript,
@@ -264,32 +264,32 @@ Return valid JSON:
         try:
             async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
                 response = await client.post(
-                    f"{OPENROUTER_BASE_URL}/chat/completions",
+                    f"{OPENAI_BASE_URL}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Authorization": f"Bearer {OPENAI_API_KEY}",
                         "Content-Type": "application/json"
                     },
                     json={
                         "model": VISION_MODEL,
                         "messages": [{"role": "user", "content": message_content}],
                         "temperature": 0.7,
-                        "max_tokens": 3000
+                        "max_tokens": 8000
                     }
                 )
 
                 if response.status_code != 200:
                     error_detail = response.text[:500]
-                    self.logger.error(f"OpenRouter API error: {response.status_code} - {error_detail}")
+                    self.logger.error(f"OpenAI API error: {response.status_code} - {error_detail}")
                     raise HTTPException(status_code=500, detail=f"AI analysis failed (HTTP {response.status_code}): {error_detail}")
 
                 result = response.json()
                 content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
                 finish_reason = result.get("choices", [{}])[0].get("finish_reason", "unknown")
-                self.logger.info(f"OpenRouter response received: {len(content)} chars, finish_reason={finish_reason}")
+                self.logger.info(f"OpenAI response received: {len(content)} chars, finish_reason={finish_reason}")
 
                 try:
                     if not content or not content.strip():
-                        self.logger.error(f"OpenRouter returned empty content. Full API response: {json.dumps(result)[:500]}")
+                        self.logger.error(f"OpenAI returned empty content. Full API response: {json.dumps(result)[:500]}")
                         raise ValueError("AI returned empty response — model may have timed out. Try a shorter video.")
 
                     self.logger.info(f"Raw response first 200 chars: {content[:200]}")
@@ -335,7 +335,7 @@ Return valid JSON:
                 return analysis
 
         except httpx.RequestError as e:
-            self.logger.error(f"OpenRouter API request error: {str(e)}")
+            self.logger.error(f"OpenAI API request error: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to connect to AI service: {str(e)}")
         except Exception as e:
             self.logger.error(f"Unexpected error during analysis: {str(e)}")
@@ -424,24 +424,24 @@ async def analyze_video_funnel(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
-async def transcribe_audio_via_openrouter(audio_base64: str, label: str = "video") -> str:
-    """Transcribe audio using OpenRouter's audio-capable model.
+async def transcribe_audio_via_openai(audio_base64: str, label: str = "video") -> str:
+    """Transcribe audio using OpenAI's audio-capable model.
     Sends base64 WAV audio to GPT-4o-audio-preview for transcription.
     Falls back gracefully if transcription fails."""
-    if not OPENROUTER_API_KEY or not audio_base64:
+    if not OPENAI_API_KEY or not audio_base64:
         return ""
 
     try:
-        logger.info(f"Transcribing {label} audio via OpenRouter ({len(audio_base64) // 1024}KB base64)")
+        logger.info(f"Transcribing {label} audio via OpenAI ({len(audio_base64) // 1024}KB base64)")
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
+                f"{OPENAI_BASE_URL}/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "openai/gpt-4o-audio-preview",
+                    "model": "gpt-4o-audio-preview",
                     "messages": [{
                         "role": "user",
                         "content": [
@@ -518,9 +518,9 @@ async def analyze_video_funnel_frames(
         ad_transcript = ""
         landing_transcript = ""
         if ad_audio_base64:
-            ad_transcript = await transcribe_audio_via_openrouter(ad_audio_base64, "ad")
+            ad_transcript = await transcribe_audio_via_openai(ad_audio_base64, "ad")
         if landing_audio_base64:
-            landing_transcript = await transcribe_audio_via_openrouter(landing_audio_base64, "landing")
+            landing_transcript = await transcribe_audio_via_openai(landing_audio_base64, "landing")
 
         if ad_transcript:
             logger.info(f"Ad transcript: {ad_transcript[:100]}...")
@@ -646,8 +646,8 @@ async def deep_funnel_audit(
     """
     logger.info(f"[deep-audit] Starting for {platform}/{industry}")
 
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
 
     # Optionally fetch and extract landing page content
     landing_page_content = ""
@@ -840,16 +840,16 @@ CRITICAL: Every observation and fix must reference SPECIFIC words, phrases, or e
     try:
         async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
+                f"{OPENAI_BASE_URL}/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 json={
                     "model": TEXT_MODEL,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.6,
-                    "max_tokens": 2500,
+                    "max_tokens": 4000,
                 },
             )
 
